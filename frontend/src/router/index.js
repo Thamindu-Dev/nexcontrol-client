@@ -35,7 +35,8 @@ export default defineRouter(function (/* { store, ssrContext } */) {
   })
 
   // Add navigation guard for authentication
-  Router.beforeEach((to, from, next) => {
+  // SECURITY: Fixed async/await to prevent auth bypass
+  Router.beforeEach(async (to, from, next) => {
     const authStore = useAuthStore()
 
     // Check if route requires authentication
@@ -43,15 +44,15 @@ export default defineRouter(function (/* { store, ssrContext } */) {
       if (!authStore.isAuthenticated) {
         // Not logged in, redirect to login
         next('/login')
+        return
+      }
+
+      // Check if token is valid (await the promise)
+      const isValid = await authStore.verifyToken()
+      if (isValid) {
+        next()
       } else {
-        // Check if token is valid
-        authStore.verifyToken().then(isValid => {
-          if (isValid) {
-            next()
-          } else {
-            next('/login')
-          }
-        })
+        next('/login')
       }
     } else {
       // Public route, allow access

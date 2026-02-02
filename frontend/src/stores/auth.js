@@ -37,6 +37,30 @@ export const useAuthStore = defineStore('auth', {
 
   actions: {
     /**
+     * Check if JWT token is expired
+     * @param {string} token - JWT token
+     * @returns {boolean} True if expired
+     */
+    isTokenExpired(token) {
+      if (!token) return true
+
+      try {
+        // JWT format: header.payload.signature
+        const parts = token.split('.')
+        if (parts.length !== 3) return true
+
+        // Decode payload (base64url)
+        const payload = JSON.parse(atob(parts[1]))
+        const now = Math.floor(Date.now() / 1000)
+
+        // Check if token is expired or will expire in next 5 minutes
+        return payload.exp < (now - 300)
+      } catch {
+        return true
+      }
+    },
+
+    /**
      * Login with password
      */
     async login(password) {
@@ -88,6 +112,14 @@ export const useAuthStore = defineStore('auth', {
     async verifyToken() {
       if (!this.token) {
         this.isAuthenticated = false;
+        return false;
+      }
+
+      // Check token expiration first (before making API call)
+      if (this.isTokenExpired(this.token)) {
+        this.token = null;
+        this.isAuthenticated = false;
+        this.serverConnected = false;
         return false;
       }
 

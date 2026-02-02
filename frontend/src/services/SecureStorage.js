@@ -6,7 +6,29 @@
  * Falls back to localStorage when not in mobile environment
  */
 
-import { Preferences } from '@capacitor/preferences';
+// Dynamic import for Capacitor plugins to avoid build errors in web
+let Preferences = null;
+
+// Check if running in Capacitor environment
+const isCapacitor = () => {
+  return typeof window !== 'undefined' && window.Capacitor;
+};
+
+/**
+ * Initialize Capacitor Preferences (lazy load)
+ */
+async function initPreferences() {
+  if (Preferences || !isCapacitor()) {
+    return;
+  }
+
+  try {
+    const module = await import('@capacitor/preferences');
+    Preferences = module.Preferences;
+  } catch (error) {
+    console.warn('Capacitor Preferences not available:', error);
+  }
+}
 
 /**
  * Set a value in secure storage
@@ -15,21 +37,23 @@ import { Preferences } from '@capacitor/preferences';
  */
 export async function setItem(key, value) {
   try {
-    await Preferences.set({
-      key,
-      value
-    });
-    return true;
-  } catch (error) {
-    console.error('SecureStorage set error:', error);
-    // Fallback to localStorage
-    try {
-      localStorage.setItem(key, value);
+    await initPreferences();
+
+    if (Preferences && isCapacitor()) {
+      await Preferences.set({ key, value });
       return true;
-    } catch (fallbackError) {
-      console.error('localStorage fallback error:', fallbackError);
-      return false;
     }
+  } catch (error) {
+    console.warn('SecureStorage set error:', error);
+  }
+
+  // Fallback to localStorage
+  try {
+    localStorage.setItem(key, value);
+    return true;
+  } catch (fallbackError) {
+    console.error('localStorage fallback error:', fallbackError);
+    return false;
   }
 }
 
@@ -40,17 +64,24 @@ export async function setItem(key, value) {
  */
 export async function getItem(key) {
   try {
-    const { value } = await Preferences.get({ key });
-    return value;
-  } catch (error) {
-    console.error('SecureStorage get error:', error);
-    // Fallback to localStorage
-    try {
-      return localStorage.getItem(key);
-    } catch (fallbackError) {
-      console.error('localStorage fallback error:', fallbackError);
-      return null;
+    await initPreferences();
+
+    if (Preferences && isCapacitor()) {
+      const { value } = await Preferences.get({ key });
+      if (value !== null) {
+        return value;
+      }
     }
+  } catch (error) {
+    console.warn('SecureStorage get error:', error);
+  }
+
+  // Fallback to localStorage
+  try {
+    return localStorage.getItem(key);
+  } catch (fallbackError) {
+    console.error('localStorage fallback error:', fallbackError);
+    return null;
   }
 }
 
@@ -60,18 +91,23 @@ export async function getItem(key) {
  */
 export async function removeItem(key) {
   try {
-    await Preferences.remove({ key });
-    return true;
-  } catch (error) {
-    console.error('SecureStorage remove error:', error);
-    // Fallback to localStorage
-    try {
-      localStorage.removeItem(key);
+    await initPreferences();
+
+    if (Preferences && isCapacitor()) {
+      await Preferences.remove({ key });
       return true;
-    } catch (fallbackError) {
-      console.error('localStorage fallback error:', fallbackError);
-      return false;
     }
+  } catch (error) {
+    console.warn('SecureStorage remove error:', error);
+  }
+
+  // Fallback to localStorage
+  try {
+    localStorage.removeItem(key);
+    return true;
+  } catch (fallbackError) {
+    console.error('localStorage fallback error:', fallbackError);
+    return false;
   }
 }
 
@@ -80,18 +116,22 @@ export async function removeItem(key) {
  */
 export async function clear() {
   try {
-    await Preferences.clear();
-    return true;
-  } catch (error) {
-    console.error('SecureStorage clear error:', error);
-    // Fallback to localStorage
-    try {
-      localStorage.clear();
-      return true;
-    } catch (fallbackError) {
-      console.error('localStorage fallback error:', fallbackError);
-      return false;
+    await initPreferences();
+
+    if (Preferences && isCapacitor()) {
+      await Preferences.clear();
     }
+  } catch (error) {
+    console.warn('SecureStorage clear error:', error);
+  }
+
+  // Fallback to localStorage
+  try {
+    localStorage.clear();
+    return true;
+  } catch (fallbackError) {
+    console.error('localStorage fallback error:', fallbackError);
+    return false;
   }
 }
 

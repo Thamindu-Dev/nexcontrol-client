@@ -5,8 +5,10 @@
  * Handles push notifications for iOS and Android
  */
 
-import { PushNotifications } from '@capacitor/push-notifications';
-import { LocalNotifications } from '@capacitor/local-notifications';
+// Check if running in Capacitor environment
+const isCapacitor = () => {
+  return typeof window !== 'undefined' && window.Capacitor;
+};
 
 /**
  * Request permission for push notifications
@@ -14,6 +16,9 @@ import { LocalNotifications } from '@capacitor/local-notifications';
  */
 export async function requestPermission() {
   try {
+    if (!isCapacitor()) return false;
+
+    const { PushNotifications } = await import('@capacitor/push-notifications');
     const result = await PushNotifications.requestPermissions();
     return result.receive === 'granted';
   } catch (error) {
@@ -28,6 +33,9 @@ export async function requestPermission() {
  */
 export async function checkPermission() {
   try {
+    if (!isCapacitor()) return false;
+
+    const { PushNotifications } = await import('@capacitor/push-notifications');
     const result = await PushNotifications.checkPermissions();
     return result.receive === 'granted';
   } catch (error) {
@@ -42,6 +50,9 @@ export async function checkPermission() {
  */
 export async function register() {
   try {
+    if (!isCapacitor()) return null;
+
+    const { PushNotifications } = await import('@capacitor/push-notifications');
     await PushNotifications.register();
     return new Promise((resolve, reject) => {
       const registrationHandler = (token) => {
@@ -74,6 +85,9 @@ export async function register() {
  */
 export async function unregister() {
   try {
+    if (!isCapacitor()) return;
+
+    const { PushNotifications } = await import('@capacitor/push-notifications');
     await PushNotifications.unregister();
     await PushNotifications.removeAllListeners();
   } catch (error) {
@@ -87,6 +101,9 @@ export async function unregister() {
  */
 export async function addNotificationListener(callback) {
   try {
+    if (!isCapacitor()) return;
+
+    const { PushNotifications } = await import('@capacitor/push-notifications');
     await PushNotifications.addListener('pushNotificationReceived', (notification) => {
       callback(notification);
     });
@@ -101,6 +118,9 @@ export async function addNotificationListener(callback) {
  */
 export async function addActionListener(callback) {
   try {
+    if (!isCapacitor()) return;
+
+    const { PushNotifications } = await import('@capacitor/push-notifications');
     await PushNotifications.addListener('pushNotificationActionPerformed', (action) => {
       callback(action);
     });
@@ -115,6 +135,10 @@ export async function addActionListener(callback) {
  */
 export async function scheduleLocalNotification(options) {
   try {
+    if (!isCapacitor()) return false;
+
+    const { LocalNotifications } = await import('@capacitor/local-notifications');
+
     // Check permissions first
     const permissions = await LocalNotifications.checkPermissions();
     if (permissions.display !== 'granted') {
@@ -146,6 +170,9 @@ export async function scheduleLocalNotification(options) {
  */
 export async function cancelLocalNotification(ids) {
   try {
+    if (!isCapacitor()) return;
+
+    const { LocalNotifications } = await import('@capacitor/local-notifications');
     await LocalNotifications.cancel({ notifications: ids });
   } catch (error) {
     console.error('Cancel local notification error:', error);
@@ -158,6 +185,9 @@ export async function cancelLocalNotification(ids) {
  */
 export async function getPendingNotifications() {
   try {
+    if (!isCapacitor()) return [];
+
+    const { LocalNotifications } = await import('@capacitor/local-notifications');
     const result = await LocalNotifications.getPending();
     return result.notifications || [];
   } catch (error) {
@@ -172,6 +202,9 @@ export async function getPendingNotifications() {
  */
 export async function addLocalNotificationListener(callback) {
   try {
+    if (!isCapacitor()) return;
+
+    const { LocalNotifications } = await import('@capacitor/local-notifications');
     await LocalNotifications.addListener('localNotificationReceived', (notification) => {
       callback(notification);
     });
@@ -186,6 +219,9 @@ export async function addLocalNotificationListener(callback) {
  */
 export async function addLocalActionListener(callback) {
   try {
+    if (!isCapacitor()) return;
+
+    const { LocalNotifications } = await import('@capacitor/local-notifications');
     await LocalNotifications.addListener('localNotificationActionPerformed', (action) => {
       callback(action);
     });

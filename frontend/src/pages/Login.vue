@@ -131,9 +131,80 @@ const serverConfig = reactive({
 });
 
 /**
- * Handle login form submission
+ * Validate IP address (private/local only for security)
+ * @param {string} ip - IP address to validate
+ * @returns {boolean} True if valid private/local IP
+ */
+function isValidIP(ip) {
+  if (!ip || typeof ip !== 'string') return false
+
+  const ipLower = ip.toLowerCase().trim()
+
+  // Check for localhost
+  if (ipLower === 'localhost') return true
+
+  // IPv4 private ranges
+  const privateRanges = [
+    /^10\./,                           // 10.0.0.0/8
+    /^172\.(1[6-9]|2\d|3[01])\./,    // 172.16.0.0/12
+    /^192\.168\./,                     // 192.168.0.0/16
+    /^127\./                           // 127.0.0.0/8 (loopback)
+  ]
+
+  // Check IPv4 format
+  const ipv4Regex = /^(\d{1,3})\.(\d{1,3})\.(\d{1,3})\.(\d{1,3})$/
+  const ipv4Match = ip.match(ipv4Regex)
+
+  if (ipv4Match) {
+    // Valid IPv4, check if in private range
+    return privateRanges.some(range => range.test(ip))
+  }
+
+  return false
+}
+
+/**
+ * Validate port number
+ * @param {number} port - Port to validate
+ * @returns {boolean} True if valid port
+ */
+function isValidPort(port) {
+  const portNum = Number(port)
+  return !isNaN(portNum) && portNum >= 1 && portNum <= 65535
+}
+
+/**
+ * Handle login form submission (with validation)
  */
 async function handleLogin() {
+  // Validate host/IP
+  if (!serverConfig.host || !serverConfig.host.trim()) {
+    loginError.value = 'Server IP address is required'
+    return
+  }
+
+  // SECURITY: Validate IP is private/local only (prevent SSRF)
+  if (!isValidIP(serverConfig.host)) {
+    loginError.value = 'Invalid IP address. Must be a local network IP'
+    $q.notify({
+      type: 'negative',
+      message: 'Invalid IP address. Must be a local network IP (192.168.x.x, 10.x.x.x, 172.16-31.x.x, or localhost)',
+      position: 'top'
+    })
+    return
+  }
+
+  // Validate port
+  if (!isValidPort(serverConfig.port)) {
+    loginError.value = 'Invalid port. Must be between 1 and 65535'
+    $q.notify({
+      type: 'negative',
+      message: 'Invalid port. Must be between 1 and 65535',
+      position: 'top'
+    })
+    return
+  }
+
   loading.value = true;
   loginError.value = null;
 

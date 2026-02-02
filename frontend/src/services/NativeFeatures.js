@@ -5,10 +5,11 @@
  * Centralized access to all native Capacitor features
  */
 
-import { App } from '@capacitor/app';
-import { Haptics, ImpactStyle } from '@capacitor/haptics';
-import { Keyboard } from '@capacitor/keyboard';
-import { Device } from '@capacitor/device';
+// Check if running in Capacitor environment
+const isCapacitor = () => {
+  return typeof window !== 'undefined' && window.Capacitor;
+};
+
 import PushNotifications from './PushNotifications';
 import BiometricAuth from './BiometricAuth';
 
@@ -18,6 +19,15 @@ import BiometricAuth from './BiometricAuth';
  */
 export async function getDeviceInfo() {
   try {
+    if (!isCapacitor()) {
+      return {
+        platform: 'web',
+        model: 'unknown',
+        osVersion: 'unknown'
+      };
+    }
+
+    const { Device } = await import('@capacitor/device');
     const info = await Device.getInfo();
     const language = await Device.getLanguageCode();
     const battery = await Device.getBatteryInfo();
@@ -43,6 +53,9 @@ export async function getDeviceInfo() {
  */
 export async function isMobile() {
   try {
+    if (!isCapacitor()) return false;
+
+    const { Device } = await import('@capacitor/device');
     const info = await Device.getInfo();
     return info.platform === 'ios' || info.platform === 'android';
   } catch {
@@ -56,6 +69,9 @@ export async function isMobile() {
  */
 export async function isIOS() {
   try {
+    if (!isCapacitor()) return false;
+
+    const { Device } = await import('@capacitor/device');
     const info = await Device.getInfo();
     return info.platform === 'ios';
   } catch {
@@ -69,6 +85,9 @@ export async function isIOS() {
  */
 export async function isAndroid() {
   try {
+    if (!isCapacitor()) return false;
+
+    const { Device } = await import('@capacitor/device');
     const info = await Device.getInfo();
     return info.platform === 'android';
   } catch {
@@ -82,6 +101,9 @@ export async function isAndroid() {
  */
 export async function hapticImpact(style = 'medium') {
   try {
+    if (!isCapacitor()) return;
+
+    const { Haptics, ImpactStyle } = await import('@capacitor/haptics');
     const impactStyle = {
       light: ImpactStyle.Light,
       medium: ImpactStyle.Medium,
@@ -100,6 +122,9 @@ export async function hapticImpact(style = 'medium') {
  */
 export async function hapticNotification(type = 'SUCCESS') {
   try {
+    if (!isCapacitor()) return;
+
+    const { Haptics } = await import('@capacitor/haptics');
     await Haptics.notification({ type });
   } catch (error) {
     console.error('Haptic notification error:', error);
@@ -112,6 +137,9 @@ export async function hapticNotification(type = 'SUCCESS') {
  */
 export async function setKeyboard(show = true) {
   try {
+    if (!isCapacitor()) return;
+
+    const { Keyboard } = await import('@capacitor/keyboard');
     if (show) {
       await Keyboard.show();
     } else {
@@ -128,6 +156,9 @@ export async function setKeyboard(show = true) {
  */
 export async function isKeyboardVisible() {
   try {
+    if (!isCapacitor()) return false;
+
+    const { Keyboard } = await import('@capacitor/keyboard');
     const result = await Keyboard.isVisible();
     return result.isVisible;
   } catch {
@@ -141,6 +172,9 @@ export async function isKeyboardVisible() {
  */
 export async function addAppStateListener(callback) {
   try {
+    if (!isCapacitor()) return;
+
+    const { App } = await import('@capacitor/app');
     await App.addListener('appStateChange', (state) => {
       callback(state);
     });
@@ -155,6 +189,9 @@ export async function addAppStateListener(callback) {
  */
 export async function addUrlOpenListener(callback) {
   try {
+    if (!isCapacitor()) return;
+
+    const { App } = await import('@capacitor/app');
     await App.addListener('appUrlOpen', (data) => {
       callback(data);
     });
@@ -169,6 +206,15 @@ export async function addUrlOpenListener(callback) {
  */
 export async function getAppInfo() {
   try {
+    if (!isCapacitor()) {
+      return {
+        appName: 'NexControl',
+        version: '1.0.0',
+        build: '1'
+      };
+    }
+
+    const { App } = await import('@capacitor/app');
     const info = await App.getInfo();
     return info;
   } catch (error) {
@@ -186,6 +232,9 @@ export async function getAppInfo() {
  */
 export async function exitApp() {
   try {
+    if (!isCapacitor()) return;
+
+    const { App } = await import('@capacitor/app');
     await App.exitApp();
   } catch (error) {
     console.error('Exit app error:', error);
@@ -197,9 +246,11 @@ export async function exitApp() {
  */
 export async function minimizeApp() {
   try {
-    // Only works on Android
-    const info = await Device.getInfo();
+    if (!isCapacitor()) return;
+
+    const info = await getDeviceInfo();
     if (info.platform === 'android') {
+      const { App } = await import('@capacitor/app');
       await App.minimizeApp();
     }
   } catch (error) {
@@ -220,16 +271,9 @@ export async function initialize() {
       return;
     }
 
-    // Initialize push notifications
-    const hasPermission = await PushNotifications.checkPermission();
-    if (!hasPermission) {
-      console.log('Push notification permission not granted');
-    }
-
     // Add app state listener
     await addAppStateListener((state) => {
       console.log('App state changed:', state.isActive ? 'active' : 'inactive');
-      // You can emit this to a store for global access
     });
 
     console.log('Native features initialized successfully');
@@ -250,7 +294,7 @@ export async function requestAllPermissions() {
 
   try {
     // Push notifications
-    permissions.push = await PushNotifications.requestPermission();
+    permissions.push = await PushNotifications.checkPermission();
 
     // Biometric
     const biometricCaps = await BiometricAuth.checkBiometricCapabilities();

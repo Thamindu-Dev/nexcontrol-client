@@ -8,8 +8,12 @@
  * This service provides a framework for biometric authentication
  */
 
-import { Device } from '@capacitor/device';
 import { getItem, setItem, removeItem, STORAGE_KEYS } from './SecureStorage';
+
+// Check if running in Capacitor environment
+const isCapacitor = () => {
+  return typeof window !== 'undefined' && window.Capacitor;
+};
 
 /**
  * Check if device supports biometric authentication
@@ -17,6 +21,18 @@ import { getItem, setItem, removeItem, STORAGE_KEYS } from './SecureStorage';
  */
 export async function checkBiometricCapabilities() {
   try {
+    if (!isCapacitor()) {
+      return {
+        isMobile: false,
+        platform: 'web',
+        hasFaceId: false,
+        hasTouchId: false,
+        hasFingerprint: false,
+        supported: false
+      };
+    }
+
+    const { Device } = await import('@capacitor/device');
     const info = await Device.getInfo();
 
     // Check if running on mobile platform
