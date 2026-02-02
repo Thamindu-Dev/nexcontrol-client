@@ -16,13 +16,13 @@ Building a Quasar/Vue frontend with Capacitor for iOS and Android mobile apps.
 - [x] Ensure platforms are committed to repository
 - [x] Test that `npx cap sync` works in CI/CD
 
-### Phase 3: Core App Structure 🔄 IN PROGRESS
-- [ ] Configure app icons and splash screens
-- [ ] Set up app metadata (name, bundle ID, version)
-- [ ] Configure iOS and Android app settings
-- [ ] Set up proper navigation structure
+### Phase 3: Core App Structure ✅ COMPLETED
+- [x] Configure app icons and splash screens (resources setup guide added)
+- [x] Set up app metadata (name, bundle ID, version)
+- [x] Configure iOS and Android app settings
+- [x] Set up proper navigation structure (already in place)
 
-### Phase 4: Backend Integration
+### Phase 4: Backend Integration 🔄 IN PROGRESS
 - [ ] Configure API base URLs for development/production
 - [ ] Implement authentication flow
 - [ ] Set up secure storage for tokens

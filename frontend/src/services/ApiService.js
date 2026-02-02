@@ -6,45 +6,59 @@
  * Supports both encrypted and unencrypted endpoints
  *
  * Features:
- * - Base URL configuration
- * - JWT token management
+ * - Environment-aware base URL configuration
+ * - JWT token management with secure storage
  * - Request/Response interceptors
  * - Automatic encryption for sensitive endpoints
+ * - Error handling and token refresh
  */
 
 import { encryptPayload, decryptResponse } from './EncryptionService';
-
-// Configuration
-const TOKEN_STORAGE_KEY = 'nexcontrol_token';
-const SERVER_CONFIG_KEY = 'nexcontrol_server_config';
+import { getApiBaseUrl } from './EnvConfig';
+import { getItem as getSecureItem, setItem as setSecureItem, removeItem as removeSecureItem, STORAGE_KEYS } from './SecureStorage';
 
 /**
- * Check if running in GitHub Codespaces
+ * Get stored JWT token from secure storage
  */
-function isCodespaces() {
-  return window.location.hostname.endsWith('.app.github.dev') ||
-         window.location.hostname.includes('codespaces');
+async function getToken() {
+  try {
+    // Try secure storage first (mobile)
+    return await getSecureItem(STORAGE_KEYS.AUTH_TOKEN);
+  } catch {
+    // Fallback to localStorage for web
+    return localStorage.getItem('nexcontrol_token');
+  }
 }
 
 /**
- * Get the base URL from localStorage or use default
- * In Codespaces, use empty string to rely on proxy
+ * Set JWT token in secure storage
  */
-function getBaseUrl() {
-  // In Codespaces, use proxy (no base URL)
-  if (isCodespaces()) {
-    return '';
+async function setToken(token) {
+  try {
+    await setSecureItem(STORAGE_KEYS.AUTH_TOKEN, token);
+  } catch {
+    // Fallback to localStorage
+    localStorage.setItem('nexcontrol_token', token);
   }
+}
 
-  const config = getServerConfig();
-  return `${config.protocol}://${config.host}:${config.port}`;
+/**
+ * Clear JWT token (logout)
+ */
+export async function clearToken() {
+  try {
+    await removeSecureItem(STORAGE_KEYS.AUTH_TOKEN);
+    await removeSecureItem(STORAGE_KEYS.REFRESH_TOKEN);
+  } catch {
+    localStorage.removeItem('nexcontrol_token');
+  }
 }
 
 /**
  * Get server configuration
  */
-function getServerConfig() {
-  const stored = localStorage.getItem(SERVER_CONFIG_KEY);
+export function getServerConfig() {
+  const stored = localStorage.getItem('nexcontrol_server_config');
   if (stored) {
     try {
       return JSON.parse(stored);
@@ -63,35 +77,52 @@ function getServerConfig() {
  * Set server configuration
  */
 export function setServerConfig(config) {
-  localStorage.setItem(SERVER_CONFIG_KEY, JSON.stringify(config));
+  localStorage.setItem('nexcontrol_server_config', JSON.stringify(config));
 }
 
 /**
- * Get stored JWT token
+ * Handle API errors
  */
-function getToken() {
-  return localStorage.getItem(TOKEN_STORAGE_KEY);
+function handleApiError(response, errorData) {
+  // Handle 401 Unauthorized - token expired or invalid
+  if (response.status === 401) {
+    clearToken();
+    // Redirect to login (handled by router guard)
+    if (window.location.pathname !== '/login') {
+      window.location.href = '/login';
+    }
+    throw new Error('Authentication required. Please login again.');
+  }
+
+  // Handle 403 Forbidden
+  if (response.status === 403) {
+    throw new Error('You do not have permission to perform this action.');
+  }
+
+  // Handle 404 Not Found
+  if (response.status === 404) {
+    throw new Error('The requested resource was not found.');
+  }
+
+  // Handle 500 Server Error
+  if (response.status >= 500) {
+    throw new Error('Server error. Please try again later.');
+  }
+
+  // Default error message
+  throw new Error(errorData.detail || errorData.message || 'Request failed');
 }
 
 /**
- * Set JWT token
- */
-function setToken(token) {
-  localStorage.setItem(TOKEN_STORAGE_KEY, token);
-}
-
-/**
- * Clear JWT token (logout)
- */
-export function clearToken() {
-  localStorage.removeItem(TOKEN_STORAGE_KEY);
-}
-
-/**
- * Create axios instance with base configuration
+ * Create API client with base configuration
  */
 const api = {
-  baseURL: getBaseUrl(),
+  /**
+   * Get current base URL
+   */
+  get baseURL() {
+    return getApiBaseUrl();
+  },
 
   /**
    * Make an API request
@@ -105,7 +136,7 @@ const api = {
   async request(endpoint, method = 'GET', data = null, encrypted = false) {
     try {
       const url = `${this.baseURL}${endpoint}`;
-      const token = getToken();
+      const token = await getToken();
 
       // Prepare headers
       const headers = {
@@ -139,10 +170,8 @@ const api = {
 
       // Handle non-OK responses
       if (!response.ok) {
-        const errorData = await response.json().catch(() => ({
-          detail: response.statusText
-        }));
-        throw new Error(errorData.detail || 'Request failed');
+        const errorData = await response.json().catch(() => ({}));
+        return handleApiError(response, errorData);
       }
 
       // Parse response
@@ -155,8 +184,13 @@ const api = {
 
       return responseData;
     } catch (error) {
-      console.error('API request error:', error);
-      throw error;
+      // Re-throw API errors
+      if (error.message) {
+        throw error;
+      }
+      // Handle network errors
+      console.error('Network error:', error);
+      throw new Error('Network error. Please check your connection.');
     }
   },
 
@@ -194,7 +228,7 @@ const api = {
   async login(password) {
     const response = await this.post('/api/auth/login', { password });
     if (response.access_token) {
-      setToken(response.access_token);
+      await setToken(response.access_token);
     }
     return response;
   },
@@ -203,21 +237,22 @@ const api = {
    * Logout
    */
   async logout() {
-    clearToken();
+    await clearToken();
   },
 
   /**
    * Check if authenticated
    */
-  isAuthenticated() {
-    return !!getToken();
+  async isAuthenticated() {
+    const token = await getToken();
+    return !!token;
   },
 
   /**
-   * Update base URL (call this after changing server config)
+   * Get current auth token
    */
-  updateBaseUrl() {
-    this.baseURL = getBaseUrl();
+  async getToken() {
+    return getToken();
   }
 };
 
