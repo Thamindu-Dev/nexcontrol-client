@@ -22,19 +22,23 @@ Building a Quasar/Vue frontend with Capacitor for iOS and Android mobile apps.
 - [x] Configure iOS and Android app settings
 - [x] Set up proper navigation structure (already in place)
 
-### Phase 4: Backend Integration 🔄 IN PROGRESS
-- [ ] Configure API base URLs for development/production
-- [ ] Implement authentication flow
-- [ ] Set up secure storage for tokens
-- [ ] Implement API interceptors for error handling
+### Phase 4: Backend Integration ✅ COMPLETED
+- [x] Configure API base URLs for development/production
+- [x] Implement authentication flow
+- [x] Set up secure storage for tokens
+- [x] Implement API interceptors for error handling
 
-### Phase 5: Core Features
-- [ ] Dashboard/Home view
+### Phase 5: Core Features ✅ ALREADY IMPLEMENTED
+- [x] Dashboard/Home view (Dashboard.vue)
+- [x] Docker containers management (Docker.vue)
+- [x] Process management (Processes.vue)
+- [x] Screenshot capture (Screenshot.vue)
+- [x] Wake on LAN (WoL.vue)
+- [x] Settings page (Settings.vue)
+- [ ] Real-time device status updates (WebSocket)
 - [ ] Device management (list, add, edit, delete)
-- [ ] Real-time device status updates
-- [ ] Control panels for devices
 
-### Phase 6: Native Features
+### Phase 6: Native Features 🔄 IN PROGRESS
 - [ ] Push notifications setup
 - [ ] Camera integration (if needed for QR/Barcodes)
 - [ ] Biometric authentication (TouchID/FaceID)
@@ -55,4 +59,4 @@ Building a Quasar/Vue frontend with Capacitor for iOS and Android mobile apps.
 - [ ] Public release
 
 ## Current Focus
-Phase 3: Core App Structure - configuring app icons, splash screens, and metadata.
+Phase 6: Native Features - implementing push notifications, biometric auth, and camera integration.
