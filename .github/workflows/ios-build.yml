@@ -67,29 +67,7 @@ jobs:
             echo "No Podfile found, skipping pod install"
           fi
 
-      - name: Create export options plist
-        working-directory: ./frontend/ios/App
-        run: |
-          cat > exportOptions.plist << 'EOF'
-          <?xml version="1.0" encoding="UTF-8"?>
-          <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
-          <plist version="1.0">
-          <dict>
-              <key>method</key>
-              <string>development</string>
-              <key>teamID</key>
-              <string>YOUR_TEAM_ID</string>
-              <key>compileBitcode</key>
-              <false/>
-              <key>uploadSymbols</key>
-              <true/>
-              <key>signingStyle</key>
-              <string>automatic</string>
-          </dict>
-          </plist>
-          EOF
-
-      - name: Build iOS app (archive)
+      - name: Build iOS app (archive without code signing)
         working-directory: ./frontend/ios/App
         run: |
           # Use workspace if it exists, otherwise use project
@@ -99,40 +77,50 @@ jobs:
               -scheme App \
               -configuration Release \
               -archivePath ${{ runner.temp }}/App.xcarchive \
-              CODE_SIGN_STYLE=Automatic \
-              CODE_SIGN_IDENTITY="Apple Development" \
-              DEVELOPMENT_TEAM="${{ secrets.IOS_TEAM_ID }}" \
-              archive || echo "Build may have failed due to signing, continuing..."
+              CODE_SIGN_IDENTITY="" \
+              CODE_SIGNING_REQUIRED=NO \
+              CODE_SIGNING_ALLOWED=NO \
+              archive
           else
             echo "Using project..."
             xcodebuild -project App.xcodeproj \
               -scheme App \
               -configuration Release \
               -archivePath ${{ runner.temp }}/App.xcarchive \
-              CODE_SIGN_STYLE=Automatic \
-              CODE_SIGN_IDENTITY="Apple Development" \
-              DEVELOPMENT_TEAM="${{ secrets.IOS_TEAM_ID }}" \
-              archive || echo "Build may have failed due to signing, continuing..."
+              CODE_SIGN_IDENTITY="" \
+              CODE_SIGNING_REQUIRED=NO \
+              CODE_SIGNING_ALLOWED=NO \
+              archive
           fi
 
-      - name: Export IPA
+      - name: Export .app bundle for sideloading
+        run: |
+          # Copy the .app bundle from the archive
+          cp -R ${{ runner.temp }}/App.xcarchive/Products/Applications/*.app ${{ runner.temp }}/NexControl.app
+
+      - name: Create IPA for sideloading (optional)
         working-directory: ./frontend/ios/App
         run: |
-          xcodebuild -exportArchive \
-            -archivePath ${{ runner.temp }}/App.xcarchive \
-            -exportPath ${{ runner.temp }}/export \
-            -exportOptionsPlist exportOptions.plist \
-            ALLOW_MISSING_PROVISIONING=1 || echo "Export failed, this is expected without proper signing"
+          # Try to create unsigned IPA for sideloading tools
+          if [ -d "${{ runner.temp }}/App.xcarchive" ]; then
+            mkdir -p ${{ runner.temp }}/ipa/Payload
+            cp -R ${{ runner.temp }}/App.xcarchive/Products/Applications/*.app ${{ runner.temp }}/ipa/Payload/
+            cd ${{ runner.temp }}/ipa
+            zip -r ../NexControl-unsigned.ipa .
+          fi
 
-      - name: Find and upload IPA (if exists)
-        run: |
-          find ${{ runner.temp }}/export -name "*.ipa" -type f || echo "No IPA found"
-
-      - name: Upload IPA artifact
+      - name: Upload .app bundle (for Sideloadly/AltStore)
         uses: actions/upload-artifact@v4
         with:
-          name: NexControl-iOS-IPA
-          path: ${{ runner.temp }}/export/*.ipa
+          name: NexControl-iOS-App-Bundle
+          path: ${{ runner.temp }}/NexControl.app
+          retention-days: 90
+
+      - name: Upload unsigned IPA (for sideloading)
+        uses: actions/upload-artifact@v4
+        with:
+          name: NexControl-iOS-Unsigned-IPA
+          path: ${{ runner.temp }}/NexControl-unsigned.ipa
           retention-days: 90
           if-no-files-found: warn
 
@@ -141,15 +129,14 @@ jobs:
         with:
           name: NexControl-iOS-Archive
           path: ${{ runner.temp }}/App.xcarchive
-          retention-days: 7
-          if-no-files-found: warn
+          retention-days: 90
 
       - name: Release (if triggered manually)
         if: github.event_name == 'workflow_dispatch' && github.event.inputs.release == 'true'
         uses: softprops/action-gh-release@v1
         with:
           files: |
-            ${{ runner.temp }}/export/*.ipa
+            ${{ runner.temp }}/NexControl-unsigned.ipa
           tag_name: v${{ github.run_number }}
           name: NexControl v${{ github.run_number }}
           draft: false
