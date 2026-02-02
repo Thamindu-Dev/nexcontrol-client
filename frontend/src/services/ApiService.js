@@ -136,7 +136,15 @@ const api = {
   async request(endpoint, method = 'GET', data = null, encrypted = false) {
     try {
       const url = `${this.baseURL}${endpoint}`;
-      const token = await getToken();
+      console.log('[API Request]', method, url);
+
+      // Get token with timeout to prevent hanging
+      const token = await Promise.race([
+        getToken(),
+        new Promise((_, reject) =>
+          setTimeout(() => reject(new Error('Token get timeout')), 2000)
+        )
+      ]).catch(() => null);
 
       // Prepare headers
       const headers = {
@@ -148,10 +156,14 @@ const api = {
         headers['Authorization'] = `Bearer ${token}`;
       }
 
-      // Prepare request options
+      // Prepare request options with timeout
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 15000); // 15 second timeout
+
       const options = {
         method,
-        headers
+        headers,
+        signal: controller.signal
       };
 
       // Add body for POST/PUT/PATCH
@@ -165,8 +177,15 @@ const api = {
         }
       }
 
+      console.log('[API Request] Sending to:', url);
+
       // Make the request
       const response = await fetch(url, options);
+
+      // Clear timeout
+      clearTimeout(timeoutId);
+
+      console.log('[API Response] Status:', response.status);
 
       // Handle non-OK responses
       if (!response.ok) {

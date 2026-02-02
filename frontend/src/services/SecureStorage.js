@@ -8,6 +8,8 @@
 
 // Dynamic import for Capacitor plugins to avoid build errors in web
 let Preferences = null;
+let preferencesInitStarted = false;
+let preferencesReady = false;
 
 // Check if running in Capacitor environment
 const isCapacitor = () => {
@@ -15,18 +17,41 @@ const isCapacitor = () => {
 };
 
 /**
- * Initialize Capacitor Preferences (lazy load)
+ * Initialize Capacitor Preferences (lazy load with caching)
  */
 async function initPreferences() {
-  if (Preferences || !isCapacitor()) {
+  // Return early if already ready
+  if (preferencesReady || !isCapacitor()) {
     return;
   }
 
+  // Return early if initialization already started (to prevent parallel imports)
+  if (preferencesInitStarted) {
+    // Wait up to 2 seconds for initialization
+    const maxWait = 20;
+    let waited = 0;
+    while (!preferencesReady && waited < maxWait) {
+      await new Promise(resolve => setTimeout(resolve, 100));
+      waited++;
+    }
+    return;
+  }
+
+  preferencesInitStarted = true;
+
   try {
-    const module = await import('@capacitor/preferences');
+    // Add timeout to prevent hanging
+    const module = await Promise.race([
+      import('@capacitor/preferences'),
+      new Promise((_, reject) =>
+        setTimeout(() => reject(new Error('Preferences import timeout')), 3000)
+      )
+    ]);
     Preferences = module.Preferences;
+    preferencesReady = true;
   } catch (error) {
     console.warn('Capacitor Preferences not available:', error);
+    preferencesReady = false;
   }
 }
 
@@ -139,7 +164,7 @@ export async function clear() {
  * Keys used in the app
  */
 export const STORAGE_KEYS = {
-  AUTH_TOKEN: 'nexcontrol_auth_token',
+  AUTH_TOKEN: 'nexcontrol_token',
   REFRESH_TOKEN: 'nexcontrol_refresh_token',
   SERVER_CONFIG: 'nexcontrol_server_config',
   BIOMETRIC_ENABLED: 'nexcontrol_biometric_enabled',
