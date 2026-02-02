@@ -39,6 +39,7 @@ jobs:
         run: |
           npm install
           npm install -g @capacitor/cli
+          npm install @capacitor/core @capacitor/cli
 
       - name: Set version info
         working-directory: ./frontend
@@ -49,6 +50,10 @@ jobs:
       - name: Build Quasar app
         working-directory: ./frontend
         run: npm run build
+
+      - name: Add Android platform
+        working-directory: ./frontend
+        run: npx cap add android || true
 
       - name: Sync Capacitor
         working-directory: ./frontend

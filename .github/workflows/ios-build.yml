@@ -33,6 +33,7 @@ jobs:
         run: |
           npm install
           npm install -g @capacitor/cli
+          npm install @capacitor/core @capacitor/cli
 
       - name: Setup Python for backend info
         uses: actions/setup-python@v5
@@ -49,6 +50,10 @@ jobs:
       - name: Build Quasar app
         working-directory: ./frontend
         run: npm run build
+
+      - name: Add iOS platform
+        working-directory: ./frontend
+        run: npx cap add ios || true
 
       - name: Sync Capacitor
         working-directory: ./frontend
