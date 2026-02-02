@@ -1,12 +1,10 @@
 # Uncomment the next line to define a global platform for your project
 platform :ios, '15.0'
 
-use_frameworks!
+# Use static linking for Capacitor 8.x to avoid "Multiple commands produce" errors
+use_frameworks! :linkage => :static
 
 target 'App' do
-  # Comment the next line if you don't want to use dynamic frameworks
-  use_frameworks!
-
   # Capacitor
   pod 'Capacitor', '~> 8.0'
   pod 'CapacitorCordova', '~> 8.0'
@@ -26,6 +24,13 @@ post_install do |installer|
   installer.pods_project.targets.each do |target|
     target.build_configurations.each do |config|
       config.build_settings['IPHONEOS_DEPLOYMENT_TARGET'] = '15.0'
+      # Fix for "Multiple commands produce" error
+      config.build_settings['ONLY_ACTIVE_ARCH'] = 'YES'
     end
+  end
+
+  # Fix duplicate framework embedding issue
+  installer.pods_project.build_configurations.each do |config|
+    config.build_settings["EXCLUDED_SOURCE_FILE_NAMES"] = "*.h"
   end
 end

@@ -55,15 +55,22 @@ jobs:
         working-directory: ./frontend
         run: npx cap sync ios
 
-      - name: Check for CocoaPods
+      - name: Clean Pods and derived data
+        working-directory: ./frontend/ios/App
+        run: |
+          # Remove Pods to ensure clean install
+          rm -rf Pods
+          rm -rf Podfile.lock
+          rm -rf ~/Library/Developer/Xcode/DerivedData
+          echo "Cleaned Pods and derived data"
+
+      - name: Install CocoaPods dependencies
         working-directory: ./frontend/ios/App
         run: |
           if [ -f "Podfile" ]; then
-            echo "has_podfile=true" >> $GITHUB_ENV
-            echo "Podfile found, installing pods..."
+            echo "Installing CocoaPods..."
             pod install --repo-update
           else
-            echo "has_podfile=false" >> $GITHUB_ENV
             echo "No Podfile found, skipping pod install"
           fi
 
@@ -80,6 +87,7 @@ jobs:
               CODE_SIGN_IDENTITY="" \
               CODE_SIGNING_REQUIRED=NO \
               CODE_SIGNING_ALLOWED=NO \
+              VALID_ARCHS="arm64" \
               archive
           else
             echo "Using project..."
@@ -90,6 +98,7 @@ jobs:
               CODE_SIGN_IDENTITY="" \
               CODE_SIGNING_REQUIRED=NO \
               CODE_SIGNING_ALLOWED=NO \
+              VALID_ARCHS="arm64" \
               archive
           fi
 
