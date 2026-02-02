@@ -55,23 +55,31 @@ jobs:
         working-directory: ./frontend
         run: npx cap sync android
 
+      - name: Grant execute permission for gradlew
+        working-directory: ./frontend/android
+        run: chmod +x gradlew
+
       - name: Build Android APK
-        working-directory: ./frontend/App/android
+        working-directory: ./frontend/android
         run: |
           ./gradlew assembleDebug
 
       - name: Upload APK artifact
         uses: actions/upload-artifact@v4
         with:
-          name: NexControl-Android
-          path: frontend/App/android/app/build/outputs/apk/debug/app-debug.apk
-          retention-days: 30
+          name: NexControl-Android-APK
+          path: frontend/android/app/build/outputs/apk/debug/app-debug.apk
+          retention-days: 90
+          if-no-files-found: error
 
       - name: Release (if triggered manually)
         if: github.event_name == 'workflow_dispatch' && github.event.inputs.release == 'true'
         uses: softprops/action-gh-release@v1
         with:
-          files: frontend/App/android/app/build/outputs/apk/debug/app-debug.apk
+          files: frontend/android/app/build/outputs/apk/debug/app-debug.apk
           tag_name: v${{ github.run_number }}
+          name: NexControl v${{ github.run_number }}
+          draft: false
+          prerelease: false
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
