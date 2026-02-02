@@ -85,8 +85,9 @@
                 />
               </div>
             </div>
+          </q-card-section>
 
-            <q-card-section class="q-pt-none">
+          <q-card-section class="q-pt-none">
               <div class="text-caption">
                 <div>ID: {{ container.id }}</div>
                 <div>Status: {{ container.status }}</div>
