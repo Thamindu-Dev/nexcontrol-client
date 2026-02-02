@@ -188,7 +188,7 @@
 <script setup>
 import { ref, reactive, onMounted } from 'vue';
 import { useQuasar } from 'quasar';
-import { useSettingsStore } from 'stores/settings';
+import { useSettingsStore } from '../stores/settings';
 
 // Define component name for ESLint multi-word rule
 defineOptions({
@@ -312,7 +312,7 @@ async function wakeDevice(device) {
   try {
     // In a browser environment, we need to forward this to the backend
     // since browsers cannot send raw UDP packets
-    const WoLService = (await import('services/WoLService')).default;
+    const WoLService = (await import('../services/WoLService')).default;
     await WoLService.sendMagicPacket(device.mac, device.broadcast, device.port);
 
     $q.notify({

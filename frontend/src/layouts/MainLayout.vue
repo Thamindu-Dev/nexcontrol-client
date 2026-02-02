@@ -117,9 +117,9 @@
 import { ref, computed, onMounted, onUnmounted } from 'vue';
 import { useRouter } from 'vue-router';
 import { useQuasar } from 'quasar';
-import { useAuthStore } from 'stores/auth';
-import { useSettingsStore } from 'stores/settings';
-import { useSystemStore } from 'stores/system';
+import { useAuthStore } from '../stores/auth';
+import { useSettingsStore } from '../stores/settings';
+import { useSystemStore } from '../stores/system';
 
 const router = useRouter();
 const $q = useQuasar();

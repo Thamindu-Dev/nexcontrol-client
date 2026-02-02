@@ -236,15 +236,15 @@
 import { ref, computed, onMounted, onUnmounted } from 'vue';
 import { useRouter } from 'vue-router';
 import { useQuasar } from 'quasar';
-import { useAuthStore } from 'stores/auth';
-import { useSystemStore } from 'stores/system';
-import { useSettingsStore } from 'stores/settings';
+import { useAuthStore } from '../stores/auth';
+import { useSystemStore } from '../stores/system';
+import { useSettingsStore } from '../stores/settings';
 
 // Define component name for ESLint multi-word rule
 defineOptions({
   name: 'DashboardPage'
 });
-import api from 'services/ApiService';
+import api from '../services/ApiService';
 
 const router = useRouter();
 const $q = useQuasar();

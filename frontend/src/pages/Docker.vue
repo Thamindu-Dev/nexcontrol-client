@@ -88,11 +88,11 @@
           </q-card-section>
 
           <q-card-section class="q-pt-none">
-              <div class="text-caption">
-                <div>ID: {{ container.id }}</div>
-                <div>Status: {{ container.status }}</div>
-              </div>
-            </q-card-section>
+            <div class="text-caption">
+              <div>ID: {{ container.id }}</div>
+              <div>Status: {{ container.status }}</div>
+            </div>
+          </q-card-section>
 
             <q-card-actions align="right">
               <q-btn
@@ -167,8 +167,8 @@
 <script setup>
 import { ref, computed, onMounted } from 'vue';
 import { useQuasar } from 'quasar';
-import { useSystemStore } from 'stores/system';
-import api from 'services/ApiService';
+import { useSystemStore } from '../stores/system';
+import api from '../services/ApiService';
 
 // Define component name for ESLint multi-word rule
 defineOptions({

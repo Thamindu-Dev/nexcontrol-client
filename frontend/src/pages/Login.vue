@@ -101,8 +101,8 @@
 import { ref, reactive, onMounted } from 'vue';
 import { useRouter } from 'vue-router';
 import { useQuasar } from 'quasar';
-import { useAuthStore } from 'stores/auth';
-import { useSettingsStore } from 'stores/settings';
+import { useAuthStore } from '../stores/auth';
+import { useSettingsStore } from '../stores/settings';
 
 // Define component name for ESLint multi-word rule
 defineOptions({

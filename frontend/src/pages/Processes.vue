@@ -118,7 +118,7 @@
 <script setup>
 import { ref, computed, onMounted } from 'vue';
 import { useQuasar } from 'quasar';
-import { useSystemStore } from 'stores/system';
+import { useSystemStore } from '../stores/system';
 
 // Define component name for ESLint multi-word rule
 defineOptions({
