@@ -24,6 +24,8 @@
     "allowNavigation": [
       "*"
     ],
-    "iosContentMode": "origin"
+    "iosContentMode": "origin",
+    "hostname": "localhost",
+    "iosScheme": "http"
   }
 }
