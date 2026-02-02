@@ -53,7 +53,9 @@ jobs:
 
       - name: Add iOS platform
         working-directory: ./frontend
-        run: npx cap add ios || true
+        run: |
+          npx cap add ios || echo "iOS platform may already exist"
+        continue-on-error: true
 
       - name: Sync Capacitor
         working-directory: ./frontend

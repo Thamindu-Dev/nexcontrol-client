@@ -53,7 +53,9 @@ jobs:
 
       - name: Add Android platform
         working-directory: ./frontend
-        run: npx cap add android || true
+        run: |
+          npx cap add android || echo "Android platform may already exist"
+        continue-on-error: true
 
       - name: Sync Capacitor
         working-directory: ./frontend
