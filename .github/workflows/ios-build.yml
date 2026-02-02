@@ -55,12 +55,20 @@ jobs:
         working-directory: ./frontend
         run: npx cap sync ios
 
-      - name: Install CocoaPods dependencies
+      - name: Check for CocoaPods
         working-directory: ./frontend/ios/App
-        run: pod install --repo-update
+        run: |
+          if [ -f "Podfile" ]; then
+            echo "has_podfile=true" >> $GITHUB_ENV
+            echo "Podfile found, installing pods..."
+            pod install --repo-update
+          else
+            echo "has_podfile=false" >> $GITHUB_ENV
+            echo "No Podfile found, skipping pod install"
+          fi
 
       - name: Create export options plist
-        working-directory: ./frontend/ios
+        working-directory: ./frontend/ios/App
         run: |
           cat > exportOptions.plist << 'EOF'
           <?xml version="1.0" encoding="UTF-8"?>
@@ -82,19 +90,33 @@ jobs:
           EOF
 
       - name: Build iOS app (archive)
-        working-directory: ./frontend/ios
+        working-directory: ./frontend/ios/App
         run: |
-          xcodebuild -workspace App.xcworkspace \
-            -scheme App \
-            -configuration Release \
-            -archivePath ${{ runner.temp }}/App.xcarchive \
-            CODE_SIGN_STYLE=Automatic \
-            CODE_SIGN_IDENTITY="Apple Development" \
-            DEVELOPMENT_TEAM="${{ secrets.IOS_TEAM_ID }}" \
-            archive || echo "Build may have failed due to signing, continuing..."
+          # Use workspace if it exists, otherwise use project
+          if [ -f "App.xcworkspace/contents.xcworkspacedata" ]; then
+            echo "Using workspace..."
+            xcodebuild -workspace App.xcworkspace \
+              -scheme App \
+              -configuration Release \
+              -archivePath ${{ runner.temp }}/App.xcarchive \
+              CODE_SIGN_STYLE=Automatic \
+              CODE_SIGN_IDENTITY="Apple Development" \
+              DEVELOPMENT_TEAM="${{ secrets.IOS_TEAM_ID }}" \
+              archive || echo "Build may have failed due to signing, continuing..."
+          else
+            echo "Using project..."
+            xcodebuild -project App.xcodeproj \
+              -scheme App \
+              -configuration Release \
+              -archivePath ${{ runner.temp }}/App.xcarchive \
+              CODE_SIGN_STYLE=Automatic \
+              CODE_SIGN_IDENTITY="Apple Development" \
+              DEVELOPMENT_TEAM="${{ secrets.IOS_TEAM_ID }}" \
+              archive || echo "Build may have failed due to signing, continuing..."
+          fi
 
       - name: Export IPA
-        working-directory: ./frontend/ios
+        working-directory: ./frontend/ios/App
         run: |
           xcodebuild -exportArchive \
             -archivePath ${{ runner.temp }}/App.xcarchive \
@@ -104,7 +126,7 @@ jobs:
 
       - name: Find and upload IPA (if exists)
         run: |
-          find ${{ runner.temp }}/export -name "*.ipa" -type f
+          find ${{ runner.temp }}/export -name "*.ipa" -type f || echo "No IPA found"
 
       - name: Upload IPA artifact
         uses: actions/upload-artifact@v4

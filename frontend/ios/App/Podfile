@@ -1,0 +1,31 @@
+# Uncomment the next line to define a global platform for your project
+platform :ios, '13.0'
+
+use_frameworks!
+
+target 'App' do
+  # Comment the next line if you don't want to use dynamic frameworks
+  use_frameworks!
+
+  # Capacitor
+  pod 'Capacitor', '~> 8.0'
+  pod 'CapacitorCordova', '~> 8.0'
+
+  # Add your native plugins here
+  # pod '@capacitor/push-notifications', :path => '../../node_modules/@capacitor/push-notifications'
+  # pod '@capacitor/local-notifications', :path => '../../node_modules/@capacitor/local-notifications'
+  # pod '@capacitor/app', :path => '../../node_modules/@capacitor/app'
+  # pod '@capacitor/haptics', :path => '../../node_modules/@capacitor/haptics'
+  # pod '@capacitor/keyboard', :path => '../../node_modules/@capacitor/keyboard'
+  # pod '@capacitor/device', :path => '../../node_modules/@capacitor/device'
+  # pod '@capacitor/preferences', :path => '../../node_modules/@capacitor/preferences'
+
+end
+
+post_install do |installer|
+  installer.pods_project.targets.each do |target|
+    target.build_configurations.each do |config|
+      config.build_settings['IPHONEOS_DEPLOYMENT_TARGET'] = '13.0'
+    end
+  end
+end
