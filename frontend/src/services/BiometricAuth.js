@@ -49,7 +49,8 @@ export async function checkBiometricCapabilities() {
  * @param {string} reason - Reason for authentication prompt
  * @returns {Promise<boolean>} Authentication success
  */
-export async function authenticate(_reason = 'Authenticate to access NexControl') {
+// eslint-disable-next-line no-unused-vars
+export async function authenticate(reason = 'Authenticate to access NexControl') {
   try {
     const capabilities = await checkBiometricCapabilities();
 
