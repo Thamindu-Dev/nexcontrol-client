@@ -1632,13 +1632,17 @@ async def encryption_middleware(request: Request, call_next):
 # ============================================================
 
 @app.post("/api/auth/login", response_model=TokenResponse, tags=["Authentication"])
-@limiter.limit("10 per minute")
+# Temporarily disabled rate limiter for iOS debugging
+# @limiter.limit("10 per minute")
 async def login(request: LoginRequest, http_request: Request):
+    client_ip = get_remote_address(http_request)
+    logger.info(f"[LOGIN ATTEMPT] Received login request from {client_ip}")
+
+    # Check if account is locked
     """
     Authenticate with app password and receive JWT token
 
-    Rate limited: 10 attempts per minute per IP
-    Locks out after 5 failed attempts for 15 minutes
+    Rate limited: 10 attempts per minute per IP (TEMPORARILY DISABLED)
 
     Args:
         request: Login request with password
@@ -2252,6 +2256,65 @@ async def root():
         },
         "timestamp": time.time()
     }
+
+
+@app.post("/api/test/echo", tags=["General"])
+async def test_echo(request: Request):
+    """
+    Simple POST echo endpoint for testing iOS network issues
+    Echos back whatever JSON is sent to it
+    No authentication required
+    """
+    from fastapi.responses import JSONResponse
+    import json
+
+    # Try to read body
+    body_bytes = await request.body()
+    body_str = body_bytes.decode('utf-8')
+
+    logger.info(f"[TEST ECHO] Received POST from {get_remote_address(request)}")
+    logger.info(f"[TEST ECHO] Body: {body_str[:200]}")  # Log first 200 chars
+
+    try:
+        body_json = json.loads(body_str)
+        return JSONResponse(
+            content={
+                "status": "success",
+                "message": "POST request received successfully!",
+                "received_data": body_json,
+                "timestamp": time.time()
+            },
+            status_code=200,
+            headers={
+                "Access-Control-Allow-Origin": "*",
+                "Access-Control-Allow-Methods": "POST, GET, OPTIONS",
+                "Access-Control-Allow-Headers": "*"
+            }
+        )
+    except json.JSONDecodeError:
+        return JSONResponse(
+            content={
+                "status": "success",
+                "message": "POST received (not valid JSON)",
+                "raw_body": body_str,
+                "timestamp": time.time()
+            },
+            status_code=200
+        )
+
+
+@app.options("/api/test/echo", tags=["General"])
+async def test_echo_options():
+    """OPTIONS handler for echo test endpoint"""
+    from fastapi.responses import Response
+    return Response(
+        status_code=200,
+        headers={
+            "Access-Control-Allow-Origin": "*",
+            "Access-Control-Allow-Methods": "POST, GET, OPTIONS",
+            "Access-Control-Allow-Headers": "*"
+        }
+    )
 
 
 @app.get("/api/test/connection", tags=["General"])

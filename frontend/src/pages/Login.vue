@@ -208,12 +208,20 @@ async function handleLogin() {
   loading.value = true;
   loginError.value = null;
 
+  // Debug logging
+  const serverUrl = `${serverConfig.protocol}://${serverConfig.host}:${serverConfig.port}`;
+  console.log('[Login] Attempting to connect to:', serverUrl);
+  console.log('[Login] Capacitor available:', typeof window !== 'undefined' && window.Capacitor);
+
   try {
     // Update server configuration
     await settingsStore.updateServer(serverConfig);
+    console.log('[Login] Server config updated');
 
     // Attempt login
+    console.log('[Login] Calling authStore.login...');
     const result = await authStore.login(password.value);
+    console.log('[Login] Login result:', result);
 
     if (result.success) {
       // Show success message
@@ -234,6 +242,7 @@ async function handleLogin() {
       loginError.value = result.error || 'Login failed';
     }
   } catch (error) {
+    console.error('[Login] Error:', error);
     loginError.value = error.message || 'Connection failed. Check server settings.';
     $q.notify({
       type: 'negative',
@@ -259,6 +268,7 @@ onMounted(() => {
 
   // Expose test function to window for debugging from Safari console
   if (typeof window !== 'undefined') {
+    // Test GET request
     window.testNexControlConnection = async () => {
       try {
         const protocol = serverConfig.protocol || 'http';
@@ -266,7 +276,7 @@ onMounted(() => {
         const port = serverConfig.port;
         const url = `${protocol}://${host}:${port}/api/test/connection`;
 
-        console.log('[Test] Connecting to:', url);
+        console.log('[Test GET] Connecting to:', url);
 
         const response = await fetch(url, {
           method: 'GET',
@@ -275,16 +285,56 @@ onMounted(() => {
           }
         });
 
-        console.log('[Test] Response status:', response.status);
+        console.log('[Test GET] Response status:', response.status);
         const data = await response.json();
-        console.log('[Test] Response data:', data);
+        console.log('[Test GET] Response data:', data);
         return data;
       } catch (error) {
-        console.error('[Test] Error:', error);
+        console.error('[Test GET] Error:', error);
         throw error;
       }
     };
-    console.log('[NexControl] Debug: window.testNexControlConnection() available');
+
+    // Test POST request
+    window.testNexControlPOST = async () => {
+      try {
+        const protocol = serverConfig.protocol || 'http';
+        const host = serverConfig.host;
+        const port = serverConfig.port;
+        const url = `${protocol}://${host}:${port}/api/test/echo`;
+
+        console.log('[Test POST] Connecting to:', url);
+        console.log('[Test POST] Testing POST request...');
+
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), 10000);
+
+        const response = await fetch(url, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify({ test: 'data from iOS', timestamp: Date.now() }),
+          signal: controller.signal
+        });
+
+        clearTimeout(timeoutId);
+
+        console.log('[Test POST] Response status:', response.status);
+        const data = await response.json();
+        console.log('[Test POST] Response data:', data);
+        return data;
+      } catch (error) {
+        console.error('[Test POST] Error:', error);
+        if (error.name === 'AbortError') {
+          console.error('[Test POST] Request timed out after 10 seconds');
+        }
+        throw error;
+      }
+    };
+
+    console.log('[NexControl] Debug: Call window.testNexControlConnection() for GET test');
+    console.log('[NexControl] Debug: Call window.testNexControlPOST() for POST test');
   }
 });
 </script>
