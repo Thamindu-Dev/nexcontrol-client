@@ -53,7 +53,14 @@ export default defineConfig((/* ctx */) => {
       // polyfillModulePreload: true,
       // distDir
 
-      // extendViteConf (viteConf) {},
+      extendViteConf(viteConf) {
+        viteConf.server = viteConf.server || {};
+        viteConf.server.proxy = viteConf.server.proxy || {};
+        viteConf.server.proxy['/api'] = {
+          target: 'http://localhost:8000',
+          changeOrigin: true,
+        };
+      },
       // viteVuePluginOptions: {},
 
       vitePlugins: [

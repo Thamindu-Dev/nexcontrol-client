@@ -1,0 +1,92 @@
+name: Build iOS App
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+  workflow_dispatch:
+    inputs:
+      release:
+        description: 'Create release build'
+        required: false
+        default: 'false'
+        type: boolean
+
+jobs:
+  build-ios:
+    runs-on: macos-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+          cache-dependency-path: frontend/package-lock.json
+
+      - name: Install dependencies
+        working-directory: ./frontend
+        run: |
+          npm install
+          npm install -g @capacitor/cli
+
+      - name: Setup Python for backend info
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Copy environment config
+        working-directory: ./frontend
+        run: |
+          # Create a production config
+          echo "VITE_APP_VERSION=${{ github.run_number }}" >> $GITHUB_ENV
+          echo "VITE_BUILD_DATE=$(date +%Y-%m-%d)" >> $GITHUB_ENV
+
+      - name: Build Quasar app
+        working-directory: ./frontend
+        run: npm run build
+
+      - name: Sync Capacitor
+        working-directory: ./frontend
+        run: npx cap sync ios
+
+      - name: Install CocoaPods dependencies
+        working-directory: ./frontend/App/ios
+        run: pod install
+
+      - name: Build iOS app (archive)
+        working-directory: ./frontend/App/ios
+        run: |
+          xcodebuild -workspace App.xcworkspace \
+            -scheme App \
+            -configuration Release \
+            -archivePath ${{ runner.temp }}/App.xcarchive \
+            archive
+
+      - name: Export IPA
+        working-directory: ./frontend/App/ios
+        run: |
+          xcodebuild -exportArchive \
+            -archivePath ${{ runner.temp }}/App.xcarchive \
+            -exportPath ${{ runner.temp }}/export \
+            -exportOptionsPlist exportOptions.plist
+
+      - name: Upload IPA artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: NexControl-iOS
+          path: ${{ runner.temp }}/export/*.ipa
+          retention-days: 30
+
+      - name: Release (if triggered manually)
+        if: github.event_name == 'workflow_dispatch' && github.event.inputs.release == 'true'
+        uses: softprops/action-gh-release@v1
+        with:
+          files: ${{ runner.temp }}/export/*.ipa
+          tag_name: v${{ github.run_number }}
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

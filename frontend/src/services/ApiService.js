@@ -19,9 +19,23 @@ const TOKEN_STORAGE_KEY = 'nexcontrol_token';
 const SERVER_CONFIG_KEY = 'nexcontrol_server_config';
 
 /**
+ * Check if running in GitHub Codespaces
+ */
+function isCodespaces() {
+  return window.location.hostname.endsWith('.app.github.dev') ||
+         window.location.hostname.includes('codespaces');
+}
+
+/**
  * Get the base URL from localStorage or use default
+ * In Codespaces, use empty string to rely on proxy
  */
 function getBaseUrl() {
+  // In Codespaces, use proxy (no base URL)
+  if (isCodespaces()) {
+    return '';
+  }
+
   const config = getServerConfig();
   return `${config.protocol}://${config.host}:${config.port}`;
 }
