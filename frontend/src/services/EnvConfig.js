@@ -95,9 +95,10 @@ export function getWebSocketUrl() {
       return 'wss://staging-api.nexcontrol.example.com/ws';
     case 'mobile':
       return 'wss://api.nexcontrol.example.com/ws';
-    case 'codespaces':
+    case 'codespaces': {
       const wsProtocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
       return `${wsProtocol}//${window.location.host}/ws`;
+    }
     default:
       return 'ws://localhost:8000/ws';
   }
