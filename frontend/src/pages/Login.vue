@@ -218,8 +218,40 @@ async function handleLogin() {
     await settingsStore.updateServer(serverConfig);
     console.log('[Login] Server config updated');
 
-    // Attempt login
-    console.log('[Login] Calling authStore.login...');
+    // FIRST: Test connection to trigger iOS local network permission popup
+    console.log('[Login] Testing connection...');
+    const testUrl = `${serverUrl}/api/test/connection`;
+
+    try {
+      const testResponse = await fetch(testUrl, {
+        method: 'GET',
+        headers: { 'Content-Type': 'application/json' }
+      });
+      console.log('[Login] Test connection response:', testResponse.status);
+
+      // If test fails, don't proceed with login
+      if (!testResponse.ok) {
+        throw new Error(`Server returned ${testResponse.status}`);
+      }
+    } catch (testError) {
+      console.error('[Login] Connection test failed:', testError);
+      loginError.value = 'Cannot reach server. Make sure your PC is on and check the IP address.';
+      loading.value = false;
+
+      // Show helpful message for iOS
+      if (typeof window !== 'undefined' && window.Capacitor?.getPlatform() === 'ios') {
+        $q.notify({
+          type: 'warning',
+          message: 'If you see a popup about Local Network access, tap OK to allow',
+          position: 'top',
+          timeout: 5000
+        });
+      }
+      return;
+    }
+
+    // SECOND: Attempt login now that connection is confirmed
+    console.log('[Login] Connection OK, calling authStore.login...');
     const result = await authStore.login(password.value);
     console.log('[Login] Login result:', result);
 
