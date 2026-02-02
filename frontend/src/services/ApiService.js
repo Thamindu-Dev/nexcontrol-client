@@ -138,13 +138,8 @@ const api = {
       const url = `${this.baseURL}${endpoint}`;
       console.log('[API Request]', method, url);
 
-      // Get token with timeout to prevent hanging
-      const token = await Promise.race([
-        getToken(),
-        new Promise((_, reject) =>
-          setTimeout(() => reject(new Error('Token get timeout')), 2000)
-        )
-      ]).catch(() => null);
+      // Get token without timeout - let it resolve naturally
+      const token = await getToken().catch(() => null);
 
       // Prepare headers
       const headers = {
@@ -156,9 +151,9 @@ const api = {
         headers['Authorization'] = `Bearer ${token}`;
       }
 
-      // Prepare request options with timeout
+      // Prepare request options with longer timeout (30 seconds)
       const controller = new AbortController();
-      const timeoutId = setTimeout(() => controller.abort(), 15000); // 15 second timeout
+      const timeoutId = setTimeout(() => controller.abort(), 30000);
 
       const options = {
         method,
@@ -203,6 +198,12 @@ const api = {
 
       return responseData;
     } catch (error) {
+      // Handle abort errors specifically
+      if (error.name === 'AbortError') {
+        console.error('[API] Request timeout or aborted:', endpoint);
+        throw new Error('Request timeout. Please check your connection and try again.');
+      }
+
       // Re-throw API errors
       if (error.message) {
         throw error;

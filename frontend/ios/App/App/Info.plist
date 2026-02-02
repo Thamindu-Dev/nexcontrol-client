@@ -56,5 +56,12 @@
 	<string>This app may need camera access for scanning QR codes</string>
 	<key>NSPhotoLibraryUsageDescription</key>
 	<string>This app may need photo library access for saving images</string>
+	<key>NSLocalNetworkUsageDescription</key>
+	<string>This app requires access to your local network to connect to your PC</string>
+	<key>NSBonjourServices</key>
+	<array>
+		<string>_http._tcp</string>
+		<string>_https._tcp</string>
+	</array>
 </dict>
 </plist>

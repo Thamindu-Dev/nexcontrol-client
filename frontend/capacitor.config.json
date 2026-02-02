@@ -9,7 +9,8 @@
   "ios": {
     "scheme": "NexControl",
     "bundleId": "com.nexcontrol.app",
-    "overridesWebViewPackage": null
+    "overridesWebViewPackage": null,
+    "contentMode": "origin"
   },
   "android": {
     "buildOptions": {
@@ -22,6 +23,7 @@
     "cleartext": true,
     "allowNavigation": [
       "*"
-    ]
+    ],
+    "iosContentMode": "origin"
   }
 }
