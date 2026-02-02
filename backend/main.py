@@ -1688,6 +1688,24 @@ async def login(request: LoginRequest, http_request: Request):
         )
 
 
+@app.options("/api/auth/login", tags=["Authentication"])
+async def login_options():
+    """
+    Explicit OPTIONS handler for login endpoint
+    iOS/Capacitor requires explicit CORS preflight response
+    """
+    from fastapi.responses import Response
+    return Response(
+        status_code=200,
+        headers={
+            "Access-Control-Allow-Origin": "*",
+            "Access-Control-Allow-Methods": "POST, OPTIONS",
+            "Access-Control-Allow-Headers": "*",
+            "Access-Control-Max-Age": "86400"
+        }
+    )
+
+
 @app.get("/api/auth/verify", tags=["Authentication"])
 async def verify_token(current_user: dict = Depends(get_current_user)):
     """
@@ -2234,6 +2252,43 @@ async def root():
         },
         "timestamp": time.time()
     }
+
+
+@app.get("/api/test/connection", tags=["General"])
+async def test_connection():
+    """
+    Simple connection test endpoint for debugging iOS network issues
+    No authentication required, returns CORS headers
+    """
+    from fastapi.responses import JSONResponse
+    return JSONResponse(
+        content={
+            "status": "connected",
+            "message": "Connection successful! Your iOS device can reach the server.",
+            "timestamp": time.time(),
+            "server_time": datetime.now().isoformat()
+        },
+        status_code=200,
+        headers={
+            "Access-Control-Allow-Origin": "*",
+            "Access-Control-Allow-Methods": "GET, OPTIONS",
+            "Access-Control-Allow-Headers": "*"
+        }
+    )
+
+
+@app.options("/api/test/connection", tags=["General"])
+async def test_connection_options():
+    """OPTIONS handler for test connection endpoint"""
+    from fastapi.responses import Response
+    return Response(
+        status_code=200,
+        headers={
+            "Access-Control-Allow-Origin": "*",
+            "Access-Control-Allow-Methods": "GET, OPTIONS",
+            "Access-Control-Allow-Headers": "*"
+        }
+    )
 
 
 @app.get("/stats", tags=["General"])

@@ -256,6 +256,36 @@ onMounted(() => {
   if (savedConfig) {
     Object.assign(serverConfig, savedConfig);
   }
+
+  // Expose test function to window for debugging from Safari console
+  if (typeof window !== 'undefined') {
+    window.testNexControlConnection = async () => {
+      try {
+        const protocol = serverConfig.protocol || 'http';
+        const host = serverConfig.host;
+        const port = serverConfig.port;
+        const url = `${protocol}://${host}:${port}/api/test/connection`;
+
+        console.log('[Test] Connecting to:', url);
+
+        const response = await fetch(url, {
+          method: 'GET',
+          headers: {
+            'Content-Type': 'application/json'
+          }
+        });
+
+        console.log('[Test] Response status:', response.status);
+        const data = await response.json();
+        console.log('[Test] Response data:', data);
+        return data;
+      } catch (error) {
+        console.error('[Test] Error:', error);
+        throw error;
+      }
+    };
+    console.log('[NexControl] Debug: window.testNexControlConnection() available');
+  }
 });
 </script>
 
