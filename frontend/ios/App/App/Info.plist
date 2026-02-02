@@ -47,5 +47,14 @@
 	</array>
 	<key>UIViewControllerBasedStatusBarAppearance</key>
 	<true/>
+	<key>NSAppTransportSecurity</key>
+	<dict>
+		<key>NSAllowsArbitraryLoads</key>
+		<true/>
+	</dict>
+	<key>NSCameraUsageDescription</key>
+	<string>This app may need camera access for scanning QR codes</string>
+	<key>NSPhotoLibraryUsageDescription</key>
+	<string>This app may need photo library access for saving images</string>
 </dict>
 </plist>

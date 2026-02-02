@@ -3,12 +3,25 @@
   "appName": "NexControl",
   "webDir": "dist/spa",
   "bundledWebRuntime": false,
+  "version": "1.0.0",
+  "build": "1",
+  "resources": "resources",
   "ios": {
-    "scheme": "NexControl"
+    "scheme": "NexControl",
+    "bundleId": "com.nexcontrol.app",
+    "overridesWebViewPackage": null
   },
   "android": {
     "buildOptions": {
       "signingType": "apk"
-    }
+    },
+    "packageId": "com.nexcontrol.app"
+  },
+  "server": {
+    "androidScheme": "https",
+    "cleartext": true,
+    "allowNavigation": [
+      "*"
+    ]
   }
 }
