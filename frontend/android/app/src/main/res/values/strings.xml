@@ -1,0 +1,7 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="app_name">NexControl</string>
+    <string name="title_activity_main">NexControl</string>
+    <string name="package_name">com.nexcontrol.app</string>
+    <string name="custom_url_scheme">com.nexcontrol.app</string>
+</resources>
