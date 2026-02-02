@@ -14,7 +14,13 @@
     "test:coverage": "vitest --coverage",
     "dev": "quasar dev",
     "build": "quasar build",
-    "postinstall": "quasar prepare"
+    "postinstall": "quasar prepare",
+    "cap:sync": "./scripts/sync.sh all",
+    "cap:sync:ios": "./scripts/sync.sh ios",
+    "cap:sync:android": "./scripts/sync.sh android",
+    "cap:build": "./scripts/build.sh",
+    "cap:clean": "./scripts/clean.sh",
+    "cap:clean:deep": "./scripts/clean.sh --deep"
   },
   "dependencies": {
     "@capacitor/android": "^8.0.2",
