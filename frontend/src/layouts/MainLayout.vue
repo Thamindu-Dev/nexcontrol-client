@@ -61,7 +61,7 @@
             <q-icon name="computer" size="32px" color="white" />
           </div>
           <div>
-            <div class="text-h6 text-weight-bold text-primary">NexControl</div>
+            <div class="text-h6 text-weight-bold text-white">NexControl</div>
             <div class="text-caption text-grey-5">Remote PC Controller</div>
           </div>
         </div>
@@ -73,9 +73,9 @@
               size="18px"
               class="q-mr-sm"
             />
-            <span class="text-subtitle2 text-primary">{{ isConnected ? 'Connected' : 'Disconnected' }}</span>
+            <span class="text-subtitle2 text-white">{{ isConnected ? 'Connected' : 'Disconnected' }}</span>
           </div>
-          <div class="text-caption text-secondary q-mt-xs">{{ serverInfo }}</div>
+          <div class="text-caption text-grey-6 q-mt-xs">{{ serverInfo }}</div>
         </div>
       </div>
 
@@ -101,10 +101,10 @@
             </div>
           </q-item-section>
           <q-item-section>
-            <q-item-label :class="{ 'text-weight-bold': link.link === $route.path, 'text-primary': true }">
+            <q-item-label :class="{ 'text-weight-bold': link.link === $route.path, 'text-white': true }">
               {{ link.title }}
             </q-item-label>
-            <q-item-label caption class="text-secondary">{{ link.caption }}</q-item-label>
+            <q-item-label caption class="text-grey-6">{{ link.caption }}</q-item-label>
           </q-item-section>
           <q-item-section side v-if="link.link === $route.path">
             <q-icon name="chevron_right" color="cyan" size="20px" />
@@ -136,7 +136,7 @@
             </div>
           </q-item-section>
           <q-item-section>
-            <q-item-label class="text-primary">Refresh Stats</q-item-label>
+            <q-item-label class="text-white">Refresh Stats</q-item-label>
           </q-item-section>
         </q-item>
 
@@ -152,14 +152,14 @@
             </div>
           </q-item-section>
           <q-item-section>
-            <q-item-label class="text-primary">Settings</q-item-label>
+            <q-item-label class="text-white">Settings</q-item-label>
           </q-item-section>
         </q-item>
       </q-list>
     </q-drawer>
 
     <!-- Page Container -->
-    <q-page-container>
+    <q-page-container class="bg-black">
       <router-view />
     </q-page-container>
 
@@ -169,11 +169,11 @@
         <div class="row col-12 items-center q-pa-sm footer-content">
           <div class="row items-center">
             <div class="status-dot q-mr-sm" :class="{ 'status-connected': isConnected, 'status-disconnected': !isConnected }"></div>
-            <span class="text-subtitle2 text-primary q-mr-md">
+            <span class="text-subtitle2 text-white q-mr-md">
               {{ isConnected ? 'Connected' : 'Disconnected' }}
             </span>
             <q-separator vertical class="q-mx-md bg-grey-8" style="opacity: 0.3" />
-            <span class="text-caption text-secondary">
+            <span class="text-caption text-grey-6">
               <q-icon name="dns" size="14px" class="q-mr-xs" />
               {{ serverInfo }}
             </span>
@@ -252,16 +252,10 @@ body,
   z-index: 1;
 }
 
-/* Header - Theme Aware */
+/* Header - Pure Black */
 .app-header {
-  background: var(--q-dark) or #1d1d1d;
-  border-bottom: 1px solid var(--q-separator);
-}
-
-/* Light mode overrides */
-.body--light .app-header {
-  background: #ffffff;
-  border-bottom: 1px solid #e0e0e0;
+  background: #000000;
+  border-bottom: 1px solid #333333;
 }
 
 /* Ensure toolbar has proper spacing with safe area - REDUCED PADDING */
@@ -274,95 +268,63 @@ body,
 .app-title {
   font-size: 1.1rem;
   font-weight: 700;
-  color: var(--q-primary-text);
+  color: #FFFFFF;
   letter-spacing: 0.5px;
 }
 
 .logo-wrapper {
   width: 36px;
   height: 36px;
-  background: var(--q-dark-page);
-  border: 1px solid var(--q-separator);
+  background: #0A0A0A;
+  border: 1px solid #333333;
   border-radius: 8px;
   display: flex;
   align-items: center;
   justify-content: center;
 }
 
-.body--light .logo-wrapper {
-  background: #f5f5f5;
-  border: 1px solid #e0e0e0;
-}
-
 .logo-wrapper-large {
   width: 48px;
   height: 48px;
-  background: var(--q-dark-page);
-  border: 1px solid var(--q-separator);
+  background: #0A0A0A;
+  border: 1px solid #333333;
   border-radius: 10px;
   display: flex;
   align-items: center;
   justify-content: center;
 }
 
-.body--light .logo-wrapper-large {
-  background: #f5f5f5;
-  border: 1px solid #e0e0e0;
-}
-
 /* Header Buttons */
 .header-btn {
-  color: var(--q-primary-text);
+  color: #FFFFFF;
   background: transparent;
-  border: 1px solid var(--q-separator);
+  border: 1px solid #333333;
   border-radius: 8px;
-}
-
-.body--light .header-btn {
-  color: #1976d2;
 }
 
 .logout-btn {
   color: #ef4444;
-  border-color: var(--q-separator);
-}
-
-.body--light .logout-btn {
-  color: #d32f2f;
+  border-color: #333333;
 }
 
 .logout-btn:hover {
   background: rgba(239, 68, 68, 0.1);
 }
 
-/* Drawer - Theme Aware */
+/* Drawer - Pure Black */
 .app-drawer {
-  background: var(--q-dark-page);
-  border-right: 1px solid var(--q-separator);
-}
-
-.body--light .app-drawer {
-  background: #ffffff;
-  border-right: 1px solid #e0e0e0;
+  background: #000000;
+  border-right: 1px solid #333333;
 }
 
 .drawer-header {
-  border-bottom: 1px solid var(--q-separator);
-  background: var(--q-dark-page);
-}
-
-.body--light .drawer-header {
-  background: #f5f5f5;
+  border-bottom: 1px solid #333333;
+  background: #000000;
 }
 
 .connection-indicator {
-  background: var(--q-dark-page);
-  border: 1px solid var(--q-separator);
-}
-
-.body--light .connection-indicator {
-  background: #f5f5f5;
-  border: 1px solid #e0e0e0;
+  background: #0A0A0A;
+  border: 1px solid #333333;
 }
 
 /* Drawer List */
@@ -371,17 +333,13 @@ body,
 }
 
 .section-label {
-  color: var(--q-secondary-text);
+  color: #666666;
   font-size: 0.7rem;
   font-weight: 600;
   letter-spacing: 1px;
   text-transform: uppercase;
   padding-left: 8px;
   margin-bottom: 8px;
-}
-
-.body--light .section-label {
-  color: #757575;
 }
 
 /* Navigation Items */
@@ -394,38 +352,24 @@ body,
 }
 
 .nav-item:hover {
-  background: var(--q-dark-page);
-}
-
-.body--light .nav-item:hover {
-  background: #f5f5f5;
+  background: #0A0A0A;
 }
 
 .nav-item-active {
-  background: var(--q-dark-page) !important;
+  background: #0A0A0A !important;
   border: 1px solid rgba(34, 211, 238, 0.3);
-}
-
-.body--light .nav-item-active {
-  background: #e3f2fd !important;
-  border: 1px solid rgba(25, 118, 210, 0.3);
 }
 
 .icon-wrapper {
   width: 36px;
   height: 36px;
   border-radius: 8px;
-  background: var(--q-dark-page);
-  border: 1px solid var(--q-separator);
+  background: #0A0A0A;
+  border: 1px solid #333333;
   display: flex;
   align-items: center;
   justify-content: center;
   transition: all 0.2s ease;
-}
-
-.body--light .icon-wrapper {
-  background: #f5f5f5;
-  border: 1px solid #e0e0e0;
 }
 
 .icon-active {
@@ -433,17 +377,8 @@ body,
   border-color: rgba(34, 211, 238, 0.5);
 }
 
-.body--light .icon-active {
-  background: rgba(25, 118, 210, 0.1);
-  border-color: rgba(25, 118, 210, 0.3);
-}
-
 .nav-item:hover .icon-wrapper {
-  background: rgba(255, 255, 255, 0.05);
-}
-
-.body--light .nav-item:hover .icon-wrapper {
-  background: #eeeeee;
+  background: #111111;
 }
 
 /* Rotating animation */
@@ -456,28 +391,19 @@ body,
   to { transform: rotate(360deg); }
 }
 
-/* Footer - Theme Aware */
+/* Footer - Pure Black */
 .app-footer {
-  background: var(--q-dark);
-  border-top: 1px solid var(--q-separator);
-}
-
-.body--light .app-footer {
-  background: #ffffff;
-  border-top: 1px solid #e0e0e0;
+  background: #000000;
+  border-top: 1px solid #333333;
 }
 
 .footer-content {
-  background: var(--q-dark-page);
+  background: #0A0A0A;
   border-radius: 8px;
   padding: 10px 12px;
 }
 
-.body--light .footer-content {
-  background: #f5f5f5;
-}
-
-/* Status Dot - Theme Aware */
+/* Status Dot - Neon Cyan when connected */
 .status-dot {
   width: 8px;
   height: 8px;
@@ -490,18 +416,9 @@ body,
   box-shadow: 0 0 8px rgba(34, 211, 238, 0.6);
 }
 
-.body--light .status-connected {
-  background: #1976d2;
-  box-shadow: 0 0 8px rgba(25, 118, 210, 0.5);
-}
-
 .status-disconnected {
-  background: var(--q-secondary-text);
+  background: #666666;
   box-shadow: none;
-}
-
-.body--light .status-disconnected {
-  background: #9e9e9e;
 }
 
 @keyframes pulse-dot {

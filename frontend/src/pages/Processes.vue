@@ -89,7 +89,7 @@
                   <td class="text-left">{{ process.pid }}</td>
                   <td class="text-left">
                     <div>{{ process.name || 'N/A' }}</div>
-                    <div class="text-caption text-secondary">
+                    <div class="text-caption text-grey-6">
                       {{ process.username || 'N/A' }}
                     </div>
                   </td>
@@ -246,81 +246,50 @@ onMounted(async () => {
 </script>
 
 <style scoped>
-/* Theme Aware Styles */
+/* OLED Theme Styles */
 .glass-card {
-  background: var(--q-dark-page);
-  border: 1px solid var(--q-separator);
+  background: #000000;
+  border: 1px solid #333333;
   border-radius: 12px;
 }
 
-.body--light .glass-card {
-  background: #ffffff;
-  border: 1px solid #e0e0e0;
-}
-
-/* Table Styling - Theme Aware */
+/* Table Styling - High Contrast */
 .q-markup-table {
-  background: var(--q-dark-page) !important;
-}
-
-.body--light .q-markup-table {
-  background: #ffffff !important;
+  background: #000000 !important;
 }
 
 .q-table {
-  background: var(--q-dark-page) !important;
-  color: var(--q-primary-text) !important;
+  background: #000000 !important;
+  color: #FFFFFF !important;
 }
 
 .q-table th {
-  color: var(--q-primary-text) !important;
+  color: #FFFFFF !important;
   font-weight: 600;
-  background: var(--q-dark-page) !important;
-  border-bottom: 2px solid var(--q-separator) !important;
-}
-
-.body--light .q-table th {
-  background: #f5f5f5 !important;
-  border-bottom: 2px solid #e0e0e0 !important;
+  background: #0A0A0A !important;
+  border-bottom: 2px solid #333333 !important;
 }
 
 .q-table td {
-  color: var(--q-primary-text) !important;
-  background: var(--q-dark-page) !important;
-  border-bottom: 1px solid var(--q-separator) !important;
-}
-
-.body--light .q-table td {
-  background: #ffffff !important;
-  border-bottom: 1px solid #eeeeee !important;
+  color: #E0E0E0 !important;
+  background: #000000 !important;
+  border-bottom: 1px solid #1A1A1A !important;
 }
 
 .q-table tr:hover td {
-  background: rgba(255, 255, 255, 0.03) !important;
-}
-
-.body--light .q-table tr:hover td {
-  background: #f5f5f5 !important;
+  background: #0A0A0A !important;
 }
 
 .q-table tbody tr {
-  background: var(--q-dark-page) !important;
+  background: #000000 !important;
 }
 
-.body--light .q-table tbody tr {
-  background: #ffffff !important;
-}
-
-/* Process list text colors */
+/* Ensure process list text is visible */
 .process-name {
-  color: var(--q-primary-text);
+  color: #FFFFFF;
 }
 
 .process-user {
-  color: var(--q-secondary-text);
-}
-
-.body--light .process-user {
-  color: #757575;
+  color: #AAAAAA;
 }
 </style>

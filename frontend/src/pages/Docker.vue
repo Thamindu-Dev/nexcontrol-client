@@ -47,7 +47,7 @@
             class="q-mb-md"
           />
           <div class="text-h6">Docker is not available</div>
-          <div class="text-caption text-secondary q-mt-sm">
+          <div class="text-caption text-grey q-mt-sm">
             Docker is either not installed or not running on the remote PC.<br>
             Install Docker and start the Docker daemon to use this feature.
           </div>
@@ -84,7 +84,7 @@
                 <div class="text-subtitle1 text-weight-bold">
                   {{ container.name }}
                 </div>
-                <div class="text-caption text-secondary">
+                <div class="text-caption text-grey">
                   {{ container.image }}
                 </div>
               </div>
@@ -314,31 +314,20 @@ onMounted(async () => {
 
 <style scoped>
 /* Container Cards - OLED Theme */
-/* Theme-aware glass card */
+/* Glass Card - Dark Mode */
 .glass-card {
-  background: var(--q-dark-page);
-  border: 1px solid var(--q-separator);
+  background: #000000;
+  border: 1px solid #333333;
   border-radius: 12px;
 }
 
-.body--light .glass-card {
-  background: #ffffff;
-  border: 1px solid #e0e0e0;
-}
-
-/* Preformatted text for logs - Theme aware */
+/* Preformatted text for logs */
 pre {
-  background: var(--q-dark-page) !important;
-  border: 1px solid var(--q-separator);
+  background: #0A0A0A !important;
+  border: 1px solid #333333;
   border-radius: 8px;
-  color: var(--q-primary-text);
+  color: #E0E0E0;
   font-family: 'Courier New', monospace;
   font-size: 0.85rem;
-}
-
-.body--light pre {
-  background: #f5f5f5 !important;
-  border: 1px solid #e0e0e0;
-  color: #212121;
 }
 </style>
