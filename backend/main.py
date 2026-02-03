@@ -88,6 +88,9 @@ import jose.exceptions
 from jose import jwt
 from passlib.context import CryptContext
 
+# Password hashing context (must be defined before use)
+pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
+
 # ============================================================
 # CONFIGURATION & CONSTANTS
 # ============================================================
@@ -184,9 +187,6 @@ app.add_middleware(
     allow_headers=["*"],  # Allow all headers
     max_age=600,  # Cache preflight response for 10 minutes
 )
-
-# Password hashing context
-pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 
 # Login attempt tracking (in production, use Redis)
 login_attempts = {}
