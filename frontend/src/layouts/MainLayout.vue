@@ -11,7 +11,8 @@
 -->
 <template>
   <q-layout view="lHh Lpr lFf">
-    <q-header elevated class="bg-primary">
+    <!-- Header -->
+    <q-header elevated class="glass-header">
       <q-toolbar>
         <q-btn
           flat
@@ -19,14 +20,17 @@
           round
           icon="menu"
           aria-label="Menu"
+          class="menu-btn glass-btn"
           @click="toggleLeftDrawer"
         />
 
         <q-toolbar-title>
-          <q-avatar color="white" text-color="primary" size="sm" class="q-mr-sm">
-            <q-icon name="computer" />
-          </q-avatar>
-          NexControl
+          <div class="row items-center">
+            <div class="logo-wrapper q-mr-sm">
+              <q-icon name="computer" size="24px" color="white" />
+            </div>
+            <span class="app-title">NexControl</span>
+          </div>
         </q-toolbar-title>
 
         <q-btn
@@ -34,90 +38,151 @@
           round
           dense
           icon="logout"
+          class="glass-btn logout-btn"
           @click="logout"
           v-if="authStore.isAuthenticated"
         >
-          <q-tooltip>Logout</q-tooltip>
+          <q-tooltip anchor="bottom middle" self="top middle">Logout</q-tooltip>
         </q-btn>
       </q-toolbar>
     </q-header>
 
-    <q-drawer v-model="leftDrawerOpen" show-if-above bordered>
-      <q-list>
-        <q-item-label header>Navigation</q-item-label>
+    <!-- Drawer -->
+    <q-drawer
+      v-model="leftDrawerOpen"
+      show-if-above
+      bordered
+      class="glass-drawer"
+      :width="280"
+    >
+      <div class="drawer-header q-pa-lg">
+        <div class="row items-center q-mb-md">
+          <div class="logo-wrapper-large q-mr-sm">
+            <q-icon name="computer" size="32px" color="primary" />
+          </div>
+          <div>
+            <div class="text-h6 text-weight-bold text-white">NexControl</div>
+            <div class="text-caption text-grey-4">Remote PC Controller</div>
+          </div>
+        </div>
+        <div class="connection-indicator q-pa-sm rounded-borders">
+          <div class="row items-center">
+            <q-icon
+              :name="isConnected ? 'check_circle' : 'error'"
+              :color="isConnected ? 'positive' : 'negative'"
+              size="20px"
+              class="q-mr-sm"
+            />
+            <span class="text-subtitle2 text-white">{{ isConnected ? 'Connected' : 'Disconnected' }}</span>
+          </div>
+          <div class="text-caption text-grey-4 q-mt-xs">{{ serverInfo }}</div>
+        </div>
+      </div>
+
+      <q-list class="drawer-list">
+        <!-- Navigation Section -->
+        <q-item-label header class="section-label">
+          <q-icon name="navigation" size="16px" class="q-mr-xs" />
+          Navigation
+        </q-item-label>
 
         <q-item
           v-for="link in navigationLinks"
           :key="link.title"
           clickable
           :active="link.link === $route.path"
+          active-class="nav-item-active"
           @click="navigateTo(link.link)"
+          class="nav-item glass-btn"
           v-ripple
         >
           <q-item-section avatar>
-            <q-icon :name="link.icon" :color="link.link === $route.path ? 'primary' : undefined" />
+            <div class="icon-wrapper" :class="{ 'icon-active': link.link === $route.path }">
+              <q-icon :name="link.icon" size="24px" />
+            </div>
           </q-item-section>
           <q-item-section>
-            <q-item-label :class="{ 'text-weight-bold': link.link === $route.path }">
+            <q-item-label :class="{ 'text-weight-bold': link.link === $route.path, 'text-white': true }">
               {{ link.title }}
             </q-item-label>
-            <q-item-label caption>{{ link.caption }}</q-item-label>
+            <q-item-label caption class="text-grey-4">{{ link.caption }}</q-item-label>
+          </q-item-section>
+          <q-item-section side v-if="link.link === $route.path">
+            <q-icon name="chevron_right" color="primary" size="20px" />
           </q-item-section>
         </q-item>
 
-        <q-separator spaced />
+        <q-separator class="q-my-md bg-white" style="opacity: 0.1" />
 
-        <q-item-label header>System</q-item-label>
+        <!-- System Section -->
+        <q-item-label header class="section-label">
+          <q-icon name="settings" size="16px" class="q-mr-xs" />
+          System
+        </q-item-label>
 
         <q-item
           clickable
           @click="refreshStats"
           :disable="loading"
+          class="nav-item glass-btn"
           v-ripple
         >
           <q-item-section avatar>
-            <q-icon name="refresh" :class="{ 'text-primary': loading }" />
+            <div class="icon-wrapper">
+              <q-icon
+                name="refresh"
+                size="24px"
+                :class="{ 'rotating': loading, 'text-primary': loading }"
+              />
+            </div>
           </q-item-section>
           <q-item-section>
-            <q-item-label>Refresh Stats</q-item-label>
+            <q-item-label class="text-white">Refresh Stats</q-item-label>
           </q-item-section>
         </q-item>
 
         <q-item
           clickable
           @click="navigateTo('/settings')"
+          class="nav-item glass-btn"
           v-ripple
         >
           <q-item-section avatar>
-            <q-icon name="settings" />
+            <div class="icon-wrapper">
+              <q-icon name="settings" size="24px" />
+            </div>
           </q-item-section>
           <q-item-section>
-            <q-item-label>Settings</q-item-label>
+            <q-item-label class="text-white">Settings</q-item-label>
           </q-item-section>
         </q-item>
       </q-list>
     </q-drawer>
 
-    <q-page-container>
+    <!-- Page Container -->
+    <q-page-container class="bg-transparent">
       <router-view />
     </q-page-container>
 
-    <!-- Connection Status Footer -->
-    <q-footer v-if="authStore.isAuthenticated" elevated class="bg-grey-9">
+    <!-- Footer -->
+    <q-footer v-if="authStore.isAuthenticated" elevated class="glass-footer">
       <q-toolbar class="q-pa-none">
-        <div class="row col-12 items-center q-pa-sm">
-          <q-icon
-            :name="isConnected ? 'check_circle' : 'error'"
-            :color="isConnected ? 'positive' : 'negative'"
-            size="sm"
-          />
-          <span class="q-ml-sm text-caption">
-            {{ isConnected ? 'Connected' : 'Disconnected' }}
-          </span>
+        <div class="row col-12 items-center q-pa-sm footer-content">
+          <div class="row items-center">
+            <div class="status-dot q-mr-sm" :class="{ 'status-connected': isConnected, 'status-disconnected': !isConnected }"></div>
+            <span class="text-subtitle2 text-white q-mr-md">
+              {{ isConnected ? 'Connected' : 'Disconnected' }}
+            </span>
+            <q-separator vertical class="q-mx-md bg-white" style="opacity: 0.2" />
+            <span class="text-caption text-grey-3">
+              <q-icon name="dns" size="14px" class="q-mr-xs" />
+              {{ serverInfo }}
+            </span>
+          </div>
           <q-space />
-          <span class="text-caption text-grey">
-            {{ serverInfo }}
-          </span>
+          <div class="text-caption text-grey-4">
+            © 2026 Thamindu-Dev | v1.0.0
+          </div>
         </div>
       </q-toolbar>
     </q-footer>
@@ -210,7 +275,8 @@ function logout() {
     title: 'Logout',
     message: 'Are you sure you want to logout?',
     cancel: true,
-    persistent: true
+    persistent: true,
+    class: 'glass-dialog'
   }).onOk(async () => {
     await authStore.logout();
     router.push('/login');
@@ -230,12 +296,19 @@ async function refreshStats() {
       systemStore.fetchGPUStats()
     ]);
     isConnected.value = true;
+    $q.notify({
+      type: 'positive',
+      message: 'Stats refreshed successfully',
+      position: 'top',
+      classes: 'notification-glossy'
+    });
   } catch {
     isConnected.value = false;
     $q.notify({
       type: 'negative',
       message: 'Failed to refresh stats',
-      position: 'top'
+      position: 'top',
+      classes: 'notification-glossy'
     });
   } finally {
     loading.value = false;
@@ -270,7 +343,244 @@ onUnmounted(() => {
 </script>
 
 <style scoped>
-.q-item.q-item--active {
-  background-color: rgba(0, 0, 0, 0.03);
+/* Header */
+.glass-header {
+  background: rgba(15, 12, 41, 0.85);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.app-title {
+  font-size: 1.25rem;
+  font-weight: 700;
+  background: linear-gradient(135deg, #3b82f6, #8b5cf6);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+.logo-wrapper {
+  width: 40px;
+  height: 40px;
+  background: linear-gradient(135deg, #3b82f6, #8b5cf6);
+  border-radius: 10px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 4px 12px rgba(59, 130, 246, 0.3);
+}
+
+.logo-wrapper-large {
+  width: 50px;
+  height: 50px;
+  background: linear-gradient(135deg, #3b82f6, #8b5cf6);
+  border-radius: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 6px 16px rgba(59, 130, 246, 0.4);
+  animation: pulse-glow 3s ease-in-out infinite;
+}
+
+@keyframes pulse-glow {
+  0%, 100% {
+    box-shadow: 0 6px 16px rgba(59, 130, 246, 0.4);
+  }
+  50% {
+    box-shadow: 0 6px 24px rgba(139, 92, 246, 0.6);
+  }
+}
+
+/* Menu Button */
+.menu-btn {
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+/* Logout Button */
+.logout-btn {
+  color: #f87171;
+}
+
+.logout-btn:hover {
+  background: rgba(239, 68, 68, 0.1);
+  color: #ef4444;
+}
+
+/* Glass Button */
+.glass-btn {
+  background: rgba(255, 255, 255, 0.05);
+  backdrop-filter: blur(10px);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  transition: all 0.3s ease;
+}
+
+.glass-btn:hover {
+  background: rgba(255, 255, 255, 0.1);
+  transform: scale(1.05);
+}
+
+/* Drawer */
+.glass-drawer {
+  background: rgba(15, 12, 41, 0.95);
+  backdrop-filter: blur(30px);
+  -webkit-backdrop-filter: blur(30px);
+  border-right: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.drawer-header {
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+  background: linear-gradient(135deg, rgba(59, 130, 246, 0.1) 0%, rgba(139, 92, 246, 0.1) 100%);
+}
+
+.connection-indicator {
+  background: rgba(59, 130, 246, 0.15);
+  border: 1px solid rgba(59, 130, 246, 0.3);
+  backdrop-filter: blur(10px);
+}
+
+/* Drawer List */
+.drawer-list {
+  padding: 16px;
+}
+
+.section-label {
+  color: #90caf9;
+  font-size: 0.75rem;
+  font-weight: 600;
+  letter-spacing: 0.5px;
+  text-transform: uppercase;
+  padding-left: 8px;
+  margin-bottom: 8px;
+}
+
+/* Navigation Items */
+.nav-item {
+  border-radius: 12px;
+  margin-bottom: 4px;
+  padding: 12px 16px;
+  transition: all 0.3s ease;
+}
+
+.nav-item:hover {
+  background: rgba(255, 255, 255, 0.08);
+  transform: translateX(4px);
+}
+
+.nav-item-active {
+  background: linear-gradient(135deg, rgba(59, 130, 246, 0.2), rgba(139, 92, 246, 0.2)) !important;
+  border: 1px solid rgba(59, 130, 246, 0.3);
+  box-shadow: 0 4px 12px rgba(59, 130, 246, 0.2);
+}
+
+.icon-wrapper {
+  width: 40px;
+  height: 40px;
+  border-radius: 10px;
+  background: rgba(255, 255, 255, 0.05);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.3s ease;
+}
+
+.icon-active {
+  background: linear-gradient(135deg, #3b82f6, #8b5cf6);
+  box-shadow: 0 4px 12px rgba(59, 130, 246, 0.4);
+}
+
+.nav-item:hover .icon-wrapper {
+  background: rgba(59, 130, 246, 0.15);
+  transform: scale(1.05);
+}
+
+.nav-item-active .icon-wrapper {
+  transform: scale(1.05);
+}
+
+/* Rotating animation for refresh icon */
+.rotating {
+  animation: rotate 1s linear infinite;
+}
+
+@keyframes rotate {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+/* Footer */
+.glass-footer {
+  background: rgba(15, 12, 41, 0.85);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border-top: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.footer-content {
+  background: rgba(59, 130, 246, 0.05);
+  border-radius: 8px;
+  padding: 12px 16px;
+}
+
+/* Status Dot */
+.status-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  animation: pulse-dot 2s ease-in-out infinite;
+}
+
+.status-connected {
+  background: #4ade80;
+  box-shadow: 0 0 8px #4ade80;
+}
+
+.status-disconnected {
+  background: #ef4444;
+  box-shadow: 0 0 8px #ef4444;
+}
+
+@keyframes pulse-dot {
+  0%, 100% {
+    opacity: 1;
+    transform: scale(1);
+  }
+  50% {
+    opacity: 0.7;
+    transform: scale(1.1);
+  }
+}
+
+/* Page Container */
+.bg-transparent {
+  background: transparent !important;
+}
+
+/* Dialog Styling */
+:deep(.glass-dialog) {
+  backdrop-filter: blur(20px);
+  background: rgba(30, 30, 30, 0.9) !important;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+/* Notification Styling */
+:deep(.notification-glossy) {
+  backdrop-filter: blur(10px);
+  background: rgba(30, 30, 30, 0.9) !important;
+}
+
+/* Smooth Transitions */
+* {
+  transition: background-color 0.3s ease, border-color 0.3s ease, color 0.3s ease;
+}
+
+/* Remove default active background */
+:deep(.q-item.q-item--active) {
+  background-color: transparent !important;
 }
 </style>

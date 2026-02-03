@@ -31,21 +31,20 @@ jobs:
       - name: Install dependencies
         working-directory: ./frontend
         run: |
-          npm install
-          npm install -g @capacitor/cli
-          npm install @capacitor/core @capacitor/cli
+          npm ci
+          npm install -g @capacitor/cli@latest
 
-      - name: Setup Python for backend info
-        uses: actions/setup-python@v5
-        with:
-          python-version: '3.12'
-
-      - name: Copy environment config
+      - name: Create production environment file
         working-directory: ./frontend
         run: |
-          # Create a production config
-          echo "VITE_APP_VERSION=${{ github.run_number }}" >> $GITHUB_ENV
-          echo "VITE_BUILD_DATE=$(date +%Y-%m-%d)" >> $GITHUB_ENV
+          cat > .env.production << EOF
+          VITE_APP_VERSION=${{ github.run_number }}
+          VITE_BUILD_DATE=$(date +%Y-%m-%d)
+          VITE_BUILD_TYPE=production
+          VITE_GIT_SHA=${{ github.sha }}
+          EOF
+
+          cat .env.production
 
       - name: Build Quasar app
         working-directory: ./frontend
@@ -55,10 +54,16 @@ jobs:
         working-directory: ./frontend
         run: npx cap sync ios
 
+      - name: Update iOS version and build
+        working-directory: ./frontend/ios/App
+        run: |
+          # Update CFBundleShortVersionString and CFBundleVersion
+          plutil -replace CFBundleShortVersionString -string "${{ github.run_number }}" App/Info.plist
+          plutil -replace CFBundleVersion -string "${{ github.run_number }}" App/Info.plist
+
       - name: Clean Pods and derived data
         working-directory: ./frontend/ios/App
         run: |
-          # Remove Pods to ensure clean install
           rm -rf Pods
           rm -rf Podfile.lock
           rm -rf ~/Library/Developer/Xcode/DerivedData
@@ -77,43 +82,51 @@ jobs:
       - name: Build iOS app (archive without code signing)
         working-directory: ./frontend/ios/App
         run: |
-          # Use workspace if it exists, otherwise use project
-          if [ -f "App.xcworkspace/contents.xcworkspacedata" ]; then
-            echo "Using workspace..."
+          # Use NexControl scheme (from capacitor.config.json)
+          if [ -f "NexControl.xcworkspace/contents.xcworkspacedata" ]; then
+            echo "Using workspace with NexControl scheme..."
+            xcodebuild -workspace NexControl.xcworkspace \
+              -scheme NexControl \
+              -configuration Release \
+              -archivePath ${{ runner.temp }}/NexControl.xcarchive \
+              CODE_SIGN_IDENTITY="" \
+              CODE_SIGNING_REQUIRED=NO \
+              CODE_SIGNING_ALLOWED=NO \
+              archive
+          elif [ -f "App.xcworkspace/contents.xcworkspacedata" ]; then
+            echo "Using workspace with App scheme..."
             xcodebuild -workspace App.xcworkspace \
               -scheme App \
               -configuration Release \
-              -archivePath ${{ runner.temp }}/App.xcarchive \
+              -archivePath ${{ runner.temp }}/NexControl.xcarchive \
               CODE_SIGN_IDENTITY="" \
               CODE_SIGNING_REQUIRED=NO \
               CODE_SIGNING_ALLOWED=NO \
-              VALID_ARCHS="arm64" \
               archive
           else
-            echo "Using project..."
+            echo "Using project with App scheme..."
             xcodebuild -project App.xcodeproj \
               -scheme App \
               -configuration Release \
-              -archivePath ${{ runner.temp }}/App.xcarchive \
+              -archivePath ${{ runner.temp }}/NexControl.xcarchive \
               CODE_SIGN_IDENTITY="" \
               CODE_SIGNING_REQUIRED=NO \
               CODE_SIGNING_ALLOWED=NO \
-              VALID_ARCHS="arm64" \
               archive
           fi
 
       - name: Export .app bundle for sideloading
         run: |
           # Copy the .app bundle from the archive
-          cp -R ${{ runner.temp }}/App.xcarchive/Products/Applications/*.app ${{ runner.temp }}/NexControl.app
+          cp -R ${{ runner.temp }}/NexControl.xcarchive/Products/Applications/*.app ${{ runner.temp }}/NexControl.app
 
       - name: Create IPA for sideloading (optional)
         working-directory: ./frontend/ios/App
         run: |
           # Try to create unsigned IPA for sideloading tools
-          if [ -d "${{ runner.temp }}/App.xcarchive" ]; then
+          if [ -d "${{ runner.temp }}/NexControl.xcarchive" ]; then
             mkdir -p ${{ runner.temp }}/ipa/Payload
-            cp -R ${{ runner.temp }}/App.xcarchive/Products/Applications/*.app ${{ runner.temp }}/ipa/Payload/
+            cp -R ${{ runner.temp }}/NexControl.xcarchive/Products/Applications/*.app ${{ runner.temp }}/ipa/Payload/
             cd ${{ runner.temp }}/ipa
             zip -r ../NexControl-unsigned.ipa .
           fi
@@ -137,7 +150,7 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: NexControl-iOS-Archive
-          path: ${{ runner.temp }}/App.xcarchive
+          path: ${{ runner.temp }}/NexControl.xcarchive
           retention-days: 90
 
       - name: Release (if triggered manually)

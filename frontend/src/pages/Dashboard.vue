@@ -10,237 +10,336 @@
   ==============================================================================
 -->
 <template>
-  <q-page padding>
-    <!-- Header -->
-    <div class="row q-mb-md">
-      <div class="col-12">
-        <div class="row items-center q-gutter-sm">
-          <div class="text-h5">NexControl Dashboard</div>
-          <q-space />
-          <q-badge :color="serverStatusColor" rounded>
-            {{ serverStatusText }}
-          </q-badge>
-          <q-btn flat round dense icon="settings" @click="openSettings" />
-          <q-btn flat round dense icon="logout" @click="handleLogout" />
+  <div class="dashboard-page">
+    <!-- Animated Background -->
+    <div class="animated-background">
+      <div class="gradient-orb orb-1"></div>
+      <div class="gradient-orb orb-2"></div>
+      <div class="gradient-orb orb-3"></div>
+      <div class="gradient-orb orb-4"></div>
+    </div>
+
+    <q-page padding class="relative-position">
+      <!-- Header -->
+      <div class="row q-mb-lg header-section">
+        <div class="col-12">
+          <div class="row items-center q-gutter-sm">
+            <div class="text-h4 text-weight-bold text-white">
+              <q-icon name="dashboard" class="q-mr-sm" color="primary" />
+              Dashboard
+            </div>
+            <q-space />
+            <div class="status-badge glossy q-px-md q-py-sm rounded-borders">
+              <q-icon :name="serverStatusIcon" :color="serverStatusColor" size="20px" class="q-mr-xs" />
+              <span class="text-subtitle2 text-white">{{ serverStatusText }}</span>
+            </div>
+            <q-btn
+              flat
+              round
+              dense
+              icon="settings"
+              class="glass-btn"
+              @click="openSettings"
+            />
+            <q-btn
+              flat
+              round
+              dense
+              icon="logout"
+              class="glass-btn text-negative"
+              @click="handleLogout"
+            />
+          </div>
         </div>
       </div>
-    </div>
 
-    <!-- System Stats Cards -->
-    <div class="row q-gutter-md q-mb-lg">
-      <!-- CPU Card -->
-      <div class="col-12 col-sm-6 col-md-3">
-        <q-card>
-          <q-card-section>
-            <div class="text-subtitle2 text-grey-7">CPU Usage</div>
-          <div class="row items-center q-mt-sm">
-              <div class="col">
-                <div class="text-h4">{{ stats.cpu?.cpu_percent?.toFixed(1) || 0 }}%</div>
+      <!-- System Stats Cards -->
+      <div class="row q-gutter-md q-mb-xl">
+        <!-- CPU Card -->
+        <div class="col-12 col-sm-6 col-md-3">
+          <q-card class="stat-card glass-card glossy" flat bordered>
+            <q-card-section>
+              <div class="row items-center q-mb-sm">
+                <q-icon name="memory" size="32px" color="cyan" class="q-mr-sm stat-icon" />
+                <div class="text-subtitle2 text-blue-1">CPU Usage</div>
               </div>
-              <div class="col-auto">
-                <q-circular-progress
-                  :value="stats.cpu?.cpu_percent || 0"
-                  :thickness="0.2"
-                  size="60px"
-                  color="primary"
-                  :indeterminate="loading.stats"
-                />
-              </div>
-            </div>
-            <div class="text-caption text-grey">
-              {{ stats.cpu?.cpu_count || 0 }} cores @ {{ stats.cpu?.cpu_freq_mhz?.toFixed(0) || 0 }} MHz
-            </div>
-          </q-card-section>
-        </q-card>
-      </div>
-
-      <!-- Memory Card -->
-      <div class="col-12 col-sm-6 col-md-3">
-        <q-card>
-          <q-card-section>
-            <div class="text-subtitle2 text-grey-7">Memory Usage</div>
-            <div class="q-mt-sm">
-              <div class="text-h4">{{ stats.memory?.percent?.toFixed(1) || 0 }}%</div>
-              <q-linear-progress
-                :value="stats.memory?.percent || 0"
-                :thickness="0.2"
-                color="info"
-                :indeterminate="loading.stats"
-              />
-            </div>
-            <div class="text-caption text-grey q-mt-sm">
-              {{ formatBytes(stats.memory?.used) }} / {{ formatBytes(stats.memory?.total) }}
-            </div>
-          </q-card-section>
-        </q-card>
-      </div>
-
-      <!-- Disk Card -->
-      <div class="col-12 col-sm-6 col-md-3">
-        <q-card>
-          <q-card-section>
-            <div class="text-subtitle2 text-grey-7">Disk Usage</div>
-            <div class="q-mt-sm">
-              <div class="text-h4">{{ stats.disk?.percent?.toFixed(1) || 0 }}%</div>
-              <q-linear-progress
-                :value="stats.disk?.percent || 0"
-                :thickness="0.2"
-                color="warning"
-                :indeterminate="loading.stats"
-              />
-            </div>
-            <div class="text-caption text-grey q-mt-sm">
-              {{ formatBytes(stats.disk?.used) }} / {{ formatBytes(stats.disk?.total) }}
-            </div>
-          </q-card-section>
-        </q-card>
-      </div>
-
-      <!-- GPU Card -->
-      <div class="col-12 col-sm-6 col-md-3">
-        <q-card>
-          <q-card-section>
-            <div class="text-subtitle2 text-grey-7">GPU Temperature</div>
-            <div class="text-h4 q-mt-sm">
-              {{ gpuTemp || 'N/A' }}
-              <span class="text-caption text-grey">°C</span>
-            </div>
-            <div v-if="stats.gpu?.error" class="text-caption text-warning q-mt-sm">
-              {{ stats.gpu.error }}
-            </div>
-          </q-card-section>
-        </q-card>
-      </div>
-    </div>
-
-    <!-- Power Controls -->
-    <div class="row q-gutter-md q-mb-lg">
-      <div class="col-12">
-        <q-card>
-          <q-card-section>
-            <div class="text-h6">Power Management</div>
-          </q-card-section>
-
-          <q-card-section class="q-pt-none">
-            <div class="row q-gutter-md">
-              <div class="col-12 col-sm-4">
-                <q-btn
-                  @click="confirmShutdown"
-                  color="red"
-                  class="full-width"
-                  size="lg"
-                  :loading="powerActionLoading"
-                >
-                  <q-icon name="power_settings_new" class="q-mr-sm" />
-                  Shutdown
-                </q-btn>
-              </div>
-
-              <div class="col-12 col-sm-4">
-                <q-btn
-                  @click="confirmHibernate"
-                  color="orange"
-                  class="full-width"
-                  size="lg"
-                  :loading="powerActionLoading"
-                >
-                  <q-icon name="bedtime" class="q-mr-sm" />
-                  Hibernate
-                </q-btn>
-              </div>
-
-              <div class="col-12 col-sm-4">
-                <q-btn
-                  @click="confirmRestart"
-                  color="yellow"
-                  class="full-width"
-                  size="lg"
-                  text-color="black"
-                  :loading="powerActionLoading"
-                >
-                  <q-icon name="refresh" class="q-mr-sm" />
-                  Restart
-                </q-btn>
-              </div>
-            </div>
-          </q-card-section>
-        </q-card>
-      </div>
-    </div>
-
-    <!-- Quick Actions -->
-    <div class="row q-gutter-md">
-      <div class="col-12 col-sm-6">
-        <q-card
-          clickable
-          @click="goToDocker"
-          class="cursor-pointer"
-        >
-          <q-card-section>
-            <div class="row items-center">
-              <div class="col">
-                <div class="text-subtitle1">Docker Manager</div>
-                <div class="text-caption text-grey">
-                  {{ containers.length }} containers
+              <div class="row items-center q-mt-sm">
+                <div class="col">
+                  <div class="text-h3 text-weight-bold text-white">
+                    {{ stats.cpu?.cpu_percent?.toFixed(1) || 0 }}<span class="text-h5">%</span>
+                  </div>
+                </div>
+                <div class="col-auto">
+                  <div class="circular-progress-wrapper">
+                    <q-circular-progress
+                      :value="stats.cpu?.cpu_percent || 0"
+                      :thickness="0.25"
+                      size="70px"
+                      color="cyan"
+                      track-color="rgba(255,255,255,0.1)"
+                      :indeterminate="loading.stats"
+                      class="circular-progress"
+                    />
+                  </div>
                 </div>
               </div>
-              <div class="col-auto">
-                <q-icon name="view_in_ar" size="lg" />
+              <div class="text-caption text-grey-4 q-mt-sm">
+                <q-icon name="settings_ethernet" size="14px" class="q-mr-xs" />
+                {{ stats.cpu?.cpu_count || 0 }} cores @ {{ stats.cpu?.cpu_freq_mhz?.toFixed(0) || 0 }} MHz
               </div>
-            </div>
-          </q-card-section>
-        </q-card>
-      </div>
+            </q-card-section>
+          </q-card>
+        </div>
 
-      <div class="col-12 col-sm-6">
-        <q-card
-          clickable
-          @click="goToProcesses"
-          class="cursor-pointer"
-        >
-          <q-card-section>
-            <div class="row items-center">
-              <div class="col">
-                <div class="text-subtitle1">Process Manager</div>
-                <div class="text-caption text-grey">
-                  {{ processes.length }} processes
+        <!-- Memory Card -->
+        <div class="col-12 col-sm-6 col-md-3">
+          <q-card class="stat-card glass-card glossy" flat bordered>
+            <q-card-section>
+              <div class="row items-center q-mb-sm">
+                <q-icon name="storage" size="32px" color="purple" class="q-mr-sm stat-icon" />
+                <div class="text-subtitle2 text-blue-1">Memory</div>
+              </div>
+              <div class="q-mt-sm">
+                <div class="text-h3 text-weight-bold text-white">
+                  {{ stats.memory?.percent?.toFixed(1) || 0 }}<span class="text-h5">%</span>
+                </div>
+                <div class="progress-wrapper q-mt-sm">
+                  <q-linear-progress
+                    :value="stats.memory?.percent || 0"
+                    :thickness="8"
+                    color="purple"
+                    track-color="rgba(255,255,255,0.1)"
+                    :indeterminate="loading.stats"
+                    rounded
+                    class="custom-progress"
+                  />
                 </div>
               </div>
-              <div class="col-auto">
-                <q-icon name="memory" size="lg" />
+              <div class="text-caption text-grey-4 q-mt-sm">
+                <q-icon name="folder" size="14px" class="q-mr-xs" />
+                {{ formatBytes(stats.memory?.used) }} / {{ formatBytes(stats.memory?.total) }}
               </div>
-            </div>
-          </q-card-section>
-        </q-card>
-      </div>
-    </div>
+            </q-card-section>
+          </q-card>
+        </div>
 
-    <!-- Auto-Refresh Toggle -->
-    <div class="row q-mt-md">
-      <div class="col-12">
-        <q-card flat bordered>
-          <q-card-section>
-            <div class="row items-center">
-              <div class="col">
-                <div class="text-subtitle2">Auto-Refresh</div>
-                <div class="text-caption text-grey">
-                  {{ autoRefresh ? `Every ${refreshInterval/1000}s` : 'Disabled' }}
+        <!-- Disk Card -->
+        <div class="col-12 col-sm-6 col-md-3">
+          <q-card class="stat-card glass-card glossy" flat bordered>
+            <q-card-section>
+              <div class="row items-center q-mb-sm">
+                <q-icon name="folder_open" size="32px" color="orange" class="q-mr-sm stat-icon" />
+                <div class="text-subtitle2 text-blue-1">Disk</div>
+              </div>
+              <div class="q-mt-sm">
+                <div class="text-h3 text-weight-bold text-white">
+                  {{ stats.disk?.percent?.toFixed(1) || 0 }}<span class="text-h5">%</span>
+                </div>
+                <div class="progress-wrapper q-mt-sm">
+                  <q-linear-progress
+                    :value="stats.disk?.percent || 0"
+                    :thickness="8"
+                    color="orange"
+                    track-color="rgba(255,255,255,0.1)"
+                    :indeterminate="loading.stats"
+                    rounded
+                    class="custom-progress"
+                  />
                 </div>
               </div>
-              <div class="col-auto">
-                <q-toggle
-                  v-model="autoRefresh"
-                  color="primary"
-                  @update:model-value="toggleAutoRefresh"
-                  :label="autoRefresh ? 'On' : 'Off'"
-                />
+              <div class="text-caption text-grey-4 q-mt-sm">
+                <q-icon name="hard_disk" size="14px" class="q-mr-xs" />
+                {{ formatBytes(stats.disk?.used) }} / {{ formatBytes(stats.disk?.total) }}
               </div>
-            </div>
-          </q-card-section>
-        </q-card>
+            </q-card-section>
+          </q-card>
+        </div>
+
+        <!-- GPU Card -->
+        <div class="col-12 col-sm-6 col-md-3">
+          <q-card class="stat-card glass-card glossy" flat bordered>
+            <q-card-section>
+              <div class="row items-center q-mb-sm">
+                <q-icon name="videogame_asset" size="32px" color="green" class="q-mr-sm stat-icon" />
+                <div class="text-subtitle2 text-blue-1">GPU</div>
+              </div>
+              <div class="text-h3 text-weight-bold text-white q-mt-sm">
+                {{ gpuTemp || '--' }}
+                <span class="text-h5 text-grey-4">°C</span>
+              </div>
+              <div v-if="stats.gpu?.error" class="text-caption text-warning q-mt-sm">
+                <q-icon name="warning" size="14px" class="q-mr-xs" />
+                {{ stats.gpu.error }}
+              </div>
+              <div v-else class="text-caption text-grey-4 q-mt-sm">
+                <q-icon name="check_circle" size="14px" class="q-mr-xs text-positive" />
+                Monitoring Active
+              </div>
+            </q-card-section>
+          </q-card>
+        </div>
       </div>
-    </div>
-  </q-page>
+
+      <!-- Power Controls -->
+      <div class="row q-gutter-md q-mb-xl">
+        <div class="col-12">
+          <q-card class="glass-card glossy" flat bordered>
+            <q-card-section>
+              <div class="row items-center q-mb-md">
+                <q-icon name="bolt" size="28px" color="yellow" class="q-mr-sm" />
+                <div class="text-h5 text-white">Power Management</div>
+              </div>
+            </q-card-section>
+
+            <q-card-section class="q-pt-none">
+              <div class="row q-gutter-md">
+                <div class="col-12 col-sm-4">
+                  <q-btn
+                    @click="confirmShutdown"
+                    class="power-btn power-shutdown full-width glossy"
+                    size="lg"
+                    :loading="powerActionLoading"
+                    :disable="powerActionLoading"
+                  >
+                    <div class="row items-center justify-center no-wrap">
+                      <q-icon name="power_settings_new" size="24px" class="q-mr-sm" />
+                      <span class="text-subtitle1 text-weight-bold">Shutdown</span>
+                    </div>
+                  </q-btn>
+                </div>
+
+                <div class="col-12 col-sm-4">
+                  <q-btn
+                    @click="confirmHibernate"
+                    class="power-btn power-hibernate full-width glossy"
+                    size="lg"
+                    :loading="powerActionLoading"
+                    :disable="powerActionLoading"
+                  >
+                    <div class="row items-center justify-center no-wrap">
+                      <q-icon name="bedtime" size="24px" class="q-mr-sm" />
+                      <span class="text-subtitle1 text-weight-bold">Hibernate</span>
+                    </div>
+                  </q-btn>
+                </div>
+
+                <div class="col-12 col-sm-4">
+                  <q-btn
+                    @click="confirmRestart"
+                    class="power-btn power-restart full-width glossy"
+                    size="lg"
+                    :loading="powerActionLoading"
+                    :disable="powerActionLoading"
+                  >
+                    <div class="row items-center justify-center no-wrap">
+                      <q-icon name="refresh" size="24px" class="q-mr-sm" />
+                      <span class="text-subtitle1 text-weight-bold">Restart</span>
+                    </div>
+                  </q-btn>
+                </div>
+              </div>
+            </q-card-section>
+          </q-card>
+        </div>
+      </div>
+
+      <!-- Quick Actions -->
+      <div class="row q-gutter-md q-mb-xl">
+        <div class="col-12 col-sm-6">
+          <q-card
+            clickable
+            @click="goToDocker"
+            class="action-card glass-card glossy cursor-pointer"
+            flat
+            bordered
+          >
+            <q-card-section>
+              <div class="row items-center">
+                <div class="col">
+                  <div class="text-subtitle1 text-weight-bold text-white q-mb-xs">
+                    <q-icon name="view_in_ar" color="primary" class="q-mr-sm" />
+                    Docker Manager
+                  </div>
+                  <div class="text-caption text-grey-4">
+                    <q-icon name="widgets" size="14px" class="q-mr-xs" />
+                    {{ containers.length }} containers
+                  </div>
+                </div>
+                <div class="col-auto">
+                  <q-icon name="arrow_forward" size="lg" color="primary" class="arrow-icon" />
+                </div>
+              </div>
+            </q-card-section>
+          </q-card>
+        </div>
+
+        <div class="col-12 col-sm-6">
+          <q-card
+            clickable
+            @click="goToProcesses"
+            class="action-card glass-card glossy cursor-pointer"
+            flat
+            bordered
+          >
+            <q-card-section>
+              <div class="row items-center">
+                <div class="col">
+                  <div class="text-subtitle1 text-weight-bold text-white q-mb-xs">
+                    <q-icon name="memory" color="primary" class="q-mr-sm" />
+                    Process Manager
+                  </div>
+                  <div class="text-caption text-grey-4">
+                    <q-icon name="list" size="14px" class="q-mr-xs" />
+                    {{ processes.length }} processes
+                  </div>
+                </div>
+                <div class="col-auto">
+                  <q-icon name="arrow_forward" size="lg" color="primary" class="arrow-icon" />
+                </div>
+              </div>
+            </q-card-section>
+          </q-card>
+        </div>
+      </div>
+
+      <!-- Auto-Refresh Toggle -->
+      <div class="row q-mt-md">
+        <div class="col-12">
+          <q-card class="glass-card glossy" flat bordered>
+            <q-card-section>
+              <div class="row items-center justify-between">
+                <div class="row items-center">
+                  <q-icon name="autorenew" size="24px" color="primary" class="q-mr-sm" />
+                  <div>
+                    <div class="text-subtitle1 text-weight-bold text-white">Auto-Refresh</div>
+                    <div class="text-caption text-grey-4">
+                      {{ autoRefresh ? `Every ${refreshInterval/1000}s` : 'Disabled' }}
+                    </div>
+                  </div>
+                </div>
+                <div class="col-auto">
+                  <q-toggle
+                    v-model="autoRefresh"
+                    color="primary"
+                    size="md"
+                    keep-color
+                    dark
+                    @update:model-value="toggleAutoRefresh"
+                  >
+                    <template v-slot:label>
+                      <span class="text-subtitle2 text-grey-3 q-ml-sm">
+                        {{ autoRefresh ? 'On' : 'Off' }}
+                      </span>
+                    </template>
+                  </q-toggle>
+                </div>
+              </div>
+            </q-card-section>
+          </q-card>
+        </div>
+      </div>
+    </q-page>
+  </div>
 </template>
 
 <script setup>
@@ -281,6 +380,10 @@ const serverStatusText = computed(() => {
 
 const serverStatusColor = computed(() => {
   return 'positive';
+});
+
+const serverStatusIcon = computed(() => {
+  return systemStore.dockerAvailable ? 'cloud_done' : 'cloud';
 });
 
 const gpuTemp = computed(() => {
@@ -331,7 +434,8 @@ function confirmShutdown() {
     title: 'Shutdown PC',
     message: 'Are you sure you want to shutdown the PC?',
     cancel: true,
-    persistent: true
+    persistent: true,
+    class: 'glass-dialog'
   }).onOk(async () => {
     await executePowerAction('shutdown');
   });
@@ -345,7 +449,8 @@ function confirmHibernate() {
     title: 'Hibernate PC',
     message: 'Are you sure you want to hibernate the PC?',
     cancel: true,
-    persistent: true
+    persistent: true,
+    class: 'glass-dialog'
   }).onOk(async () => {
     await executePowerAction('hibernate');
   });
@@ -359,7 +464,8 @@ function confirmRestart() {
     title: 'Restart PC',
     message: 'Are you sure you want to restart the PC?',
     cancel: true,
-    persistent: true
+    persistent: true,
+    class: 'glass-dialog'
   }).onOk(async () => {
     await executePowerAction('restart');
   });
@@ -390,13 +496,15 @@ async function executePowerAction(action) {
     $q.notify({
       type: 'positive',
       message: result.message || `${action} command sent successfully`,
-      position: 'top'
+      position: 'top',
+      classes: 'notification-glossy'
     });
   } catch (error) {
     $q.notify({
       type: 'negative',
       message: error.message || `${action} failed`,
-      position: 'top'
+      position: 'top',
+      classes: 'notification-glossy'
     });
   } finally {
     powerActionLoading.value = false;
@@ -411,7 +519,8 @@ async function handleLogout() {
     title: 'Logout',
     message: 'Are you sure you want to logout?',
     cancel: true,
-    persistent: true
+    persistent: true,
+    class: 'glass-dialog'
   }).onOk(async () => {
     await authStore.logout();
     router.push('/login');
@@ -456,3 +565,306 @@ onUnmounted(() => {
   systemStore.disableAutoRefresh();
 });
 </script>
+
+<style scoped>
+.dashboard-page {
+  min-height: 100vh;
+  position: relative;
+  overflow: hidden;
+}
+
+/* Animated Background */
+.animated-background {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: linear-gradient(135deg, #0f0c29 0%, #302b63 50%, #24243e 100%);
+  z-index: 0;
+}
+
+/* Animated Orbs */
+.gradient-orb {
+  position: absolute;
+  border-radius: 50%;
+  filter: blur(80px);
+  opacity: 0.5;
+  animation: float 25s infinite;
+}
+
+.orb-1 {
+  width: 400px;
+  height: 400px;
+  background: radial-gradient(circle, #3b82f6 0%, transparent 70%);
+  top: -150px;
+  right: -150px;
+  animation-delay: 0s;
+}
+
+.orb-2 {
+  width: 350px;
+  height: 350px;
+  background: radial-gradient(circle, #8b5cf6 0%, transparent 70%);
+  bottom: -100px;
+  left: -100px;
+  animation-delay: -8s;
+}
+
+.orb-3 {
+  width: 300px;
+  height: 300px;
+  background: radial-gradient(circle, #06b6d4 0%, transparent 70%);
+  top: 40%;
+  left: 20%;
+  animation-delay: -15s;
+}
+
+.orb-4 {
+  width: 250px;
+  height: 250px;
+  background: radial-gradient(circle, #f59e0b 0%, transparent 70%);
+  bottom: 30%;
+  right: 15%;
+  animation-delay: -20s;
+}
+
+@keyframes float {
+  0%, 100% {
+    transform: translate(0, 0) scale(1);
+  }
+  25% {
+    transform: translate(40px, -60px) scale(1.1);
+  }
+  50% {
+    transform: translate(-30px, 40px) scale(0.9);
+  }
+  75% {
+    transform: translate(50px, 30px) scale(1.05);
+  }
+}
+
+/* Glassmorphism Card */
+.glass-card {
+  background: rgba(255, 255, 255, 0.05);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  box-shadow: 0 20px 40px rgba(0, 0, 0, 0.4);
+  transition: all 0.3s ease;
+}
+
+.glass-card:hover {
+  background: rgba(255, 255, 255, 0.08);
+  border-color: rgba(255, 255, 255, 0.15);
+  transform: translateY(-2px);
+  box-shadow: 0 25px 50px rgba(0, 0, 0, 0.5);
+}
+
+/* Header Section */
+.header-section {
+  animation: slideDown 0.6s ease-out;
+}
+
+@keyframes slideDown {
+  from {
+    opacity: 0;
+    transform: translateY(-20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* Status Badge */
+.status-badge {
+  background: rgba(59, 130, 246, 0.2);
+  border: 1px solid rgba(59, 130, 246, 0.3);
+  backdrop-filter: blur(10px);
+}
+
+/* Stat Cards */
+.stat-card {
+  animation: fadeInUp 0.6s ease-out backwards;
+}
+
+.stat-card:nth-child(1) { animation-delay: 0.1s; }
+.stat-card:nth-child(2) { animation-delay: 0.2s; }
+.stat-card:nth-child(3) { animation-delay: 0.3s; }
+.stat-card:nth-child(4) { animation-delay: 0.4s; }
+
+@keyframes fadeInUp {
+  from {
+    opacity: 0;
+    transform: translateY(30px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.stat-icon {
+  animation: pulse-icon 2s ease-in-out infinite;
+}
+
+@keyframes pulse-icon {
+  0%, 100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.7;
+  }
+}
+
+/* Circular Progress */
+.circular-progress-wrapper {
+  position: relative;
+}
+
+.circular-progress {
+  transition: all 0.3s ease;
+}
+
+.circular-progress:hover {
+  transform: scale(1.05);
+}
+
+/* Linear Progress */
+.custom-progress :deep(.q-linear-progress__track) {
+  background: rgba(255, 255, 255, 0.1) !important;
+}
+
+.custom-progress :deep(.q-linear-progress__fill) {
+  transition: all 0.5s ease;
+}
+
+/* Power Buttons */
+.power-btn {
+  border: none;
+  box-shadow: 0 10px 20px rgba(0, 0, 0, 0.3);
+  transition: all 0.3s ease;
+}
+
+.power-btn:hover {
+  transform: translateY(-3px);
+  box-shadow: 0 15px 30px rgba(0, 0, 0, 0.5);
+}
+
+.power-btn:active {
+  transform: translateY(-1px);
+}
+
+.power-btn:disabled {
+  transform: none;
+  opacity: 0.6;
+}
+
+.power-shutdown {
+  background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);
+}
+
+.power-shutdown:hover {
+  background: linear-gradient(135deg, #f87171 0%, #ef4444 100%);
+}
+
+.power-hibernate {
+  background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);
+}
+
+.power-hibernate:hover {
+  background: linear-gradient(135deg, #fbbf24 0%, #f59e0b 100%);
+}
+
+.power-restart {
+  background: linear-gradient(135deg, #eab308 0%, #ca8a04 100%);
+}
+
+.power-restart:hover {
+  background: linear-gradient(135deg, #facc15 0%, #eab308 100%);
+}
+
+/* Action Cards */
+.action-card {
+  transition: all 0.3s ease;
+}
+
+.action-card:hover {
+  background: rgba(255, 255, 255, 0.1);
+  border-color: rgba(59, 130, 246, 0.4);
+  transform: translateX(5px);
+}
+
+.action-card .arrow-icon {
+  transition: all 0.3s ease;
+}
+
+.action-card:hover .arrow-icon {
+  transform: translateX(5px);
+}
+
+/* Glass Button */
+.glass-btn {
+  background: rgba(255, 255, 255, 0.05);
+  backdrop-filter: blur(10px);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  transition: all 0.3s ease;
+}
+
+.glass-btn:hover {
+  background: rgba(255, 255, 255, 0.1);
+  transform: scale(1.05);
+}
+
+/* Glossy Effect */
+.glossy {
+  position: relative;
+  overflow: hidden;
+}
+
+.glossy::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: -100%;
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(
+    90deg,
+    transparent,
+    rgba(255, 255, 255, 0.1),
+    transparent
+  );
+  transition: left 0.5s;
+}
+
+.glossy:hover::before {
+  left: 100%;
+}
+
+/* Notification Styling */
+:deep(.notification-glossy) {
+  backdrop-filter: blur(10px);
+  background: rgba(30, 30, 30, 0.9) !important;
+}
+
+/* Dialog Styling */
+:deep(.glass-dialog) {
+  backdrop-filter: blur(20px);
+  background: rgba(30, 30, 30, 0.9) !important;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+/* Smooth Transitions */
+* {
+  transition: background-color 0.3s ease, border-color 0.3s ease, color 0.3s ease;
+}
+
+/* Responsive adjustments */
+@media (max-width: 600px) {
+  .text-h3 {
+    font-size: 2rem;
+  }
+}
+</style>

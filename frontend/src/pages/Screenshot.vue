@@ -151,7 +151,7 @@ async function captureScreenshot() {
   capturing.value = true;
 
   try {
-    const result = await api.get('/api/screenshot/capture');
+    const result = await api.post('/api/screenshot/capture', {});
 
     if (result.success && result.screenshot) {
       screenshotData.value = result.screenshot;

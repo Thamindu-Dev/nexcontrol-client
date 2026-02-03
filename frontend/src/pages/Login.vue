@@ -10,108 +10,179 @@
   ==============================================================================
 -->
 <template>
-  <div class="login-page q-pa-md">
-    <div class="column fullscreen bg-blue-1">
-      <div class="row items-center">
-        <div class="col-12 col-sm-6 col-md-4 col-lg-3">
-          <q-card class="q-pa-md">
-            <q-card-section>
-              <div class="text-h5 text-center text-weight-bold text-primary">
-                NexControl
+  <div class="login-page">
+    <!-- Animated Background -->
+    <div class="animated-background">
+      <div class="gradient-orb orb-1"></div>
+      <div class="gradient-orb orb-2"></div>
+      <div class="gradient-orb orb-3"></div>
+    </div>
+
+    <div class="row fullscreen items-center justify-center">
+      <div class="col-12 col-sm-8 col-md-6 col-lg-4 q-px-md">
+        <!-- Glassmorphism Card -->
+        <q-card class="glass-card q-pa-xl glossy" flat bordered>
+          <!-- Header Section -->
+          <q-card-section class="text-center q-pb-xl">
+            <!-- Logo Icon -->
+            <div class="logo-container q-mb-md">
+              <q-icon
+                name="computer"
+                size="80px"
+                class="logo-icon"
+              />
+            </div>
+
+            <div class="text-h4 text-weight-bold text-white q-mb-sm">
+              NexControl
+            </div>
+            <div class="text-subtitle2 text-blue-2">
+              Remote PC Controller
+            </div>
+            <div class="text-caption text-grey-4 q-mt-xs">
+              Control your PC from anywhere
+            </div>
+          </q-card-section>
+
+          <q-card-section>
+            <q-form @submit="handleLogin" class="q-gutter-md">
+              <!-- Server Configuration -->
+              <div class="section-label q-mb-sm">
+                <q-icon name="dns" size="20px" class="q-mr-xs text-primary" />
+                <span class="text-subtitle2 text-white">Server Configuration</span>
               </div>
-              <div class="text-subtitle2 text-center text-grey">
-                Remote PC Controller
+
+              <q-input
+                v-model="serverConfig.host"
+                label="Server IP"
+                outlined
+                dark
+                dense
+                color="white"
+                label-color="blue-2"
+                hint="e.g., 192.168.1.100"
+                :rules="[val => !!val || 'Host is required']"
+                class="styled-input"
+              >
+                <template v-slot:prepend>
+                  <q-icon name="lan" color="primary" />
+                </template>
+              </q-input>
+
+              <q-input
+                v-model.number="serverConfig.port"
+                label="Port"
+                type="number"
+                outlined
+                dark
+                dense
+                color="white"
+                label-color="blue-2"
+                hint="Default: 8000"
+                :rules="[val => val > 0 || 'Port is required']"
+                class="styled-input"
+              >
+                <template v-slot:prepend>
+                  <q-icon name="settings_ethernet" color="primary" />
+                </template>
+              </q-input>
+
+              <q-separator class="q-my-lg bg-white" style="opacity: 0.1" />
+
+              <!-- Login Form -->
+              <div class="section-label q-mb-sm">
+                <q-icon name="lock" size="20px" class="q-mr-xs text-primary" />
+                <span class="text-subtitle2 text-white">Login</span>
               </div>
-            </q-card-section>
 
-            <q-card-section>
-              <q-form @submit="handleLogin" class="q-gutter-md">
-                <!-- Server Configuration -->
-                <div class="text-subtitle2 text-grey-7">
-                  Server Configuration
-                </div>
+              <q-input
+                v-model="password"
+                label="Password"
+                :type="isPwd ? 'password' : 'text'"
+                outlined
+                dark
+                dense
+                color="white"
+                label-color="blue-2"
+                hint="Enter your app password"
+                :rules="[val => !!val || 'Password is required']"
+                class="styled-input"
+              >
+                <template v-slot:prepend>
+                  <q-icon name="vpn_key" color="primary" />
+                </template>
+                <template v-slot:append>
+                  <q-icon
+                    :name="isPwd ? 'visibility_off' : 'visibility'"
+                    class="cursor-pointer text-grey-5 hover:text-primary"
+                    @click="isPwd = !isPwd"
+                  />
+                </template>
+              </q-input>
 
-                <q-input
-                  v-model="serverConfig.host"
-                  label="Server IP"
-                  filled
-                  dense
-                  hint="e.g., 192.168.1.100"
-                  :rules="[val => !!val || 'Host is required']"
-                />
+              <!-- Error Message -->
+              <div v-if="loginError" class="error-message q-mb-sm q-pa-sm rounded-borders">
+                <q-icon name="error_outline" size="20px" class="q-mr-sm" />
+                <span>{{ loginError }}</span>
+              </div>
 
-                <q-input
-                  v-model.number="serverConfig.port"
-                  label="Port"
-                  type="number"
-                  filled
-                  dense
-                  hint="Default: 8000"
-                  :rules="[val => val > 0 || 'Port is required']"
-                />
+              <!-- Connect Button -->
+              <q-btn
+                type="submit"
+                class="connect-btn full-width q-mb-sm glossy"
+                :loading="loading"
+                :disable="loading"
+                size="lg"
+              >
+                <template v-slot:default>
+                  <div class="row items-center justify-center no-wrap">
+                    <q-icon name="rocket_launch" class="q-mr-sm" />
+                    <span>Connect to Server</span>
+                  </div>
+                </template>
+              </q-btn>
 
-                <q-separator class="q-my-md" />
+              <!-- Test Network Button -->
+              <q-btn
+                @click="testNetworkOnly"
+                outline
+                class="full-width q-mb-sm"
+                color="blue-grey"
+                size="md"
+                icon-right="wifi_find"
+              >
+                Test Network Access
+              </q-btn>
 
-                <!-- Login Form -->
-                <div class="text-subtitle2 text-grey-7">
-                  Login
-                </div>
-
-                <q-input
-                  v-model="password"
-                  label="Password"
-                  :type="isPwd ? 'password' : 'text'"
-                  filled
-                  dense
-                  hint="Enter your app password"
-                  :rules="[val => !!val || 'Password is required']"
-                >
-                  <template v-slot:append>
-                    <q-icon
-                      :name="isPwd ? 'visibility_off' : 'visibility'"
-                      class="cursor-pointer"
-                      @click="isPwd = !isPwd"
-                    />
-                  </template>
-                </q-input>
-
-                <div v-if="loginError" class="text-negative text-caption q-mb-sm">
-                  {{ loginError }}
-                </div>
-
-                <q-btn
-                  type="submit"
+              <!-- Save Credentials -->
+              <div class="row items-center justify-center q-mt-md">
+                <q-toggle
+                  v-model="saveCredentials"
                   color="primary"
-                  class="full-width q-mb-sm"
-                  :loading="loading"
-                  :disable="loading"
-                  label="Connect"
-                  size="md"
+                  label="Remember credentials"
+                  dark
+                  keep-color
+                  class="text-caption text-grey-4"
                 />
-
-                <!-- Test button to trigger local network popup -->
-                <q-btn
-                  @click="testNetworkOnly"
-                  color="grey"
-                  class="full-width q-mb-sm"
-                  outline
-                  label="Test Network Access (triggers popup)"
-                  size="sm"
-                />
-
-                <div class="q-mt-md">
-                  <q-checkbox v-model="saveCredentials" label="Save credentials" />
-                </div>
-              </q-form>
-            </q-card-section>
-
-            <q-card-section>
-              <div class="text-caption text-grey">
-                <div><strong>Note:</strong> This is a local network app.</div>
-                <div>Make sure your PC is on the same network.</div>
               </div>
-            </q-card-section>
-          </q-card>
+            </q-form>
+          </q-card-section>
+
+          <q-card-section class="text-center">
+            <div class="info-box q-pa-sm rounded-borders">
+              <q-icon name="info" size="16px" class="q-mr-xs text-blue-2" />
+              <span class="text-caption text-grey-4">
+                Local network app - Make sure your PC is on the same network
+              </span>
+            </div>
+          </q-card-section>
+        </q-card>
+
+        <!-- Version Info -->
+        <div class="text-center q-mt-md">
+          <div class="text-caption text-grey-6">
+            v{{ version }}
+          </div>
         </div>
       </div>
     </div>
@@ -142,6 +213,7 @@ const isPwd = ref(true);
 const loading = ref(false);
 const loginError = ref(null);
 const saveCredentials = ref(false);
+const version = ref('1.0.0');
 
 // Server configuration
 const serverConfig = reactive({
@@ -152,14 +224,14 @@ const serverConfig = reactive({
 
 /**
  * Test network access - Makes a simple request to trigger iOS local network popup
- * This bypasses IP validation to help users grant local network permission
  */
 async function testNetworkOnly() {
   if (!serverConfig.host) {
     Notify.create({
       type: 'negative',
       message: 'Please enter server IP first',
-      position: 'top'
+      position: 'top',
+      classes: 'notification-glossy'
     });
     return;
   }
@@ -185,13 +257,15 @@ async function testNetworkOnly() {
         type: 'positive',
         message: 'Network access working! Server reachable.',
         position: 'top',
-        timeout: 3000
+        timeout: 3000,
+        classes: 'notification-glossy'
       });
     } else {
       Notify.create({
         type: 'warning',
         message: `Server responded: ${response.status}`,
-        position: 'top'
+        position: 'top',
+        classes: 'notification-glossy'
       });
     }
   } catch (error) {
@@ -199,38 +273,33 @@ async function testNetworkOnly() {
     Notify.create({
       type: 'negative',
       message: 'Cannot reach server. Check IP and ensure server is running.',
-      position: 'top'
+      position: 'top',
+      classes: 'notification-glossy'
     });
   }
 }
 
 /**
  * Validate IP address (private/local only for security)
- * @param {string} ip - IP address to validate
- * @returns {boolean} True if valid private/local IP
  */
 function isValidIP(ip) {
   if (!ip || typeof ip !== 'string') return false
 
   const ipLower = ip.toLowerCase().trim()
 
-  // Check for localhost
   if (ipLower === 'localhost') return true
 
-  // IPv4 private ranges
   const privateRanges = [
-    /^10\./,                           // 10.0.0.0/8
-    /^172\.(1[6-9]|2\d|3[01])\./,    // 172.16.0.0/12
-    /^192\.168\./,                     // 192.168.0.0/16
-    /^127\./                           // 127.0.0.0/8 (loopback)
+    /^10\./,
+    /^172\.(1[6-9]|2\d|3[01])\./,
+    /^192\.168\./,
+    /^127\./
   ]
 
-  // Check IPv4 format
   const ipv4Regex = /^(\d{1,3})\.(\d{1,3})\.(\d{1,3})\.(\d{1,3})$/
   const ipv4Match = ip.match(ipv4Regex)
 
   if (ipv4Match) {
-    // Valid IPv4, check if in private range
     return privateRanges.some(range => range.test(ip))
   }
 
@@ -239,8 +308,6 @@ function isValidIP(ip) {
 
 /**
  * Validate port number
- * @param {number} port - Port to validate
- * @returns {boolean} True if valid port
  */
 function isValidPort(port) {
   const portNum = Number(port)
@@ -248,7 +315,7 @@ function isValidPort(port) {
 }
 
 /**
- * Handle login form submission (with validation)
+ * Handle login form submission
  */
 async function handleLogin() {
   // Validate host/IP
@@ -257,13 +324,13 @@ async function handleLogin() {
     return
   }
 
-  // SECURITY: Validate IP is private/local only (prevent SSRF)
   if (!isValidIP(serverConfig.host)) {
     loginError.value = 'Invalid IP address. Must be a local network IP'
     Notify.create({
       type: 'negative',
       message: 'Invalid IP address. Must be a local network IP (192.168.x.x, 10.x.x.x, 172.16-31.x.x, or localhost)',
-      position: 'top'
+      position: 'top',
+      classes: 'notification-glossy'
     })
     return
   }
@@ -274,7 +341,8 @@ async function handleLogin() {
     Notify.create({
       type: 'negative',
       message: 'Invalid port. Must be between 1 and 65535',
-      position: 'top'
+      position: 'top',
+      classes: 'notification-glossy'
     })
     return
   }
@@ -282,24 +350,20 @@ async function handleLogin() {
   loading.value = true;
   loginError.value = null;
 
-  // Debug logging
   const serverUrl = `${serverConfig.protocol}://${serverConfig.host}:${serverConfig.port}`;
   console.log('[Login] Attempting to connect to:', serverUrl);
-  console.log('[Login] Capacitor available:', typeof window !== 'undefined' && window.Capacitor);
 
   try {
     // Update server configuration
     await settingsStore.updateServer(serverConfig);
     console.log('[Login] Server config updated');
 
-    // FIRST: Test connection to trigger iOS local network permission popup
-    console.log('[Login] Testing connection...');
+    // Test connection
     const testUrl = `${serverUrl}/api/test/connection`;
 
     try {
-      // Add timeout to prevent hanging
       const controller = new AbortController();
-      const timeoutId = setTimeout(() => controller.abort(), 10000); // 10 second timeout
+      const timeoutId = setTimeout(() => controller.abort(), 10000);
 
       const testResponse = await fetch(testUrl, {
         method: 'GET',
@@ -308,64 +372,43 @@ async function handleLogin() {
       });
 
       clearTimeout(timeoutId);
-      console.log('[Login] Test connection response:', testResponse.status);
 
-      // Parse the response body to ensure it's valid
-      let testData;
-      try {
-        testData = await testResponse.json();
-        console.log('[Login] Test connection data:', testData);
-      } catch (parseError) {
-        console.error('[Login] Failed to parse test response:', parseError);
-        // Even if parsing fails, if status is OK, continue
-      }
-
-      // If test fails, don't proceed with login
       if (!testResponse.ok) {
         throw new Error(`Server returned ${testResponse.status}`);
-      }
-
-      // Check for expected response
-      if (!testData || !testData.status || (testData.status !== 'connected' && testData.status !== 'ok')) {
-        console.warn('[Login] Unexpected test response:', testData);
       }
     } catch (testError) {
       console.error('[Login] Connection test failed:', testError);
       loginError.value = 'Cannot reach server. Make sure your PC is on and check the IP address.';
       loading.value = false;
 
-      // Show helpful message for iOS
       if (typeof window !== 'undefined' && window.Capacitor?.getPlatform() === 'ios') {
         Notify.create({
           type: 'warning',
           message: 'If you see a popup about Local Network access, tap OK to allow',
           position: 'top',
-          timeout: 5000
+          timeout: 5000,
+          classes: 'notification-glossy'
         });
       }
       return;
     }
 
-    // SECOND: Attempt login now that connection is confirmed
-    console.log('[Login] Connection OK, calling authStore.login...');
-
+    // Attempt login
     const result = await authStore.login(password.value);
     console.log('[Login] Login result:', result);
 
     if (result.success) {
-      // Show success message
       Notify.create({
         type: 'positive',
         message: 'Connected successfully!',
-        position: 'top'
+        position: 'top',
+        classes: 'notification-glossy'
       });
 
-      // Save credentials if checked
       if (saveCredentials.value) {
-        // Credentials already saved in stores
+        // Credentials saved
       }
 
-      // Navigate to dashboard
       router.push('/dashboard');
     } else {
       loginError.value = result.error || 'Login failed';
@@ -376,7 +419,8 @@ async function handleLogin() {
     Notify.create({
       type: 'negative',
       message: loginError.value,
-      position: 'top'
+      position: 'top',
+      classes: 'notification-glossy'
     });
   } finally {
     loading.value = false;
@@ -389,15 +433,13 @@ async function handleLogin() {
 onMounted(() => {
   settingsStore.loadSettings();
 
-  // Load saved server config
   const savedConfig = settingsStore.server;
   if (savedConfig) {
     Object.assign(serverConfig, savedConfig);
   }
 
-  // Expose test function to window for debugging from Safari console
+  // Expose test functions to window for debugging
   if (typeof window !== 'undefined') {
-    // Test GET request
     window.testNexControlConnection = async () => {
       try {
         const protocol = serverConfig.protocol || 'http';
@@ -409,9 +451,7 @@ onMounted(() => {
 
         const response = await fetch(url, {
           method: 'GET',
-          headers: {
-            'Content-Type': 'application/json'
-          }
+          headers: { 'Content-Type': 'application/json' }
         });
 
         console.log('[Test GET] Response status:', response.status);
@@ -424,7 +464,6 @@ onMounted(() => {
       }
     };
 
-    // Test POST request
     window.testNexControlPOST = async () => {
       try {
         const protocol = serverConfig.protocol || 'http';
@@ -433,17 +472,14 @@ onMounted(() => {
         const url = `${protocol}://${host}:${port}/api/test/echo`;
 
         console.log('[Test POST] Connecting to:', url);
-        console.log('[Test POST] Testing POST request...');
 
         const controller = new AbortController();
         const timeoutId = setTimeout(() => controller.abort(), 10000);
 
         const response = await fetch(url, {
           method: 'POST',
-          headers: {
-            'Content-Type': 'application/json'
-          },
-          body: JSON.stringify({ test: 'data from iOS', timestamp: Date.now() }),
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ test: 'data', timestamp: Date.now() }),
           signal: controller.signal
         });
 
@@ -456,14 +492,11 @@ onMounted(() => {
       } catch (error) {
         console.error('[Test POST] Error:', error);
         if (error.name === 'AbortError') {
-          console.error('[Test POST] Request timed out after 10 seconds');
+          console.error('[Test POST] Request timed out');
         }
         throw error;
       }
     };
-
-    console.log('[NexControl] Debug: Call window.testNexControlConnection() for GET test');
-    console.log('[NexControl] Debug: Call window.testNexControlPOST() for POST test');
   }
 });
 </script>
@@ -471,9 +504,187 @@ onMounted(() => {
 <style scoped>
 .login-page {
   min-height: 100vh;
+  position: relative;
+  overflow: hidden;
 }
 
-.fullscreen {
-  min-height: 100vh;
+/* Animated Background */
+.animated-background {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: linear-gradient(135deg, #0f0c29 0%, #302b63 50%, #24243e 100%);
+  z-index: 0;
+}
+
+/* Animated Orbs */
+.gradient-orb {
+  position: absolute;
+  border-radius: 50%;
+  filter: blur(80px);
+  opacity: 0.6;
+  animation: float 20s infinite;
+}
+
+.orb-1 {
+  width: 300px;
+  height: 300px;
+  background: radial-gradient(circle, #3b82f6 0%, transparent 70%);
+  top: -150px;
+  left: -150px;
+  animation-delay: 0s;
+}
+
+.orb-2 {
+  width: 250px;
+  height: 250px;
+  background: radial-gradient(circle, #8b5cf6 0%, transparent 70%);
+  bottom: -100px;
+  right: -100px;
+  animation-delay: -5s;
+}
+
+.orb-3 {
+  width: 200px;
+  height: 200px;
+  background: radial-gradient(circle, #06b6d4 0%, transparent 70%);
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  animation-delay: -10s;
+}
+
+@keyframes float {
+  0%, 100% {
+    transform: translate(0, 0) scale(1);
+  }
+  33% {
+    transform: translate(30px, -50px) scale(1.1);
+  }
+  66% {
+    transform: translate(-20px, 20px) scale(0.9);
+  }
+}
+
+/* Glassmorphism Card */
+.glass-card {
+  background: rgba(255, 255, 255, 0.05);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
+}
+
+/* Logo Icon */
+.logo-container {
+  display: inline-block;
+  padding: 20px;
+  background: linear-gradient(135deg, #3b82f6, #8b5cf6);
+  border-radius: 50%;
+  animation: pulse-glow 3s ease-in-out infinite;
+}
+
+.logo-icon {
+  color: white;
+}
+
+@keyframes pulse-glow {
+  0%, 100% {
+    box-shadow: 0 0 20px rgba(59, 130, 246, 0.5);
+  }
+  50% {
+    box-shadow: 0 0 40px rgba(139, 92, 246, 0.8);
+  }
+}
+
+/* Section Labels */
+.section-label {
+  display: flex;
+  align-items: center;
+}
+
+/* Styled Inputs */
+.styled-input :deep(.q-field__control) {
+  background: rgba(255, 255, 255, 0.05) !important;
+  border-radius: 8px;
+}
+
+.styled-input :deep(.q-field__label) {
+  color: #90caf9 !important;
+}
+
+.styled-input :deep(.q-field__marginal) {
+  color: #90caf9 !important;
+}
+
+/* Connect Button */
+.connect-btn {
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  border: none;
+  box-shadow: 0 10px 20px rgba(102, 126, 234, 0.3);
+  transition: all 0.3s ease;
+}
+
+.connect-btn:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 15px 30px rgba(102, 126, 234, 0.5);
+}
+
+.connect-btn:disabled {
+  background: linear-gradient(135deg, #4a5568 0%, #374151 100%);
+  box-shadow: none;
+  transform: none;
+}
+
+/* Error Message */
+.error-message {
+  background: rgba(239, 68, 68, 0.1);
+  border: 1px solid rgba(239, 68, 68, 0.3);
+  color: #f87171;
+}
+
+/* Info Box */
+.info-box {
+  background: rgba(59, 130, 246, 0.1);
+  border: 1px solid rgba(59, 130, 246, 0.3);
+}
+
+/* Smooth Transitions */
+* {
+  transition: background-color 0.3s ease, border-color 0.3s ease, color 0.3s ease;
+}
+
+/* Glossy Effect */
+.glossy {
+  position: relative;
+  overflow: hidden;
+}
+
+.glossy::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: -100%;
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(
+    90deg,
+    transparent,
+    rgba(255, 255, 255, 0.2),
+    transparent
+  );
+  transition: left 0.5s;
+}
+
+.glossy:hover::before {
+  left: 100%;
+}
+
+/* Notification Styling */
+:deep(.notification-glossy) {
+  backdrop-filter: blur(10px);
+  background: rgba(30, 30, 30, 0.9) !important;
 }
 </style>
