@@ -69,8 +69,9 @@ export function getApiBaseUrl() {
       return 'https://staging-api.nexcontrol.example.com';
 
     case 'mobile':
-      // Mobile apps use the production API by default
-      return 'https://api.nexcontrol.example.com';
+      // Mobile apps should use user-configured server from localStorage
+      // If not configured, default to localhost for local network testing
+      return 'http://localhost:8000';
 
     case 'codespaces':
       // In Codespaces, use proxy (empty relative path)

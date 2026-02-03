@@ -1546,9 +1546,14 @@ async def encryption_middleware(request: Request, call_next):
     2. Forward to the route handler
     3. Encrypt the response
 
-    For non-encrypted requests (GET, login):
+    For non-encrypted requests (GET, login, test endpoints):
     1. Pass through to route handler
     """
+    # Skip encryption middleware for login and test endpoints
+    # These endpoints use plain JSON, not encrypted payloads
+    if request.url.path in ["/api/auth/login", "/api/test/echo", "/api/test/connection"]:
+        return await call_next(request)
+
     # Track if request was encrypted
     was_encrypted = False
 
@@ -1558,36 +1563,37 @@ async def encryption_middleware(request: Request, call_next):
             # Read request body
             body = await request.body()
 
+            # Only process if body exists and looks like it might be encrypted
+            # Encrypted payloads have "data" and "timestamp" fields
             if body and len(body) < 10 * 1024 * 1024:  # Max 10MB
                 import json
-                data = json.loads(body)
+                try:
+                    data = json.loads(body)
 
-                # Check if this is an encrypted payload
-                if "data" in data and "timestamp" in data:
-                    # Validate timestamp first (replay attack prevention)
-                    if not SecurityManager.validate_timestamp(data["timestamp"]):
-                        logger.warning(f"Invalid timestamp from {get_remote_address(request)}")
-                        return JSONResponse(
-                            status_code=status.HTTP_401_UNAUTHORIZED,
-                            content={"detail": "Invalid timestamp"}
-                        )
+                    # Check if this is an encrypted payload (has both data and timestamp)
+                    if isinstance(data, dict) and "data" in data and "timestamp" in data:
+                        # Validate timestamp first (replay attack prevention)
+                        if not SecurityManager.validate_timestamp(data["timestamp"]):
+                            logger.warning(f"Invalid timestamp from {get_remote_address(request)}")
+                            return JSONResponse(
+                                status_code=status.HTTP_401_UNAUTHORIZED,
+                                content={"detail": "Invalid timestamp"}
+                            )
 
-                    # Decrypt the payload
-                    decrypted_data = SecurityManager.decrypt_data(data["data"])
+                        # Decrypt the payload
+                        decrypted_data = SecurityManager.decrypt_data(data["data"])
 
-                    # Store decrypted data in request state for route handlers
-                    request.state.decrypted_data = decrypted_data
-                    was_encrypted = True
+                        # Store decrypted data in request state for route handlers
+                        request.state.decrypted_data = decrypted_data
+                        was_encrypted = True
+                except json.JSONDecodeError:
+                    # Not valid JSON, let route handler deal with it
+                    pass
 
-        except json.JSONDecodeError:
-            # Not valid JSON, let route handler deal with it
-            pass
         except Exception as e:
-            logger.error(f"Encryption middleware error: {type(e).__name__}")
-            return JSONResponse(
-                status_code=status.HTTP_400_BAD_REQUEST,
-                content={"detail": "Request processing failed"}
-            )
+            logger.error(f"Encryption middleware error: {type(e).__name__}: {e}")
+            # Don't return error here - let route handler deal with it
+            pass
 
     # Process the request
     response = await call_next(request)
@@ -1622,7 +1628,7 @@ async def encryption_middleware(request: Request, call_next):
             )
 
         except Exception as e:
-            logger.error(f"Response encryption error: {type(e).__name__}")
+            logger.error(f"Response encryption error: {type(e).__name__}: {e}")
             return JSONResponse(
                 status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
                 content={"detail": "Response encryption failed"}

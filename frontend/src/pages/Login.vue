@@ -82,11 +82,21 @@
                 <q-btn
                   type="submit"
                   color="primary"
-                  class="full-width"
+                  class="full-width q-mb-sm"
                   :loading="loading"
                   :disable="loading"
                   label="Connect"
                   size="md"
+                />
+
+                <!-- Test button to trigger local network popup -->
+                <q-btn
+                  @click="testNetworkOnly"
+                  color="grey"
+                  class="full-width q-mb-sm"
+                  outline
+                  label="Test Network Access (triggers popup)"
+                  size="sm"
                 />
 
                 <div class="q-mt-md">
@@ -139,6 +149,60 @@ const serverConfig = reactive({
   host: 'localhost',
   port: 8000
 });
+
+/**
+ * Test network access - Makes a simple request to trigger iOS local network popup
+ * This bypasses IP validation to help users grant local network permission
+ */
+async function testNetworkOnly() {
+  if (!serverConfig.host) {
+    Notify.create({
+      type: 'negative',
+      message: 'Please enter server IP first',
+      position: 'top'
+    });
+    return;
+  }
+
+  const testUrl = `${serverConfig.protocol}://${serverConfig.host}:${serverConfig.port}/api/test/connection`;
+  console.log('[Test Network] Connecting to:', testUrl);
+
+  try {
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 5000);
+
+    const response = await fetch(testUrl, {
+      method: 'GET',
+      signal: controller.signal
+    });
+
+    clearTimeout(timeoutId);
+
+    if (response.ok) {
+      const data = await response.json();
+      console.log('[Test Network] Success:', data);
+      Notify.create({
+        type: 'positive',
+        message: 'Network access working! Server reachable.',
+        position: 'top',
+        timeout: 3000
+      });
+    } else {
+      Notify.create({
+        type: 'warning',
+        message: `Server responded: ${response.status}`,
+        position: 'top'
+      });
+    }
+  } catch (error) {
+    console.error('[Test Network] Error:', error);
+    Notify.create({
+      type: 'negative',
+      message: 'Cannot reach server. Check IP and ensure server is running.',
+      position: 'top'
+    });
+  }
+}
 
 /**
  * Validate IP address (private/local only for security)
