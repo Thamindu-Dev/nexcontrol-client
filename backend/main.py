@@ -126,7 +126,7 @@ except ValueError as e:
     sys.exit(1)
 
 ALGORITHM = "HS256"
-ACCESS_TOKEN_EXPIRE_MINUTES = 60
+ACCESS_TOKEN_EXPIRE_MINUTES = 1440  # 24 hours
 
 # AES Encryption Configuration
 AES_NONCE_LENGTH = 12  # 96-bit nonce for GCM

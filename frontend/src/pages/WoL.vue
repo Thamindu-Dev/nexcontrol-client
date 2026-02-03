@@ -23,7 +23,7 @@
     <!-- Add Target Device -->
     <div class="row q-mb-md">
       <div class="col-12 col-md-6">
-        <q-card>
+        <q-card class="glass-card">
           <q-card-section>
             <div class="text-h6">Add Target Device</div>
           </q-card-section>
@@ -83,7 +83,7 @@
 
       <!-- How it Works -->
       <div class="col-12 col-md-6 q-mt-md q-mt-md-none">
-        <q-card>
+        <q-card class="glass-card">
           <q-card-section>
             <div class="text-h6">How Wake-on-LAN Works</div>
           </q-card-section>
@@ -120,7 +120,7 @@
     <!-- Saved Devices -->
     <div class="row q-mt-md">
       <div class="col-12">
-        <q-card>
+        <q-card class="glass-card">
           <q-card-section>
             <div class="row items-center q-gutter-sm">
               <div class="text-h6">Saved Devices</div>

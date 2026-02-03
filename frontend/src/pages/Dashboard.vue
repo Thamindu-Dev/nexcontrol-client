@@ -11,14 +11,6 @@
 -->
 <template>
   <div class="dashboard-page">
-    <!-- Animated Background -->
-    <div class="animated-background">
-      <div class="gradient-orb orb-1"></div>
-      <div class="gradient-orb orb-2"></div>
-      <div class="gradient-orb orb-3"></div>
-      <div class="gradient-orb orb-4"></div>
-    </div>
-
     <q-page padding class="relative-position">
       <!-- Header -->
       <div class="row q-mb-lg header-section">
@@ -640,77 +632,6 @@ onUnmounted(() => {
   min-height: 100vh;
   position: relative;
   overflow: hidden;
-}
-
-/* Animated Background */
-.animated-background {
-  position: fixed;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  background: linear-gradient(135deg, #0f0c29 0%, #302b63 50%, #24243e 100%);
-  z-index: 0;
-}
-
-/* Animated Orbs */
-.gradient-orb {
-  position: absolute;
-  border-radius: 50%;
-  filter: blur(80px);
-  opacity: 0.5;
-  animation: float 25s infinite;
-}
-
-.orb-1 {
-  width: 400px;
-  height: 400px;
-  background: radial-gradient(circle, rgba(255, 255, 255, 0.1) 0%, transparent 70%);
-  top: -150px;
-  right: -150px;
-  animation-delay: 0s;
-}
-
-.orb-2 {
-  width: 350px;
-  height: 350px;
-  background: radial-gradient(circle, rgba(255, 255, 255, 0.08) 0%, transparent 70%);
-  bottom: -100px;
-  left: -100px;
-  animation-delay: -8s;
-}
-
-.orb-3 {
-  width: 300px;
-  height: 300px;
-  background: radial-gradient(circle, rgba(255, 255, 255, 0.06) 0%, transparent 70%);
-  top: 40%;
-  left: 20%;
-  animation-delay: -15s;
-}
-
-.orb-4 {
-  width: 250px;
-  height: 250px;
-  background: radial-gradient(circle, rgba(255, 255, 255, 0.05) 0%, transparent 70%);
-  bottom: 30%;
-  right: 15%;
-  animation-delay: -20s;
-}
-
-@keyframes float {
-  0%, 100% {
-    transform: translate(0, 0) scale(1);
-  }
-  25% {
-    transform: translate(40px, -60px) scale(1.1);
-  }
-  50% {
-    transform: translate(-30px, 40px) scale(0.9);
-  }
-  75% {
-    transform: translate(50px, 30px) scale(1.05);
-  }
 }
 
 /* Glassmorphism Card */

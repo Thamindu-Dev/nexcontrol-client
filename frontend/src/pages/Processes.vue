@@ -33,7 +33,7 @@
     <!-- Sort Controls -->
     <div class="row q-mb-md">
       <div class="col-12">
-        <q-card flat bordered class="q-pa-sm">
+        <q-card class="glass-card q-pa-sm">
           <div class="row items-center q-gutter-md">
             <div class="text-subtitle2">Sort by:</div>
             <q-btn-toggle
@@ -57,7 +57,7 @@
     <!-- Empty State -->
     <div v-if="processes.length === 0 && !loading.processes" class="row q-mt-lg">
       <div class="col-12">
-        <q-card flat bordered class="q-pa-xl text-center">
+        <q-card class="glass-card q-pa-xl text-center">
           <q-icon
             name="memory"
             size="xl"
@@ -72,7 +72,7 @@
     <!-- Processes Table -->
     <div v-else class="row q-mt-md">
       <div class="col-12">
-        <q-card flat bordered>
+        <q-card class="glass-card">
           <q-markup-table>
             <table class="q-table">
               <thead>
