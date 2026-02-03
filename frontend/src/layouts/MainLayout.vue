@@ -11,41 +11,20 @@
 -->
 <template>
   <q-layout view="lHh Lpr lFf">
-    <!-- Header -->
-    <q-header elevated class="app-header">
-      <q-toolbar>
-        <q-btn
-          flat
-          dense
-          round
-          icon="menu"
-          aria-label="Menu"
-          class="header-btn"
-          @click="toggleLeftDrawer"
-        />
+    <!-- Dynamic Island / Notch Spacer - CRITICAL for iOS -->
+    <div class="dynamic-island-spacer"></div>
 
-        <q-toolbar-title>
-          <div class="row items-center">
-            <div class="logo-wrapper q-mr-sm">
-              <q-icon name="computer" size="22px" color="white" />
-            </div>
-            <span class="app-title">NexControl</span>
-          </div>
-        </q-toolbar-title>
-
-        <q-btn
-          flat
-          round
-          dense
-          icon="logout"
-          class="header-btn logout-btn"
-          @click="logout"
-          v-if="authStore.isAuthenticated"
-        >
-          <q-tooltip anchor="bottom middle" self="top middle">Logout</q-tooltip>
-        </q-btn>
-      </q-toolbar>
-    </q-header>
+    <!-- Floating Menu Button - Below spacer -->
+    <q-btn
+      v-if="authStore.isAuthenticated"
+      flat
+      round
+      dense
+      icon="menu"
+      aria-label="Menu"
+      class="floating-menu-btn"
+      @click="toggleLeftDrawer"
+    />
 
     <!-- Drawer -->
     <q-drawer
@@ -223,9 +202,59 @@ body,
   margin-left: 0 !important;
   margin-right: 0 !important;
 }
+
+/* CRITICAL: Fix Notification Freeze Issue */
+.q-notifications {
+  pointer-events: none !important;
+}
+
+.q-notifications > * {
+  pointer-events: auto !important;
+}
+
+/* Ensure drawer backdrop doesn't block interactions */
+.q-drawer__backdrop {
+  pointer-events: auto !important;
+}
 </style>
 
 <style scoped>
+/* Dynamic Island / Notch Spacer */
+.dynamic-island-spacer {
+  width: 100%;
+  height: max(40px, env(safe-area-inset-top));
+  position: fixed;
+  top: 0;
+  left: 0;
+  z-index: 9999;
+  background: transparent;
+  pointer-events: none;
+}
+
+/* Floating Menu Button */
+.floating-menu-btn {
+  position: fixed !important;
+  top: max(45px, calc(env(safe-area-inset-top) + 5px)) !important;
+  left: 12px !important;
+  z-index: 10000 !important;
+  background: rgba(10, 10, 10, 0.9) !important;
+  backdrop-filter: blur(10px);
+  border: 1px solid rgba(255, 255, 255, 0.1) !important;
+  color: #FFFFFF !important;
+  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.5) !important;
+  transition: all 0.2s ease;
+}
+
+.floating-menu-btn:hover {
+  background: rgba(30, 30, 30, 0.95) !important;
+  transform: scale(1.05);
+}
+
+/* Adjust page container to account for spacer */
+.q-page-container {
+  padding-top: max(45px, calc(env(safe-area-inset-top) + 5px)) !important;
+}
+
 /* CRITICAL: Fix z-index issues to prevent UI unresponsiveness */
 .q-layout {
   position: relative;
@@ -250,65 +279,6 @@ body,
 .q-page > * {
   position: relative;
   z-index: 1;
-}
-
-/* Header - Pure Black */
-.app-header {
-  background: #000000;
-  border-bottom: 1px solid #333333;
-}
-
-/* Ensure toolbar has proper spacing with safe area - REDUCED PADDING */
-.app-header .q-toolbar {
-  min-height: 50px !important;
-  padding-top: constant(safe-area-inset-top) !important;
-  padding-top: env(safe-area-inset-top) !important;
-}
-
-.app-title {
-  font-size: 1.1rem;
-  font-weight: 700;
-  color: #FFFFFF;
-  letter-spacing: 0.5px;
-}
-
-.logo-wrapper {
-  width: 36px;
-  height: 36px;
-  background: #0A0A0A;
-  border: 1px solid #333333;
-  border-radius: 8px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
-
-.logo-wrapper-large {
-  width: 48px;
-  height: 48px;
-  background: #0A0A0A;
-  border: 1px solid #333333;
-  border-radius: 10px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
-
-/* Header Buttons */
-.header-btn {
-  color: #FFFFFF;
-  background: transparent;
-  border: 1px solid #333333;
-  border-radius: 8px;
-}
-
-.logout-btn {
-  color: #ef4444;
-  border-color: #333333;
-}
-
-.logout-btn:hover {
-  background: rgba(239, 68, 68, 0.1);
 }
 
 /* Drawer - Pure Black */

@@ -82,8 +82,8 @@
         </div>
       </div>
 
-      <!-- Row 2: Memory & Primary Disk -->
-      <div class="row q-gutter-md q-mb-lg">
+      <!-- Row 2: 2x2 Grid Stats (Memory, GPU, Disk, Temperature) -->
+      <div class="row q-col-gutter-md q-mb-lg">
         <!-- Memory Card -->
         <div class="col-6">
           <q-card class="stat-card" flat bordered>
@@ -111,6 +111,48 @@
           </q-card>
         </div>
 
+        <!-- GPU Usage Card -->
+        <div class="col-6">
+          <q-card class="stat-card" flat bordered>
+            <q-card-section class="q-pa-md">
+              <div class="row items-center q-mb-sm">
+                <q-icon name="videogame_asset" size="20px" color="grey-5" class="q-mr-xs" />
+                <div class="text-caption text-grey-6 text-weight-bold">GPU USAGE</div>
+              </div>
+              <div class="text-h4 text-weight-bold text-white q-mb-sm">
+                <template v-if="stats.gpu">
+                  {{ stats.gpu?.usage_percent?.toFixed(1) || 0 }}<span class="text-caption text-grey-6">%</span>
+                </template>
+                <template v-else>
+                  <span class="text-h5 text-grey-6">N/A</span>
+                </template>
+              </div>
+              <q-linear-progress
+                v-if="stats.gpu"
+                :value="stats.gpu?.usage_percent || 0"
+                :thickness="4"
+                color="cyan"
+                track-color="rgba(34, 211, 238, 0.1)"
+                :indeterminate="loading.stats"
+                rounded
+                class="custom-progress q-mb-sm"
+              />
+              <q-linear-progress
+                v-else
+                :value="0"
+                :thickness="4"
+                color="grey-7"
+                track-color="rgba(255, 255, 255, 0.05)"
+                rounded
+                class="custom-progress q-mb-sm"
+              />
+              <div class="text-caption text-grey-7">
+                {{ stats.gpu?.name || 'GPU data not available' }}
+              </div>
+            </q-card-section>
+          </q-card>
+        </div>
+
         <!-- Primary Disk Card -->
         <div class="col-6">
           <q-card class="stat-card" flat bordered>
@@ -133,6 +175,32 @@
               />
               <div class="text-caption text-grey-7">
                 {{ formatBytes(stats.disk?.used) }} / {{ formatBytes(stats.disk?.total) }}
+              </div>
+            </q-card-section>
+          </q-card>
+        </div>
+
+        <!-- Temperature Card -->
+        <div class="col-6">
+          <q-card class="stat-card" flat bordered>
+            <q-card-section class="q-pa-md">
+              <div class="row items-center q-mb-sm">
+                <q-icon name="thermostat" size="20px" color="grey-5" class="q-mr-xs" />
+                <div class="text-caption text-grey-6 text-weight-bold">TEMPERATURE</div>
+              </div>
+              <div class="row items-center justify-between">
+                <div class="text-h4 text-weight-bold text-white q-mb-sm">
+                  {{ stats.cpu?.temperature?.toFixed(0) || stats.temperature?.toFixed(0) || 'N/A' }}
+                  <span class="text-caption text-grey-6">°C</span>
+                </div>
+                <q-icon
+                  :name="getTemperatureIcon(stats.cpu?.temperature || stats.temperature)"
+                  :color="getTemperatureColor(stats.cpu?.temperature || stats.temperature)"
+                  size="32px"
+                />
+              </div>
+              <div class="text-caption text-grey-7 q-mt-sm">
+                CPU Temperature
               </div>
             </q-card-section>
           </q-card>
@@ -558,6 +626,27 @@ function formatBytes(bytes) {
   const sizes = ['B', 'KB', 'MB', 'GB', 'TB'];
   const i = Math.floor(Math.log(bytes) / Math.log(k));
   return parseFloat((bytes / Math.pow(k, i)).toFixed(1)) + ' ' + sizes[i];
+}
+
+/**
+ * Get temperature icon based on value
+ */
+function getTemperatureIcon(temp) {
+  if (!temp) return 'thermostat';
+  if (temp >= 80) return 'warning';
+  if (temp >= 60) return 'whatshot';
+  return 'ac_unit';
+}
+
+/**
+ * Get temperature color based on value
+ */
+function getTemperatureColor(temp) {
+  if (!temp) return 'grey-5';
+  if (temp >= 80) return 'red';
+  if (temp >= 60) return 'orange';
+  if (temp >= 40) return 'yellow';
+  return 'cyan';
 }
 
 /**
