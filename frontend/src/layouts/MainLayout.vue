@@ -134,6 +134,25 @@
             <q-item-label class="text-white">Settings</q-item-label>
           </q-item-section>
         </q-item>
+
+        <q-separator class="q-my-md bg-grey-9" style="opacity: 0.5" />
+
+        <!-- Logout -->
+        <q-item
+          clickable
+          @click="logout"
+          class="nav-item"
+          v-ripple
+        >
+          <q-item-section avatar>
+            <div class="icon-wrapper">
+              <q-icon name="logout" size="22px" color="grey-5" />
+            </div>
+          </q-item-section>
+          <q-item-section>
+            <q-item-label class="text-white">Logout</q-item-label>
+          </q-item-section>
+        </q-item>
       </q-list>
     </q-drawer>
 
