@@ -37,7 +37,7 @@
             class="q-mb-md"
           />
           <div class="text-h6">Screenshot not available</div>
-          <div class="text-caption text-grey q-mt-sm">
+          <div class="text-caption text-secondary q-mt-sm">
             Screenshot functionality is not available on this system.<br>
             This may be due to running in a headless environment or missing dependencies.
           </div>
@@ -55,7 +55,7 @@
               <q-space />
               <q-btn
                 outline
-                color="white"
+                color="primary"
                 icon="screenshot"
                 label="Capture Screenshot"
                 :loading="capturing"
@@ -77,7 +77,7 @@
               <q-space />
               <q-btn
                 outline
-                color="white"
+                color="primary"
                 icon="download"
                 label="Download"
                 @click="downloadScreenshot"
@@ -117,7 +117,7 @@
             class="q-mb-md"
           />
           <div class="text-h6">No screenshot captured</div>
-          <div class="text-caption text-grey q-mt-sm">
+          <div class="text-caption text-secondary q-mt-sm">
             Click "Capture Screenshot" to take a screenshot of the remote PC.
           </div>
         </q-card>

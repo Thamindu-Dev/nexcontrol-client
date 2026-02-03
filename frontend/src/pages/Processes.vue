@@ -88,8 +88,8 @@
                 <tr v-for="process in processes" :key="process.pid">
                   <td class="text-left">{{ process.pid }}</td>
                   <td class="text-left">
-                    {{ process.name || 'N/A' }}
-                    <div class="text-caption text-grey">
+                    <div>{{ process.name || 'N/A' }}</div>
+                    <div class="text-caption text-secondary">
                       {{ process.username || 'N/A' }}
                     </div>
                   </td>
@@ -97,12 +97,14 @@
                     <q-badge
                       :color="getCPUColor(process.cpu_percent)"
                       :label="process.cpu_percent?.toFixed(1) || '0'"
+                      text-color="white"
                     />
                   </td>
                   <td class="text-right">
                     <q-badge
                       :color="getMemoryColor(process.memory_percent)"
                       :label="process.memory_percent?.toFixed(1) || '0'"
+                      text-color="white"
                     />
                   </td>
                   <td class="text-center">
@@ -110,7 +112,7 @@
                       flat
                       dense
                       round
-                      color="negative"
+                      color="red"
                       icon="delete"
                       @click="confirmKillProcess(process.pid, process.name)"
                       :loading="killLoading[process.pid]"
@@ -244,29 +246,81 @@ onMounted(async () => {
 </script>
 
 <style scoped>
-/* OLED Theme Styles */
+/* Theme Aware Styles */
 .glass-card {
-  background: #000000;
-  border: 1px solid #333333;
+  background: var(--q-dark-page);
+  border: 1px solid var(--q-separator);
   border-radius: 12px;
 }
 
-/* Table Styling */
+.body--light .glass-card {
+  background: #ffffff;
+  border: 1px solid #e0e0e0;
+}
+
+/* Table Styling - Theme Aware */
+.q-markup-table {
+  background: var(--q-dark-page) !important;
+}
+
+.body--light .q-markup-table {
+  background: #ffffff !important;
+}
+
 .q-table {
-  background: transparent;
+  background: var(--q-dark-page) !important;
+  color: var(--q-primary-text) !important;
 }
 
 .q-table th {
-  color: #FFFFFF;
+  color: var(--q-primary-text) !important;
   font-weight: 600;
+  background: var(--q-dark-page) !important;
+  border-bottom: 2px solid var(--q-separator) !important;
+}
+
+.body--light .q-table th {
+  background: #f5f5f5 !important;
+  border-bottom: 2px solid #e0e0e0 !important;
 }
 
 .q-table td {
-  color: #E0E0E0;
-  border-bottom: 1px solid #1A1A1A;
+  color: var(--q-primary-text) !important;
+  background: var(--q-dark-page) !important;
+  border-bottom: 1px solid var(--q-separator) !important;
+}
+
+.body--light .q-table td {
+  background: #ffffff !important;
+  border-bottom: 1px solid #eeeeee !important;
 }
 
 .q-table tr:hover td {
-  background: #0A0A0A;
+  background: rgba(255, 255, 255, 0.03) !important;
+}
+
+.body--light .q-table tr:hover td {
+  background: #f5f5f5 !important;
+}
+
+.q-table tbody tr {
+  background: var(--q-dark-page) !important;
+}
+
+.body--light .q-table tbody tr {
+  background: #ffffff !important;
+}
+
+/* Process list text colors */
+.process-name {
+  color: var(--q-primary-text);
+}
+
+.process-user {
+  color: var(--q-secondary-text);
+}
+
+.body--light .process-user {
+  color: #757575;
 }
 </style>

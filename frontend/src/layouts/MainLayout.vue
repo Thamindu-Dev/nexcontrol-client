@@ -61,7 +61,7 @@
             <q-icon name="computer" size="32px" color="white" />
           </div>
           <div>
-            <div class="text-h6 text-weight-bold text-white">NexControl</div>
+            <div class="text-h6 text-weight-bold text-primary">NexControl</div>
             <div class="text-caption text-grey-5">Remote PC Controller</div>
           </div>
         </div>
@@ -73,9 +73,9 @@
               size="18px"
               class="q-mr-sm"
             />
-            <span class="text-subtitle2 text-white">{{ isConnected ? 'Connected' : 'Disconnected' }}</span>
+            <span class="text-subtitle2 text-primary">{{ isConnected ? 'Connected' : 'Disconnected' }}</span>
           </div>
-          <div class="text-caption text-grey-6 q-mt-xs">{{ serverInfo }}</div>
+          <div class="text-caption text-secondary q-mt-xs">{{ serverInfo }}</div>
         </div>
       </div>
 
@@ -101,10 +101,10 @@
             </div>
           </q-item-section>
           <q-item-section>
-            <q-item-label :class="{ 'text-weight-bold': link.link === $route.path, 'text-white': true }">
+            <q-item-label :class="{ 'text-weight-bold': link.link === $route.path, 'text-primary': true }">
               {{ link.title }}
             </q-item-label>
-            <q-item-label caption class="text-grey-6">{{ link.caption }}</q-item-label>
+            <q-item-label caption class="text-secondary">{{ link.caption }}</q-item-label>
           </q-item-section>
           <q-item-section side v-if="link.link === $route.path">
             <q-icon name="chevron_right" color="cyan" size="20px" />
@@ -136,7 +136,7 @@
             </div>
           </q-item-section>
           <q-item-section>
-            <q-item-label class="text-white">Refresh Stats</q-item-label>
+            <q-item-label class="text-primary">Refresh Stats</q-item-label>
           </q-item-section>
         </q-item>
 
@@ -152,14 +152,14 @@
             </div>
           </q-item-section>
           <q-item-section>
-            <q-item-label class="text-white">Settings</q-item-label>
+            <q-item-label class="text-primary">Settings</q-item-label>
           </q-item-section>
         </q-item>
       </q-list>
     </q-drawer>
 
     <!-- Page Container -->
-    <q-page-container class="bg-black">
+    <q-page-container>
       <router-view />
     </q-page-container>
 
@@ -169,11 +169,11 @@
         <div class="row col-12 items-center q-pa-sm footer-content">
           <div class="row items-center">
             <div class="status-dot q-mr-sm" :class="{ 'status-connected': isConnected, 'status-disconnected': !isConnected }"></div>
-            <span class="text-subtitle2 text-white q-mr-md">
+            <span class="text-subtitle2 text-primary q-mr-md">
               {{ isConnected ? 'Connected' : 'Disconnected' }}
             </span>
             <q-separator vertical class="q-mx-md bg-grey-8" style="opacity: 0.3" />
-            <span class="text-caption text-grey-6">
+            <span class="text-caption text-secondary">
               <q-icon name="dns" size="14px" class="q-mr-xs" />
               {{ serverInfo }}
             </span>
@@ -188,17 +188,17 @@
   </q-layout>
 </template>
 
-<!-- Global styles for iOS Safe Area (not scoped) -->
+<!-- Global styles for iOS Safe Area and Overflow (not scoped) -->
 <style>
-/* iOS Safe Area Support - Critical for Dynamic Island/Notch */
+/* iOS Safe Area Support */
 .q-layout > .q-header {
-  padding-top: constant(safe-area-inset-top) !important; /* iOS 11.0 */
-  padding-top: env(safe-area-inset-top) !important; /* iOS 11.2+ */
+  padding-top: constant(safe-area-inset-top) !important;
+  padding-top: env(safe-area-inset-top) !important;
 }
 
 .q-layout > .q-footer {
-  padding-bottom: constant(safe-area-inset-bottom) !important; /* iOS 11.0 */
-  padding-bottom: env(safe-area-inset-bottom) !important; /* iOS 11.2+ */
+  padding-bottom: constant(safe-area-inset-bottom) !important;
+  padding-bottom: env(safe-area-inset-bottom) !important;
 }
 
 .q-layout > .q-page-container {
@@ -207,81 +207,162 @@
   padding-right: constant(safe-area-inset-right) !important;
   padding-right: env(safe-area-inset-right) !important;
 }
+
+/* Fix Horizontal Overflow - Prevent screen sliding */
+body,
+.q-layout,
+.q-page,
+.q-page-container {
+  overflow-x: hidden !important;
+  max-width: 100vw !important;
+}
+
+/* Fix row overflow issues */
+.row {
+  flex-wrap: wrap !important;
+  margin-left: 0 !important;
+  margin-right: 0 !important;
+}
 </style>
 
 <style scoped>
-/* Header - Pure Black */
-.app-header {
-  background: #000000;
-  border-bottom: 1px solid #333333;
+/* CRITICAL: Fix z-index issues to prevent UI unresponsiveness */
+.q-layout {
+  position: relative;
+  z-index: 1;
 }
 
-/* Ensure toolbar has proper spacing with safe area */
+.q-drawer {
+  z-index: 1000 !important;
+}
+
+.q-drawer__backdrop {
+  z-index: 999 !important;
+}
+
+.q-page-container {
+  position: relative;
+  z-index: 1;
+}
+
+/* Ensure no overlays block interaction */
+.q-page,
+.q-page > * {
+  position: relative;
+  z-index: 1;
+}
+
+/* Header - Theme Aware */
+.app-header {
+  background: var(--q-dark) or #1d1d1d;
+  border-bottom: 1px solid var(--q-separator);
+}
+
+/* Light mode overrides */
+.body--light .app-header {
+  background: #ffffff;
+  border-bottom: 1px solid #e0e0e0;
+}
+
+/* Ensure toolbar has proper spacing with safe area - REDUCED PADDING */
 .app-header .q-toolbar {
-  min-height: calc(50px + constant(safe-area-inset-top));
-  min-height: calc(50px + env(safe-area-inset-top));
+  min-height: 50px !important;
+  padding-top: constant(safe-area-inset-top) !important;
+  padding-top: env(safe-area-inset-top) !important;
 }
 
 .app-title {
   font-size: 1.1rem;
   font-weight: 700;
-  color: #FFFFFF;
+  color: var(--q-primary-text);
   letter-spacing: 0.5px;
 }
 
 .logo-wrapper {
   width: 36px;
   height: 36px;
-  background: #0A0A0A;
-  border: 1px solid #333333;
+  background: var(--q-dark-page);
+  border: 1px solid var(--q-separator);
   border-radius: 8px;
   display: flex;
   align-items: center;
   justify-content: center;
 }
 
+.body--light .logo-wrapper {
+  background: #f5f5f5;
+  border: 1px solid #e0e0e0;
+}
+
 .logo-wrapper-large {
   width: 48px;
   height: 48px;
-  background: #0A0A0A;
-  border: 1px solid #333333;
+  background: var(--q-dark-page);
+  border: 1px solid var(--q-separator);
   border-radius: 10px;
   display: flex;
   align-items: center;
   justify-content: center;
 }
 
+.body--light .logo-wrapper-large {
+  background: #f5f5f5;
+  border: 1px solid #e0e0e0;
+}
+
 /* Header Buttons */
 .header-btn {
-  color: #FFFFFF;
+  color: var(--q-primary-text);
   background: transparent;
-  border: 1px solid #333333;
+  border: 1px solid var(--q-separator);
   border-radius: 8px;
+}
+
+.body--light .header-btn {
+  color: #1976d2;
 }
 
 .logout-btn {
   color: #ef4444;
-  border-color: #333333;
+  border-color: var(--q-separator);
+}
+
+.body--light .logout-btn {
+  color: #d32f2f;
 }
 
 .logout-btn:hover {
   background: rgba(239, 68, 68, 0.1);
 }
 
-/* Drawer - Pure Black */
+/* Drawer - Theme Aware */
 .app-drawer {
-  background: #000000;
-  border-right: 1px solid #333333;
+  background: var(--q-dark-page);
+  border-right: 1px solid var(--q-separator);
+}
+
+.body--light .app-drawer {
+  background: #ffffff;
+  border-right: 1px solid #e0e0e0;
 }
 
 .drawer-header {
-  border-bottom: 1px solid #333333;
-  background: #000000;
+  border-bottom: 1px solid var(--q-separator);
+  background: var(--q-dark-page);
+}
+
+.body--light .drawer-header {
+  background: #f5f5f5;
 }
 
 .connection-indicator {
-  background: #0A0A0A;
-  border: 1px solid #333333;
+  background: var(--q-dark-page);
+  border: 1px solid var(--q-separator);
+}
+
+.body--light .connection-indicator {
+  background: #f5f5f5;
+  border: 1px solid #e0e0e0;
 }
 
 /* Drawer List */
@@ -290,13 +371,17 @@
 }
 
 .section-label {
-  color: #666666;
+  color: var(--q-secondary-text);
   font-size: 0.7rem;
   font-weight: 600;
   letter-spacing: 1px;
   text-transform: uppercase;
   padding-left: 8px;
   margin-bottom: 8px;
+}
+
+.body--light .section-label {
+  color: #757575;
 }
 
 /* Navigation Items */
@@ -309,24 +394,38 @@
 }
 
 .nav-item:hover {
-  background: #0A0A0A;
+  background: var(--q-dark-page);
+}
+
+.body--light .nav-item:hover {
+  background: #f5f5f5;
 }
 
 .nav-item-active {
-  background: #0A0A0A !important;
+  background: var(--q-dark-page) !important;
   border: 1px solid rgba(34, 211, 238, 0.3);
+}
+
+.body--light .nav-item-active {
+  background: #e3f2fd !important;
+  border: 1px solid rgba(25, 118, 210, 0.3);
 }
 
 .icon-wrapper {
   width: 36px;
   height: 36px;
   border-radius: 8px;
-  background: #0A0A0A;
-  border: 1px solid #333333;
+  background: var(--q-dark-page);
+  border: 1px solid var(--q-separator);
   display: flex;
   align-items: center;
   justify-content: center;
   transition: all 0.2s ease;
+}
+
+.body--light .icon-wrapper {
+  background: #f5f5f5;
+  border: 1px solid #e0e0e0;
 }
 
 .icon-active {
@@ -334,8 +433,17 @@
   border-color: rgba(34, 211, 238, 0.5);
 }
 
+.body--light .icon-active {
+  background: rgba(25, 118, 210, 0.1);
+  border-color: rgba(25, 118, 210, 0.3);
+}
+
 .nav-item:hover .icon-wrapper {
-  background: #111111;
+  background: rgba(255, 255, 255, 0.05);
+}
+
+.body--light .nav-item:hover .icon-wrapper {
+  background: #eeeeee;
 }
 
 /* Rotating animation */
@@ -348,19 +456,28 @@
   to { transform: rotate(360deg); }
 }
 
-/* Footer - Pure Black */
+/* Footer - Theme Aware */
 .app-footer {
-  background: #000000;
-  border-top: 1px solid #333333;
+  background: var(--q-dark);
+  border-top: 1px solid var(--q-separator);
+}
+
+.body--light .app-footer {
+  background: #ffffff;
+  border-top: 1px solid #e0e0e0;
 }
 
 .footer-content {
-  background: #0A0A0A;
+  background: var(--q-dark-page);
   border-radius: 8px;
   padding: 10px 12px;
 }
 
-/* Status Dot - Neon Cyan when connected */
+.body--light .footer-content {
+  background: #f5f5f5;
+}
+
+/* Status Dot - Theme Aware */
 .status-dot {
   width: 8px;
   height: 8px;
@@ -373,9 +490,18 @@
   box-shadow: 0 0 8px rgba(34, 211, 238, 0.6);
 }
 
+.body--light .status-connected {
+  background: #1976d2;
+  box-shadow: 0 0 8px rgba(25, 118, 210, 0.5);
+}
+
 .status-disconnected {
-  background: #666666;
+  background: var(--q-secondary-text);
   box-shadow: none;
+}
+
+.body--light .status-disconnected {
+  background: #9e9e9e;
 }
 
 @keyframes pulse-dot {
@@ -482,14 +608,15 @@
 </style>
 
 <script setup>
-import { ref, computed, onMounted, onUnmounted } from 'vue';
-import { useRouter } from 'vue-router';
+import { ref, computed, onMounted, onUnmounted, watch } from 'vue';
+import { useRouter, useRoute } from 'vue-router';
 import { useQuasar } from 'quasar';
 import { useAuthStore } from '../stores/auth';
 import { useSettingsStore } from '../stores/settings';
 import { useSystemStore } from '../stores/system';
 
 const router = useRouter();
+const $route = useRoute();
 const $q = useQuasar();
 
 // Stores
@@ -501,6 +628,12 @@ const systemStore = useSystemStore();
 const leftDrawerOpen = ref(false);
 const isConnected = ref(true);
 const loading = ref(false);
+
+// CRITICAL: Watch route changes to close drawer on navigation
+// This prevents the backdrop from blocking UI interactions
+watch(() => $route.path, () => {
+  leftDrawerOpen.value = false;
+}, { flush: 'post' });
 
 // Navigation links
 const navigationLinks = [
@@ -560,9 +693,12 @@ function toggleLeftDrawer() {
 
 /**
  * Navigate to route
+ * CRITICAL: Close drawer after navigation to prevent backdrop blocking UI
  */
 function navigateTo(path) {
   router.push(path);
+  // Close drawer on navigation (especially important for mobile/overlay mode)
+  leftDrawerOpen.value = false;
 }
 
 /**

@@ -16,13 +16,13 @@
       <div class="row q-mb-lg header-section">
         <div class="col-12">
           <div class="row items-center q-gutter-sm">
-            <div class="text-h4 text-weight-bold text-white">
+            <div class="text-h4 text-weight-bold text-primary">
               Dashboard
             </div>
             <q-space />
             <div class="status-badge q-px-sm q-py-xs rounded-borders">
               <q-icon :name="serverStatusIcon" :color="serverStatusColor" size="16px" class="q-mr-xs" />
-              <span class="text-caption text-white">{{ serverStatusText }}</span>
+              <span class="text-caption text-primary">{{ serverStatusText }}</span>
             </div>
             <q-btn
               flat
@@ -56,12 +56,12 @@
                 <div class="col">
                   <div class="row items-center q-mb-sm">
                     <q-icon name="memory" size="24px" color="grey-5" class="q-mr-sm" />
-                    <div class="text-subtitle2 text-grey-6">CPU Usage</div>
+                    <div class="text-subtitle2 text-secondary">CPU Usage</div>
                   </div>
-                  <div class="text-h2 text-weight-bold text-white">
-                    {{ stats.cpu?.cpu_percent?.toFixed(1) || 0 }}<span class="text-h5 text-grey-6">%</span>
+                  <div class="text-h2 text-weight-bold text-primary">
+                    {{ stats.cpu?.cpu_percent?.toFixed(1) || 0 }}<span class="text-h5 text-secondary">%</span>
                   </div>
-                  <div class="text-caption text-grey-7 q-mt-xs">
+                  <div class="text-caption text-accent q-mt-xs">
                     {{ stats.cpu?.cpu_count || 0 }} cores @ {{ stats.cpu?.cpu_freq_mhz?.toFixed(0) || 0 }} MHz
                   </div>
                 </div>
@@ -90,10 +90,10 @@
             <q-card-section class="q-pa-md">
               <div class="row items-center q-mb-sm">
                 <q-icon name="storage" size="20px" color="grey-5" class="q-mr-xs" />
-                <div class="text-caption text-grey-6 text-weight-bold">MEMORY</div>
+                <div class="text-caption text-secondary text-weight-bold">MEMORY</div>
               </div>
-              <div class="text-h4 text-weight-bold text-white q-mb-sm">
-                {{ stats.memory?.percent?.toFixed(1) || 0 }}<span class="text-caption text-grey-6">%</span>
+              <div class="text-h4 text-weight-bold text-primary q-mb-sm">
+                {{ stats.memory?.percent?.toFixed(1) || 0 }}<span class="text-caption text-secondary">%</span>
               </div>
               <q-linear-progress
                 :value="stats.memory?.percent || 0"
@@ -104,7 +104,7 @@
                 rounded
                 class="custom-progress q-mb-sm"
               />
-              <div class="text-caption text-grey-7">
+              <div class="text-caption text-accent">
                 {{ formatBytes(stats.memory?.used) }} / {{ formatBytes(stats.memory?.total) }}
               </div>
             </q-card-section>
@@ -117,10 +117,10 @@
             <q-card-section class="q-pa-md">
               <div class="row items-center q-mb-sm">
                 <q-icon name="folder_open" size="20px" color="grey-5" class="q-mr-xs" />
-                <div class="text-caption text-grey-6 text-weight-bold">PRIMARY DISK</div>
+                <div class="text-caption text-secondary text-weight-bold">PRIMARY DISK</div>
               </div>
-              <div class="text-h4 text-weight-bold text-white q-mb-sm">
-                {{ stats.disk?.percent?.toFixed(1) || 0 }}<span class="text-caption text-grey-6">%</span>
+              <div class="text-h4 text-weight-bold text-primary q-mb-sm">
+                {{ stats.disk?.percent?.toFixed(1) || 0 }}<span class="text-caption text-secondary">%</span>
               </div>
               <q-linear-progress
                 :value="stats.disk?.percent || 0"
@@ -131,7 +131,7 @@
                 rounded
                 class="custom-progress q-mb-sm"
               />
-              <div class="text-caption text-grey-7">
+              <div class="text-caption text-accent">
                 {{ formatBytes(stats.disk?.used) }} / {{ formatBytes(stats.disk?.total) }}
               </div>
             </q-card-section>
@@ -146,7 +146,7 @@
             <q-card-section class="q-pa-md">
               <div class="row items-center q-mb-md">
                 <q-icon name="sd_storage" size="20px" color="grey-5" class="q-mr-sm" />
-                <div class="text-subtitle2 text-white">All Storage Devices</div>
+                <div class="text-subtitle2 text-primary">All Storage Devices</div>
                 <q-space />
                 <q-btn
                   flat
@@ -173,7 +173,7 @@
               <!-- Loading State -->
               <div v-else-if="loadingState.disks" class="text-center q-pa-xl">
                 <q-spinner color="grey-6" size="32px" />
-                <div class="text-caption text-grey-7 q-mt-sm">Scanning for storage devices...</div>
+                <div class="text-caption text-accent q-mt-sm">Scanning for storage devices...</div>
               </div>
 
               <!-- Disks List -->
@@ -196,7 +196,7 @@
                       </div>
                       <div class="col">
                         <div class="row items-center">
-                          <div class="text-subtitle2 text-white q-mr-sm">
+                          <div class="text-subtitle2 text-primary q-mr-sm">
                             {{ getDiskName(disk) }}
                           </div>
                           <q-chip
@@ -209,15 +209,15 @@
                             style="background: rgba(34, 211, 238, 0.15); border: 1px solid rgba(34, 211, 238, 0.3);"
                           />
                         </div>
-                        <div class="text-caption text-grey-6">
+                        <div class="text-caption text-secondary">
                           {{ disk.mountpoint || disk.device }}
                         </div>
                       </div>
                       <div class="col-auto text-right">
-                        <div v-if="disk.percent !== null" class="text-h6 text-weight-bold text-white">
-                          {{ disk.percent }}<span class="text-caption text-grey-6">%</span>
+                        <div v-if="disk.percent !== null" class="text-h6 text-weight-bold text-primary">
+                          {{ disk.percent }}<span class="text-caption text-secondary">%</span>
                         </div>
-                        <div v-else class="text-caption text-grey-7">
+                        <div v-else class="text-caption text-accent">
                           N/A
                         </div>
                       </div>
@@ -237,7 +237,7 @@
                     <!-- Additional Info -->
                     <div class="row q-mt-xs">
                       <div class="col-12">
-                        <div v-if="disk.total" class="text-caption text-grey-7">
+                        <div v-if="disk.total" class="text-caption text-accent">
                           {{ formatBytes(disk.used) }} / {{ formatBytes(disk.total) }} used
                         </div>
                         <div class="text-caption text-grey-8">
@@ -253,20 +253,22 @@
         </div>
       </div>
 
-      <!-- Power Controls - Outlined Buttons -->
+      <!-- System Actions - 2x2 Grid -->
       <div class="row q-gutter-md q-mb-lg">
         <div class="col-12">
-          <q-card class="power-card" flat bordered>
+          <q-card class="action-card" flat bordered>
             <q-card-section class="q-pa-md">
               <div class="row items-center q-mb-md">
-                <q-icon name="bolt" size="20px" color="grey-5" class="q-mr-sm" />
-                <div class="text-subtitle2 text-white">Power Management</div>
+                <q-icon name="settings_applications" size="20px" color="grey-5" class="q-mr-sm" />
+                <div class="text-subtitle2 text-primary">System Actions</div>
               </div>
             </q-card-section>
 
             <q-card-section class="q-pt-none q-pb-md q-px-md">
+              <!-- 2x2 Grid -->
               <div class="row q-gutter-sm">
-                <div class="col-4">
+                <!-- Row 1: Shutdown, Restart -->
+                <div class="col-6">
                   <q-btn
                     @click="confirmShutdown"
                     class="power-btn-outlined full-width"
@@ -283,7 +285,25 @@
                   </q-btn>
                 </div>
 
-                <div class="col-4">
+                <div class="col-6">
+                  <q-btn
+                    @click="confirmRestart"
+                    class="power-btn-outlined full-width"
+                    size="md"
+                    :loading="powerActionLoading"
+                    :disable="powerActionLoading"
+                    padding="sm md"
+                    outline
+                  >
+                    <div class="row items-center justify-center no-wrap">
+                      <q-icon name="refresh" size="18px" class="q-mr-xs" />
+                      <span class="text-caption text-weight-bold">Restart</span>
+                    </div>
+                  </q-btn>
+                </div>
+
+                <!-- Row 2: Hibernate, Lock -->
+                <div class="col-6 q-mt-sm">
                   <q-btn
                     @click="confirmHibernate"
                     class="power-btn-outlined full-width"
@@ -300,9 +320,9 @@
                   </q-btn>
                 </div>
 
-                <div class="col-4">
+                <div class="col-6 q-mt-sm">
                   <q-btn
-                    @click="confirmRestart"
+                    @click="confirmLock"
                     class="power-btn-outlined full-width"
                     size="md"
                     :loading="powerActionLoading"
@@ -311,8 +331,8 @@
                     outline
                   >
                     <div class="row items-center justify-center no-wrap">
-                      <q-icon name="refresh" size="18px" class="q-mr-xs" />
-                      <span class="text-caption text-weight-bold">Restart</span>
+                      <q-icon name="lock" size="18px" class="q-mr-xs" />
+                      <span class="text-caption text-weight-bold">Lock PC</span>
                     </div>
                   </q-btn>
                 </div>
@@ -327,14 +347,14 @@
         <div class="col-12">
           <q-card class="chart-card" flat bordered>
             <q-card-section class="q-pa-md">
-              <div class="text-subtitle2 text-weight-bold text-white q-mb-sm">
+              <div class="text-subtitle2 text-weight-bold text-primary q-mb-sm">
                 <q-icon name="show_chart" color="grey-5" size="18px" class="q-mr-sm" />
                 Historical Usage
               </div>
               <div v-if="systemStore.history.timestamps.length > 0" class="q-pb-sm">
                 <LineChart :data="systemStore.combinedChartData" :height="180" />
               </div>
-              <div v-else class="text-center text-grey-7 q-py-xl">
+              <div v-else class="text-center text-accent q-py-xl">
                 <q-icon name="show_chart" size="48px" color="grey-8" />
                 <div class="text-caption q-mt-sm">No historical data available</div>
                 <div class="text-caption text-grey-8">Enable auto-refresh or real-time mode to see charts</div>
@@ -357,11 +377,11 @@
             <q-card-section class="q-pa-md">
               <div class="row items-center">
                 <div class="col">
-                  <div class="text-subtitle2 text-weight-bold text-white q-mb-xs">
+                  <div class="text-subtitle2 text-weight-bold text-primary q-mb-xs">
                     <q-icon name="view_in_ar" color="grey-5" size="18px" class="q-mr-xs" />
                     Docker
                   </div>
-                  <div class="text-caption text-grey-6">
+                  <div class="text-caption text-secondary">
                     {{ containers.length }} containers
                   </div>
                 </div>
@@ -384,11 +404,11 @@
             <q-card-section class="q-pa-md">
               <div class="row items-center">
                 <div class="col">
-                  <div class="text-subtitle2 text-weight-bold text-white q-mb-xs">
+                  <div class="text-subtitle2 text-weight-bold text-primary q-mb-xs">
                     <q-icon name="memory" color="grey-5" size="18px" class="q-mr-xs" />
                     Processes
                   </div>
-                  <div class="text-caption text-grey-6">
+                  <div class="text-caption text-secondary">
                     {{ processes.length }} processes
                   </div>
                 </div>
@@ -410,10 +430,10 @@
                 <div class="row items-center">
                   <q-icon :name="systemStore.webSocketEnabled ? 'wifi' : 'autorenew'" size="20px" color="grey-5" class="q-mr-sm" />
                   <div>
-                    <div class="text-subtitle2 text-weight-bold text-white">
+                    <div class="text-subtitle2 text-weight-bold text-primary">
                       Update Mode
                     </div>
-                    <div class="text-caption text-grey-6">
+                    <div class="text-caption text-secondary">
                       <span v-if="systemStore.webSocketEnabled" class="text-cyan">
                         <q-icon name="flash_on" size="12px" class="q-mr-xs" />
                         Real-time (WebSocket)
@@ -629,6 +649,21 @@ function confirmRestart() {
 }
 
 /**
+ * Confirm lock screen
+ */
+function confirmLock() {
+  $q.dialog({
+    title: 'Lock PC',
+    message: 'Are you sure you want to lock the PC?',
+    cancel: true,
+    persistent: true,
+    class: 'glass-dialog'
+  }).onOk(async () => {
+    await executePowerAction('lock');
+  });
+}
+
+/**
  * Execute power action
  */
 async function executePowerAction(action) {
@@ -645,6 +680,9 @@ async function executePowerAction(action) {
         break;
       case 'restart':
         endpoint = '/api/power/restart';
+        break;
+      case 'lock':
+        endpoint = '/api/power/lock';
         break;
     }
 
@@ -788,37 +826,67 @@ onUnmounted(() => {
 .dashboard-page {
   min-height: 100vh;
   position: relative;
-  background: #000000;
+  background: var(--q-dark-page);
 }
 
-/* Cards - Pure Black with Subtle Border */
+.body--light .dashboard-page {
+  background: #f5f5f5;
+}
+
+/* Cards - Theme Aware */
 .stat-card,
 .power-card,
 .chart-card,
 .settings-card,
 .action-card,
 .storage-card {
-  background: #000000;
-  border: 1px solid #333333;
+  background: var(--q-dark-page);
+  border: 1px solid var(--q-separator);
   border-radius: 12px;
   transition: all 0.2s ease;
+}
+
+.body--light .stat-card,
+.body--light .power-card,
+.body--light .chart-card,
+.body--light .settings-card,
+.body--light .action-card,
+.body--light .storage-card {
+  background: #ffffff;
+  border: 1px solid #e0e0e0;
 }
 
 .stat-card:hover,
 .action-card:hover,
 .storage-card:hover {
-  border-color: #444444;
+  border-color: var(--q-separator-dark);
+}
+
+.body--light .stat-card:hover,
+.body--light .action-card:hover,
+.body--light .storage-card:hover {
+  border-color: #bdbdbd;
 }
 
 /* Individual Disk Items */
 .disk-item {
-  background: #0A0A0A;
-  border: 1px solid #333333;
+  background: var(--q-dark-page);
+  border: 1px solid var(--q-separator);
+}
+
+.body--light .disk-item {
+  background: #f5f5f5;
+  border: 1px solid #e0e0e0;
 }
 
 .removable-disk {
   border: 1px solid rgba(34, 211, 238, 0.2);
   background: rgba(34, 211, 238, 0.02);
+}
+
+.body--light .removable-disk {
+  border: 1px solid rgba(25, 118, 210, 0.2);
+  background: rgba(25, 118, 210, 0.05);
 }
 
 /* Header Section */
@@ -839,8 +907,13 @@ onUnmounted(() => {
 
 /* Status Badge */
 .status-badge {
-  background: #0A0A0A;
-  border: 1px solid #333333;
+  background: var(--q-dark-page);
+  border: 1px solid var(--q-separator);
+}
+
+.body--light .status-badge {
+  background: #f5f5f5;
+  border: 1px solid #e0e0e0;
 }
 
 /* Header Buttons */

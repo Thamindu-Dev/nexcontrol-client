@@ -911,26 +911,35 @@ class SystemMonitor:
                         disk_info["percent"] = None
 
                     # Determine if this is likely a removable/USB drive
+                    # FIXED: Check for 'fixed' in opts to identify internal partitions
                     is_removable = False
 
                     if OS_TYPE == "Windows":
-                        # On Windows, check if device is a removable drive (D:, E:, etc. are often USB/external)
-                        if len(partition.device) > 0:
-                            drive_letter = partition.device[0].upper()
-                            # Drives other than C: are often external/removable
-                            if drive_letter != 'C':
-                                is_removable = True
+                        # On Windows, use win32api to check drive type if available
+                        # Otherwise, be conservative - don't assume non-C: drives are removable
+                        # Most Windows systems have multiple internal partitions (D:, E:, etc.)
+                        is_removable = False  # Default to internal (fixed) on Windows
+                        # TODO: Could use win32api.GetDriveType for accurate detection
                     else:  # Linux/macOS
-                        # Check mount options for removable indicators
-                        removable_indicators = ['rw,nosuid,nodev', 'user', 'removable', 'usb']
-                        if partition.opts:
+                        # FIXED: Check opts for 'fixed' first - indicates internal partition
+                        if partition.opts and 'fixed' in partition.opts.lower():
+                            is_removable = False  # Internal partition
+                        # Then check for removable indicators
+                        elif partition.opts:
+                            removable_indicators = ['removable', 'usb', 'cdrom']
                             if any(indicator in partition.opts.lower() for indicator in removable_indicators):
                                 is_removable = True
 
                         # Check if mounted under /media or /mnt (common for USB)
-                        if partition.mountpoint:
+                        if partition.mountpoint and not is_removable:
                             if any(partition.mountpoint.startswith(p) for p in ['/media/', '/mnt/']):
                                 is_removable = True
+
+                        # Additional check: /boot, /boot/efi, /home, /, /var, etc. are internal
+                        if partition.mountpoint and not is_removable:
+                            internal_mountpoints = ['/', '/boot', '/home', '/var', '/usr', '/opt', '/root']
+                            if any(partition.mountpoint == p or partition.mountpoint.startswith(p + '/') for p in internal_mountpoints):
+                                is_removable = False
 
                     disk_info["is_removable"] = is_removable
                     disks.append(disk_info)
