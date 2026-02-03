@@ -113,6 +113,7 @@
           </q-card-section>
         </q-card>
       </div>
+    </div>
 
     <!-- Appearance -->
     <div class="row q-mb-md">
@@ -195,7 +196,7 @@
                 filled
                 dense
                 emit-value
-                map
+                map-options
               />
             </div>
           </q-card-section>
