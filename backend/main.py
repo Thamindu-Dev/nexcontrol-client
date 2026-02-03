@@ -1696,24 +1696,6 @@ async def login(request: LoginRequest, http_request: Request):
         )
 
 
-@app.options("/api/auth/login", tags=["Authentication"])
-async def login_options():
-    """
-    Explicit OPTIONS handler for login endpoint
-    iOS/Capacitor requires explicit CORS preflight response
-    """
-    from fastapi.responses import Response
-    return Response(
-        status_code=200,
-        headers={
-            "Access-Control-Allow-Origin": "*",
-            "Access-Control-Allow-Methods": "POST, OPTIONS",
-            "Access-Control-Allow-Headers": "*",
-            "Access-Control-Max-Age": "86400"
-        }
-    )
-
-
 @app.get("/api/auth/verify", tags=["Authentication"])
 async def verify_token(current_user: dict = Depends(get_current_user)):
     """
@@ -2281,23 +2263,14 @@ async def test_echo(request: Request):
 
     try:
         body_json = json.loads(body_str)
-        return JSONResponse(
-            content={
-                "status": "success",
-                "message": "POST request received successfully!",
-                "received_data": body_json,
-                "timestamp": time.time()
-            },
-            status_code=200,
-            headers={
-                "Access-Control-Allow-Origin": "*",
-                "Access-Control-Allow-Methods": "POST, GET, OPTIONS",
-                "Access-Control-Allow-Headers": "*"
-            }
-        )
+        return {
+            "status": "success",
+            "message": "POST request received successfully!",
+            "received_data": body_json,
+            "timestamp": time.time()
+        }
     except json.JSONDecodeError:
-        return JSONResponse(
-            content={
+        return {
                 "status": "success",
                 "message": "POST received (not valid JSON)",
                 "raw_body": body_str,
@@ -2307,55 +2280,19 @@ async def test_echo(request: Request):
         )
 
 
-@app.options("/api/test/echo", tags=["General"])
-async def test_echo_options():
-    """OPTIONS handler for echo test endpoint"""
-    from fastapi.responses import Response
-    return Response(
-        status_code=200,
-        headers={
-            "Access-Control-Allow-Origin": "*",
-            "Access-Control-Allow-Methods": "POST, GET, OPTIONS",
-            "Access-Control-Allow-Headers": "*"
-        }
-    )
-
-
 @app.get("/api/test/connection", tags=["General"])
 async def test_connection():
     """
     Simple connection test endpoint for debugging iOS network issues
-    No authentication required, returns CORS headers
+    No authentication required
+    CORS is handled by CORSMiddleware
     """
-    from fastapi.responses import JSONResponse
-    return JSONResponse(
-        content={
-            "status": "connected",
-            "message": "Connection successful! Your iOS device can reach the server.",
-            "timestamp": time.time(),
-            "server_time": datetime.now().isoformat()
-        },
-        status_code=200,
-        headers={
-            "Access-Control-Allow-Origin": "*",
-            "Access-Control-Allow-Methods": "GET, OPTIONS",
-            "Access-Control-Allow-Headers": "*"
-        }
-    )
-
-
-@app.options("/api/test/connection", tags=["General"])
-async def test_connection_options():
-    """OPTIONS handler for test connection endpoint"""
-    from fastapi.responses import Response
-    return Response(
-        status_code=200,
-        headers={
-            "Access-Control-Allow-Origin": "*",
-            "Access-Control-Allow-Methods": "GET, OPTIONS",
-            "Access-Control-Allow-Headers": "*"
-        }
-    )
+    return {
+        "status": "connected",
+        "message": "Connection successful! Your iOS device can reach the server.",
+        "timestamp": time.time(),
+        "server_time": datetime.now().isoformat()
+    }
 
 
 @app.get("/stats", tags=["General"])
