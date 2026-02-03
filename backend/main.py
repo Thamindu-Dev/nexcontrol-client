@@ -128,10 +128,18 @@ AES_NONCE_LENGTH = 12  # 96-bit nonce for GCM
 
 # App Password Configuration
 # Default password: admin123
-# Pre-computed bcrypt hash for compatibility
+# Generate hash at startup to ensure it's correct
 DEFAULT_APP_PASSWORD = "admin123"  # CHANGE IN PRODUCTION!
-DEFAULT_PASSWORD_HASH = "$2b$12$LQv3c1yqBWVHxkd0LHAkCOYz6TtxMQJqhN8/LewY5aqLkqVE1wkK6"
-app_password_hash = os.getenv("APP_PASSWORD_HASH", DEFAULT_PASSWORD_HASH)
+
+# Check if custom hash is provided in environment
+custom_hash = os.getenv("APP_PASSWORD_HASH")
+if custom_hash:
+    app_password_hash = custom_hash
+    logger.info("Using custom password hash from environment")
+else:
+    # Generate hash from default password
+    app_password_hash = pwd_context.hash(DEFAULT_APP_PASSWORD)
+    logger.info(f"Generated hash for default password '{DEFAULT_APP_PASSWORD}'")
 
 # Rate Limiting Configuration
 MAX_LOGIN_ATTEMPTS = 5
