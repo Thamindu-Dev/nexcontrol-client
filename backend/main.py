@@ -144,8 +144,9 @@ TIMESTAMP_TOLERANCE = 30
 OS_TYPE = platform.system()  # 'Windows', 'Linux', 'Darwin'
 logger.info(f"Operating System detected: {OS_TYPE}")
 
-# CORS Configuration - Allow all local network origins
-# In production, you should restrict this to specific IPs
+# CORS Configuration - Allow all origins for local network access
+# Note: When allow_credentials=False, we can use ["*"] to allow all origins
+# For a local network app with JWT auth, we don't need credentials
 ALLOWED_ORIGINS = os.getenv("ALLOWED_ORIGINS", "*").split(",")
 
 # ============================================================
@@ -165,12 +166,15 @@ app.state.limiter = limiter
 app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
 
 # CORS Middleware - Configure based on environment
+# IMPORTANT: When allow_origins=["*"], allow_credentials must be False
+# Authentication is handled via JWT tokens in Authorization header, not cookies
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=ALLOWED_ORIGINS,
-    allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
+    allow_origins=["*"],  # Allow all origins for local network access
+    allow_credentials=False,  # Must be False when using wildcard origins
+    allow_methods=["*"],  # Allow all HTTP methods
+    allow_headers=["*"],  # Allow all headers
+    max_age=600,  # Cache preflight response for 10 minutes
 )
 
 # Password hashing context
