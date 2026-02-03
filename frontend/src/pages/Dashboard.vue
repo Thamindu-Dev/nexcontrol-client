@@ -483,12 +483,13 @@
 </template>
 
 <script setup>
-import { ref, computed, onMounted, onUnmounted, watch } from 'vue';
+import { ref, computed, onMounted, onUnmounted } from 'vue';
 import { useRouter } from 'vue-router';
 import { useQuasar } from 'quasar';
 import { useSystemStore } from '../stores/system';
 import { useAuthStore } from '../stores/auth';
 import LineChart from '../components/LineChart.vue';
+import api from '../services/ApiService';
 
 // Define component name for ESLint multi-word rule
 defineOptions({
@@ -502,14 +503,28 @@ const authStore = useAuthStore();
 
 // State
 const stats = computed(() => systemStore.stats);
-const containers = computed(() => systemStore.containers);
-const processes = computed(() => systemStore.processes);
 const powerActionLoading = ref(false);
 const autoRefresh = ref(false);
 const refreshInterval = ref(5000);
 let refreshTimer = null;
 
+// Multi-disk state
+const allDisks = ref([]);
+const diskLoading = ref(false);
+
 // Computed
+const loading = computed(() => systemStore.loading);
+
+const loadingWithDisks = computed(() => ({
+  stats: systemStore.loading.stats,
+  disks: diskLoading.value
+}));
+
+const loadingState = computed(() => ({
+  stats: systemStore.loading.stats,
+  disks: diskLoading.value
+}));
+
 const serverStatusIcon = computed(() => {
   return systemStore.isConnected ? 'check_circle' : 'error';
 });
@@ -520,45 +535,6 @@ const serverStatusColor = computed(() => {
 
 const serverStatusText = computed(() => {
   return systemStore.isConnected ? 'Connected' : 'Disconnected';
-});
-
-const loadingWithDisks = computed(() => ({
-  stats: systemStore.loading.stats,
-  disks: systemStore.loading.disks
-}));
-
-const loadingState = computed(() => systemStore.loading);
-
-const allDisks = computed(() => {
-  const disks = [];
-
-  // Add primary disk if available
-  if (stats.value.disk) {
-    disks.push({
-      device: stats.value.disk.device || 'C:',
-      mountpoint: stats.value.disk.mountpoint || '/',
-      fstype: stats.value.disk.fstype || 'Unknown',
-      opts: stats.value.disk.opts || '',
-      total: stats.value.disk.total,
-      used: stats.value.disk.used,
-      free: stats.value.disk.free,
-      percent: stats.value.disk.percent,
-      is_removable: false
-    });
-  }
-
-  // Add additional disks from systemStore
-  if (systemStore.disks && systemStore.disks.length > 0) {
-    for (const disk of systemStore.disks) {
-      // Skip if it's the primary disk (already added)
-      if (stats.value.disk && disk.device === stats.value.disk.device) {
-        continue;
-      }
-      disks.push(disk);
-    }
-  }
-
-  return disks;
 });
 
 // Chart data
@@ -659,13 +635,33 @@ function getTemperatureColor(temp) {
  * Get disk name
  */
 function getDiskName(disk) {
-  if (disk.device) {
-    if (disk.device.includes('/')) {
-      return disk.device;
+  if (!disk) return 'Unknown Disk';
+
+  // For removable drives, show more descriptive name
+  if (disk.is_removable) {
+    if (disk.device && disk.device.includes('/') || disk.device && disk.device.includes(':')) {
+      if (disk.device.match(/^([A-Z]):/)) {
+        const match = disk.device.match(/^([A-Z]):/);
+        if (match) return `Drive ${match[1]}`;
+      }
+      return disk.mountpoint || disk.device || 'External Drive';
     }
-    return `Drive ${disk.device[0]}`;
+    return disk.mountpoint || disk.device || 'External Drive';
   }
-  return 'Storage';
+
+  // For system drives, show mountpoint or device
+  if (disk.mountpoint) {
+    if (disk.mountpoint === '/') return 'Root (/)';
+    if (disk.device && disk.device.match(/^([A-Z]):/)) {
+      const match = disk.device.match(/^([A-Z]):/);
+      if (match) {
+        return `System (${match[0]})`;
+      }
+    }
+    return disk.mountpoint;
+  }
+
+  return disk.device || 'Storage';
 }
 
 /**
@@ -683,10 +679,23 @@ async function refreshStats() {
  * Refresh disks list
  */
 async function refreshDisks() {
+  diskLoading.value = true;
   try {
-    await systemStore.fetchDisks();
+    const response = await api.get('/api/stats/disks');
+    if (response.disks) {
+      allDisks.value = response.disks;
+      console.log(`[Dashboard] Found ${response.disks.length} storage devices`);
+    }
   } catch (error) {
     console.error('[Dashboard] Error refreshing disks:', error);
+    $q.notify({
+      type: 'negative',
+      message: error.message || 'Failed to scan for storage devices',
+      position: 'bottom',
+      classes: 'notification-glossy'
+    });
+  } finally {
+    diskLoading.value = false;
   }
 }
 
@@ -717,331 +726,6 @@ function confirmRestart() {
     class: 'glass-dialog'
   }).onOk(async () => {
     await executePowerAction('restart');
-  });
-}
-
-/**
- * Confirm hibernate
- */
-function confirmHibernate() {
-  $q.dialog({
-    title: 'Hibernate PC',
-    message: 'Are you sure you want to hibernate the PC?',
-    cancel: true,
-    persistent: true,
-    class: 'glass-dialog'
-  }).onOk(async () => {
-    await executePowerAction('hibernate');
-  });
-}
-
-
-/**
- * Execute power action
- */
-async function executePowerAction(action) {
-  powerActionLoading.value = true;
-
-  try {
-    let endpoint = '';
-    switch (action) {
-      case 'shutdown':
-        endpoint = '/api/power/shutdown';
-        break;
-      case 'hibernate':
-        endpoint = '/api/power/hibernate';
-        break;
-      case 'restart':
-        endpoint = '/api/power/restart';
-        break;
-      case 'lock':
-        endpoint = '/api/power/lock';
-        break;
-    }
-
-    const response = await fetch(endpoint, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${authStore.token}`
-      },
-      body: JSON.stringify({ action })
-    });
-
-    if (!response.ok) {
-      throw new Error(`HTTP ${response.status}`);
-    }
-
-    const result = await response.json();
-
-    $q.notify({
-      type: 'positive',
-      message: result.message || `${action} command sent successfully`,
-      position: 'bottom',
-      classes: 'notification-glossy'
-    });
-  } catch (error) {
-    console.error('[Dashboard] Power action error:', error);
-    $q.notify({
-      type: 'negative',
-      message: `Failed to execute ${action}: ${error.message}`,
-      position: 'bottom',
-      classes: 'notification-glossy'
-    });
-  } finally {
-    powerActionLoading.value = false;
-  }
-}
-
-/**
- * Navigation
- */
-function goToDocker() {
-  router.push('/docker');
-}
-
-function goToProcesses() {
-  router.push('/processes');
-}
-
-/**
- * Start auto-refresh
- */
-function startAutoRefresh() {
-  if (refreshTimer) clearInterval(refreshTimer);
-  refreshTimer = setInterval(() => {
-    if (!document.hidden) {
-      refreshStats();
-    }
-  }, refreshInterval.value);
-  autoRefresh.value = true;
-}
-
-/**
- * Stop auto-refresh
- */
-function stopAutoRefresh() {
-  if (refreshTimer) {
-    clearInterval(refreshTimer);
-    refreshTimer = null;
-  }
-  autoRefresh.value = false;
-}
-
-/**
- * Lifecycle
- */
-onMounted(async () => {
-  await refreshStats();
-
-  // Start auto-refresh
-  startAutoRefresh();
-
-  // Listen for visibility changes
-  document.addEventListener('visibilitychange', () => {
-    if (document.hidden) {
-      stopAutoRefresh();
-    } else {
-      startAutoRefresh();
-    }
-  });
-});
-
-onUnmounted(() => {
-  stopAutoRefresh();
-  document.removeEventListener('visibilitychange', () => {});
-});
-</script>
-
-<style scoped>
-.dashboard-page {
-  min-height: 100vh;
-  position: relative;
-  background: #000000;
-}
-
-.stats-container {
-  width: 100%;
-}
-
-.header-menu-btn {
-  color: #FFFFFF;
-  background: rgba(10, 10, 10, 0.8);
-  border: 1px solid rgba(255, 255, 255, 0.1);
-}
-
-.header-menu-btn:hover {
-  background: rgba(30, 30, 30, 0.9);
-}
-
-.logout-btn {
-  color: #ef4444;
-  background: rgba(10, 10, 10, 0.8);
-  border: 1px solid rgba(239, 68, 68, 0.3);
-}
-
-.logout-btn:hover {
-  background: rgba(239, 68, 68, 0.1);
-}
-</style>
-
-import { useRouter } from 'vue-router';
-import { useQuasar } from 'quasar';
-import { useAuthStore } from '../stores/auth';
-import { useSystemStore } from '../stores/system';
-import { useSettingsStore } from '../stores/settings';
-import LineChart from '../components/LineChart.vue';
-import api from '../services/ApiService';
-
-// Simple logger
-const logger = {
-  info: (msg) => console.log(`[Dashboard] ${msg}`),
-  error: (msg) => console.error(`[Dashboard] ${msg}`)
-};
-
-// Get OS platform for disk naming
-const OS_PLATFORM = navigator.platform || 'unknown';
-
-// Define component name for ESLint multi-word rule
-defineOptions({
-  name: 'DashboardPage'
-});
-
-const router = useRouter();
-const $q = useQuasar();
-
-// Stores
-const authStore = useAuthStore();
-const systemStore = useSystemStore();
-const settingsStore = useSettingsStore();
-
-// State
-const loading = computed(() => systemStore.loading);
-const stats = computed(() => systemStore.stats);
-const containers = computed(() => systemStore.containers);
-const processes = computed(() => systemStore.processes);
-const powerActionLoading = ref(false);
-const autoRefresh = ref(false);
-const refreshInterval = ref(5000);
-
-// Multi-disk state
-const allDisks = ref([]);
-const diskLoading = ref(false);
-
-// Computed loading state with disks
-const loadingWithDisks = computed(() => ({
-  ...loading.value,
-  disks: diskLoading.value
-}));
-
-// Helper for template
-const loadingState = {
-  get stats() { return loading.value; },
-  get disks() { return diskLoading.value; }
-};
-
-// Computed
-const serverStatusText = computed(() => {
-  return systemStore.dockerAvailable ? 'Online' : 'Connected';
-});
-
-const serverStatusColor = computed(() => {
-  return 'cyan';
-});
-
-const serverStatusIcon = computed(() => {
-  return systemStore.dockerAvailable ? 'cloud_done' : 'cloud';
-});
-
-/**
- * Format bytes to human readable
- */
-function formatBytes(bytes) {
-  if (!bytes) return '0 B';
-  const k = 1024;
-  const sizes = ['B', 'KB', 'MB', 'GB', 'TB'];
-  const i = Math.floor(Math.log(bytes) / Math.log(k));
-  return parseFloat((bytes / Math.pow(k, i)).toFixed(1)) + ' ' + sizes[i];
-}
-
-/**
- * Get temperature icon based on value
- */
-function getTemperatureIcon(temp) {
-  if (!temp) return 'thermostat';
-  if (temp >= 80) return 'warning';
-  if (temp >= 60) return 'whatshot';
-  return 'ac_unit';
-}
-
-/**
- * Get temperature color based on value
- */
-function getTemperatureColor(temp) {
-  if (!temp) return 'grey-5';
-  if (temp >= 80) return 'red';
-  if (temp >= 60) return 'orange';
-  if (temp >= 40) return 'yellow';
-  return 'cyan';
-}
-
-/**
- * Fetch all stats
- */
-async function fetchStats() {
-  try {
-    await systemStore.fetchStats();
-  } catch (error) {
-    console.error('Failed to fetch stats:', error);
-  }
-}
-
-/**
- * Toggle auto-refresh
- */
-function toggleAutoRefresh(value) {
-  if (value) {
-    systemStore.enableAutoRefresh(refreshInterval.value);
-  } else {
-    systemStore.disableAutoRefresh();
-  }
-}
-
-/**
- * Toggle WebSocket real-time mode
- */
-function toggleWebSocket() {
-  if (systemStore.webSocketEnabled) {
-    systemStore.disableWebSocket();
-    $q.notify({
-      type: 'info',
-      message: 'Switched to polling mode',
-      position: 'bottom',
-      classes: 'notification-glossy'
-    });
-  } else {
-    systemStore.enableWebSocket();
-    $q.notify({
-      type: 'positive',
-      message: 'Real-time updates enabled',
-      position: 'bottom',
-      classes: 'notification-glossy'
-    });
-  }
-}
-
-/**
- * Confirm shutdown
- */
-function confirmShutdown() {
-  $q.dialog({
-    title: 'Shutdown PC',
-    message: 'Are you sure you want to shutdown the PC?',
-    cancel: true,
-    persistent: true,
-    class: 'glass-dialog'
-  }).onOk(async () => {
-    await executePowerAction('shutdown');
   });
 }
 
@@ -1074,22 +758,6 @@ function confirmLock() {
     await executePowerAction('lock');
   });
 }
-
-/**
- * Confirm restart
- */
-function confirmRestart() {
-  $q.dialog({
-    title: 'Restart PC',
-    message: 'Are you sure you want to restart the PC?',
-    cancel: true,
-    persistent: true,
-    class: 'glass-dialog'
-  }).onOk(async () => {
-    await executePowerAction('restart');
-  });
-}
-
 
 /**
  * Execute power action
@@ -1158,14 +826,7 @@ async function handleLogout() {
 }
 
 /**
- * Open settings
- */
-function openSettings() {
-  router.push('/settings');
-}
-
-/**
- * Navigate to pages
+ * Navigation
  */
 function goToDocker() {
   router.push('/docker');
@@ -1176,84 +837,52 @@ function goToProcesses() {
 }
 
 /**
- * Refresh all storage devices (USB, partitions, etc.)
+ * Start auto-refresh
  */
-async function refreshDisks() {
-  diskLoading.value = true;
-  try {
-    const response = await api.get('/api/stats/disks');
-    if (response.disks) {
-      allDisks.value = response.disks;
-      logger.info(`Found ${response.disks.length} storage devices`);
+function startAutoRefresh() {
+  if (refreshTimer) clearInterval(refreshTimer);
+  refreshTimer = setInterval(() => {
+    if (!document.hidden) {
+      refreshStats();
     }
-  } catch (error) {
-    logger.error('Failed to fetch storage devices:', error);
-    $q.notify({
-      type: 'negative',
-      message: error.message || 'Failed to scan for storage devices',
-      position: 'bottom',
-      classes: 'notification-glossy'
-    });
-  } finally {
-    diskLoading.value = false;
-  }
+  }, refreshInterval.value);
+  autoRefresh.value = true;
 }
 
 /**
- * Get a friendly name for a disk
+ * Stop auto-refresh
  */
-function getDiskName(disk) {
-  if (!disk) return 'Unknown Disk';
-
-  // For removable drives, show more descriptive name
-  if (disk.is_removable) {
-    if (OS_PLATFORM === 'win32') {
-      // Windows: D:, E:, etc. -> "Drive D", "Drive E"
-      const match = disk.device.match(/^([A-Z]):/);
-      if (match) {
-        return `Drive ${match[1]}`;
-      }
-    }
-    return disk.mountpoint || disk.device || 'External Drive';
+function stopAutoRefresh() {
+  if (refreshTimer) {
+    clearInterval(refreshTimer);
+    refreshTimer = null;
   }
-
-  // For system drives, show mountpoint or device
-  if (disk.mountpoint) {
-    if (disk.mountpoint === '/') return 'Root (/)';
-    if (OS_PLATFORM === 'win32') {
-      // Windows: C:\ -> "System (C:)"
-      const match = disk.device.match(/^([A-Z]):/);
-      if (match) {
-        return `System (${match[0]})`;
-      }
-    }
-    return disk.mountpoint;
-  }
-
-  return disk.device || 'Storage';
+  autoRefresh.value = false;
 }
 
 /**
- * Lifecycle hooks
+ * Lifecycle
  */
 onMounted(async () => {
-  // Load settings
-  settingsStore.loadSettings();
-  refreshInterval.value = settingsStore.preferences.refreshInterval;
-
-  // Initial stats fetch
-  await fetchStats();
-
-  // Fetch containers and processes
-  await systemStore.fetchContainers();
-  await systemStore.fetchProcesses();
-
-  // Fetch all storage devices
+  await refreshStats();
   await refreshDisks();
+
+  // Start auto-refresh
+  startAutoRefresh();
+
+  // Listen for visibility changes
+  document.addEventListener('visibilitychange', () => {
+    if (document.hidden) {
+      stopAutoRefresh();
+    } else {
+      startAutoRefresh();
+    }
+  });
 });
 
 onUnmounted(() => {
-  systemStore.disableAutoRefresh();
+  stopAutoRefresh();
+  document.removeEventListener('visibilitychange', () => {});
 });
 </script>
 
@@ -1264,13 +893,38 @@ onUnmounted(() => {
   background: #000000;
 }
 
+.stats-container {
+  width: 100%;
+}
+
+.header-menu-btn {
+  color: #FFFFFF;
+  background: rgba(10, 10, 10, 0.8);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.header-menu-btn:hover {
+  background: rgba(30, 30, 30, 0.9);
+}
+
+.logout-btn {
+  color: #ef4444;
+  background: rgba(10, 10, 10, 0.8);
+  border: 1px solid rgba(239, 68, 68, 0.3);
+}
+
+.logout-btn:hover {
+  background: rgba(239, 68, 68, 0.1);
+}
+
 /* Cards - Pure Black with Subtle Border */
 .stat-card,
 .power-card,
 .chart-card,
 .settings-card,
 .action-card,
-.storage-card {
+.storage-card,
+.action-mini-card {
   background: #000000;
   border: 1px solid #333333;
   border-radius: 12px;
@@ -1279,7 +933,8 @@ onUnmounted(() => {
 
 .stat-card:hover,
 .action-card:hover,
-.storage-card:hover {
+.storage-card:hover,
+.action-mini-card:hover {
   border-color: #444444;
 }
 
@@ -1312,13 +967,8 @@ onUnmounted(() => {
 
 /* Status Badge */
 .status-badge {
-  background: var(--q-dark-page);
-  border: 1px solid var(--q-separator);
-}
-
-.body--light .status-badge {
-  background: #f5f5f5;
-  border: 1px solid #e0e0e0;
+  background: rgba(10, 10, 10, 0.8);
+  border: 1px solid #333333;
 }
 
 /* Header Buttons */
@@ -1327,10 +977,6 @@ onUnmounted(() => {
   background: transparent;
   border: 1px solid #333333;
   border-radius: 8px;
-}
-
-.logout-btn {
-  color: #ef4444;
 }
 
 /* Circular Progress */
@@ -1377,20 +1023,6 @@ onUnmounted(() => {
   background: transparent !important;
 }
 
-/* Action Cards */
-.action-card:hover {
-  border-color: rgba(34, 211, 238, 0.3);
-}
-
-.action-card .arrow-icon {
-  transition: all 0.2s ease;
-}
-
-.action-card:hover .arrow-icon {
-  transform: translateX(3px);
-  color: #22d3ee;
-}
-
 /* Notification Styling */
 :deep(.notification-glossy) {
   background: #0A0A0A !important;
@@ -1428,17 +1060,14 @@ onUnmounted(() => {
 @media (hover: none) and (pointer: coarse) {
   .stat-card:hover,
   .action-card:hover,
-  .power-btn-outlined:hover {
+  .power-btn-outlined:hover,
+  .action-mini-card:hover {
     transform: none !important;
   }
 
   .power-btn-outlined {
     min-height: 44px;
     min-width: 44px;
-  }
-
-  .arrow-icon {
-    display: none;
   }
 }
 
