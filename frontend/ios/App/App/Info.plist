@@ -63,11 +63,14 @@
 	<key>NSPhotoLibraryUsageDescription</key>
 	<string>This app may need photo library access for saving images</string>
 	<key>NSLocalNetworkUsageDescription</key>
-	<string>This app requires access to your local network to connect to your PC</string>
+	<string>This app requires access to your local network to connect to and control your PC. Please allow local network access when prompted.</string>
 	<key>NSBonjourServices</key>
 	<array>
 		<string>_http._tcp</string>
 		<string>_https._tcp</string>
+		<string>_nexcontrol._tcp</string>
 	</array>
+	<key>NSNetworkUsageDescription</key>
+	<string>This app requires network access to connect to your PC on the local network</string>
 </dict>
 </plist>
