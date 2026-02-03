@@ -803,7 +803,7 @@ class SystemMonitor:
     @staticmethod
     def get_disk_usage(path: str = None) -> dict:
         """
-        Get disk usage statistics
+        Get disk usage statistics (legacy - single disk)
 
         Args:
             path: Path to check (auto-detected if None)
@@ -842,6 +842,120 @@ class SystemMonitor:
         except Exception as e:
             logger.error(f"Error getting disk stats: {type(e).__name__}")
             return {"percent": 0, "error": "Failed to get disk stats"}
+
+    @staticmethod
+    def get_all_disks() -> dict:
+        """
+        Get all attached storage devices (HDD, SSD, USB, partitions)
+
+        Detects:
+        - All disk partitions on Windows (C:, D:, etc.)
+        - All mounted partitions on Linux/macOS
+        - USB drives and external storage
+        - Provides usage stats for each detected disk
+
+        Returns:
+            Dict with list of all disks/partitions
+        """
+        disks = []
+
+        try:
+            # Get all disk partitions
+            partitions = psutil.disk_partitions(all=True)
+
+            # Track unique devices to avoid duplicates
+            seen_devices = set()
+
+            for partition in partitions:
+                try:
+                    # Skip non-filesystem and special partitions
+                    if partition.fstype == '' or partition.fstype == 'swap':
+                        continue
+
+                    # Skip common Linux special filesystems
+                    if OS_TYPE == "Linux":
+                        if any(partition.mountpoint.startswith(p) for p in ['/dev', '/proc', '/sys', '/run']):
+                            continue
+
+                    # Get device name for deduplication
+                    device_key = f"{partition.device}:{partition.fstype}"
+                    if device_key in seen_devices:
+                        continue
+                    seen_devices.add(device_key)
+
+                    # Get disk usage if mountpoint is accessible
+                    usage = None
+                    try:
+                        if partition.mountpoint and partition.mountpoint != '':
+                            usage = psutil.disk_usage(partition.mountpoint)
+                    except (PermissionError, FileNotFoundError):
+                        # Can't access this partition, but still include it
+                        pass
+
+                    disk_info = {
+                        "device": partition.device,
+                        "mountpoint": partition.mountpoint,
+                        "fstype": partition.fstype,
+                        "opts": partition.opts
+                    }
+
+                    # Add usage info if available
+                    if usage:
+                        disk_info.update({
+                            "total": usage.total,
+                            "used": usage.used,
+                            "free": usage.free,
+                            "percent": round(usage.percent, 2)
+                        })
+                    else:
+                        disk_info["percent"] = None
+
+                    # Determine if this is likely a removable/USB drive
+                    is_removable = False
+
+                    if OS_TYPE == "Windows":
+                        # On Windows, check if device is a removable drive (D:, E:, etc. are often USB/external)
+                        if len(partition.device) > 0:
+                            drive_letter = partition.device[0].upper()
+                            # Drives other than C: are often external/removable
+                            if drive_letter != 'C':
+                                is_removable = True
+                    else:  # Linux/macOS
+                        # Check mount options for removable indicators
+                        removable_indicators = ['rw,nosuid,nodev', 'user', 'removable', 'usb']
+                        if partition.opts:
+                            if any(indicator in partition.opts.lower() for indicator in removable_indicators):
+                                is_removable = True
+
+                        # Check if mounted under /media or /mnt (common for USB)
+                        if partition.mountpoint:
+                            if any(partition.mountpoint.startswith(p) for p in ['/media/', '/mnt/']):
+                                is_removable = True
+
+                    disk_info["is_removable"] = is_removable
+                    disks.append(disk_info)
+
+                except PermissionError:
+                    # Skip partitions we can't access
+                    continue
+                except Exception as e:
+                    logger.warning(f"Error processing partition {partition.device}: {type(e).__name__}")
+                    continue
+
+            logger.info(f"Found {len(disks)} disk/partition(s)")
+
+            return {
+                "disks": disks,
+                "count": len(disks)
+            }
+
+        except Exception as e:
+            logger.error(f"Error getting all disks: {type(e).__name__}: {str(e)}")
+            return {
+                "disks": [],
+                "count": 0,
+                "error": str(e)
+            }
 
     @staticmethod
     def get_gpu_temperature() -> dict:
@@ -2396,6 +2510,13 @@ async def get_all_stats_public():
     """Get all system statistics in one call (no auth required)"""
     return SystemMonitor.get_all_stats()
 
+
+@app.get("/api/stats/disks", tags=["System Stats (Public)"])
+async def get_all_disks_public():
+    """Get all attached storage devices including USB drives, partitions (no auth required)"""
+    return SystemMonitor.get_all_disks()
+
+
 # Protected endpoints (auth required) - for frontend app
 @app.get("/api/v1/stats/cpu", tags=["System Stats (Protected)"])
 async def get_cpu_stats(current_user: dict = Depends(get_current_user)):
@@ -2431,6 +2552,12 @@ async def get_network_stats(current_user: dict = Depends(get_current_user)):
 async def get_all_stats(current_user: dict = Depends(get_current_user)):
     """Get all system statistics in one call (authentication required)"""
     return SystemMonitor.get_all_stats()
+
+
+@app.get("/api/v1/stats/disks", tags=["System Stats (Protected)"])
+async def get_all_disks(current_user: dict = Depends(get_current_user)):
+    """Get all attached storage devices including USB drives, partitions (authentication required)"""
+    return SystemMonitor.get_all_disks()
 
 
 # ============================================================
@@ -3338,13 +3465,20 @@ class WebSocketConnectionManager:
 
         while self._is_running:
             try:
-                # Get current stats
+                # Get current stats (including all disks)
                 stats = SystemMonitor.get_all_stats()
+                disks = SystemMonitor.get_all_disks()
+
+                # Combine stats and disks
+                broadcast_data = {
+                    **stats,
+                    "disks": disks
+                }
 
                 # Broadcast to all connected clients
                 await self.broadcast({
                     "type": "stats_update",
-                    "data": stats,
+                    "data": broadcast_data,
                     "timestamp": time.time()
                 })
 

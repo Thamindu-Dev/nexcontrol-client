@@ -3,8 +3,8 @@
 body {
   /* Prevent elastic scrolling on iOS */
   overscroll-behavior-y: none;
-  /* Darken background to match app theme */
-  background-color: #0f0c29;
+  /* Pure black background for OLED theme */
+  background-color: #000000;
   /* Remove tap highlight on iOS */
   -webkit-tap-highlight-color: transparent;
   /* Disable text selection mainly for app-like feel */
@@ -19,87 +19,66 @@ textarea {
   -webkit-user-select: text;
 }
 
-/* Custom Scrollbar for WebKit */
+/* Custom Scrollbar for WebKit - Dark Theme */
 ::-webkit-scrollbar {
   width: 8px;
   height: 8px;
 }
 
 ::-webkit-scrollbar-track {
-  background: rgba(255, 255, 255, 0.05);
+  background: #0A0A0A;
 }
 
 ::-webkit-scrollbar-thumb {
-  background: rgba(255, 255, 255, 0.2);
+  background: #333333;
   border-radius: 4px;
 }
 
 ::-webkit-scrollbar-thumb:hover {
-  background: rgba(255, 255, 255, 0.3);
+  background: #444444;
 }
 
 /* Status Bar Background Support */
-/* This ensures the top area behind the status bar matches the header */
 body.platform-ios {
-  background-color: #0f0c29;
+  background-color: #000000;
 }
 
-/* Global Glassmorphism Styles */
+/* OLED Theme - Pure Black Cards */
 .glass-card {
-  background: rgba(255, 255, 255, 0.05);
-  backdrop-filter: blur(20px);
-  -webkit-backdrop-filter: blur(20px);
-  border: 1px solid rgba(255, 255, 255, 0.1);
-  box-shadow: 0 20px 40px rgba(0, 0, 0, 0.4);
-  transition: all 0.3s ease;
+  background: #000000;
+  border: 1px solid #333333;
+  border-radius: 12px;
+  transition: all 0.2s ease;
 }
 
 .glass-card:hover {
-  background: rgba(255, 255, 255, 0.08);
-  border-color: rgba(255, 255, 255, 0.15);
-  transform: translateY(-2px);
-  box-shadow: 0 25px 50px rgba(0, 0, 0, 0.5);
+  border-color: #444444;
 }
 
+/* Outlined Button Style */
 .glass-btn {
-  background: rgba(255, 255, 255, 0.05);
-  backdrop-filter: blur(10px);
-  border: 1px solid rgba(255, 255, 255, 0.1);
-  transition: all 0.3s ease;
+  background: transparent;
+  border: 1px solid #FFFFFF;
+  color: #FFFFFF;
+  border-radius: 8px;
+  transition: all 0.2s ease;
 }
 
 .glass-btn:hover {
-  background: rgba(255, 255, 255, 0.1);
-  transform: scale(1.05);
+  background: #FFFFFF;
+  color: #000000;
 }
 
-/* Glass Dialog */
-.glass-dialog .q-dialog__inner>div {
-  background: rgba(30, 30, 30, 0.95);
-  backdrop-filter: blur(20px);
-  border: 1px solid rgba(255, 255, 255, 0.1);
+/* Dialog - Dark Theme */
+.glass-dialog .q-dialog__inner > div {
+  background: #0A0A0A;
+  border: 1px solid #333333;
+  color: #FFFFFF;
 }
 
-/* Glossy Effect */
-.glossy {
-  position: relative;
-  overflow: hidden;
-}
-
-.glossy::before {
-  content: '';
-  position: absolute;
-  top: 0;
-  left: -100%;
-  width: 100%;
-  height: 100%;
-  background: linear-gradient(90deg,
-      transparent,
-      rgba(255, 255, 255, 0.1),
-      transparent);
-  transition: left 0.5s;
-}
-
-.glossy:hover::before {
-  left: 100%;
+/* Notification - Dark Theme */
+.notification-glossy {
+  background: #0A0A0A !important;
+  border: 1px solid #333333;
+  color: #FFFFFF;
 }

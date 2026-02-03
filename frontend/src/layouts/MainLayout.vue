@@ -11,9 +11,6 @@
 -->
 <template>
   <q-layout view="lHh Lpr lFf">
-    <!-- Status Bar Spacer for Dynamic Island / Notch -->
-    <div class="status-bar-spacer"></div>
-
     <!-- Header -->
     <q-header elevated class="app-header">
       <q-toolbar>
@@ -191,8 +188,39 @@
   </q-layout>
 </template>
 
-<script setup>
-import { ref, computed, onMounted, onUnmounted } from 'vue';
+<!-- Global styles for iOS Safe Area (not scoped) -->
+<style>
+/* iOS Safe Area Support - Critical for Dynamic Island/Notch */
+.q-layout > .q-header {
+  padding-top: constant(safe-area-inset-top) !important; /* iOS 11.0 */
+  padding-top: env(safe-area-inset-top) !important; /* iOS 11.2+ */
+}
+
+.q-layout > .q-footer {
+  padding-bottom: constant(safe-area-inset-bottom) !important; /* iOS 11.0 */
+  padding-bottom: env(safe-area-inset-bottom) !important; /* iOS 11.2+ */
+}
+
+.q-layout > .q-page-container {
+  padding-left: constant(safe-area-inset-left) !important;
+  padding-left: env(safe-area-inset-left) !important;
+  padding-right: constant(safe-area-inset-right) !important;
+  padding-right: env(safe-area-inset-right) !important;
+}
+</style>
+
+<style scoped>
+/* Header - Pure Black */
+.app-header {
+  background: #000000;
+  border-bottom: 1px solid #333333;
+}
+
+/* Ensure toolbar has proper spacing with safe area */
+.app-header .q-toolbar {
+  min-height: calc(50px + constant(safe-area-inset-top));
+  min-height: calc(50px + env(safe-area-inset-top));
+}
 import { useRouter } from 'vue-router';
 import { useQuasar } from 'quasar';
 import { useAuthStore } from '../stores/auth';
@@ -349,24 +377,6 @@ onUnmounted(() => {
   }
 });
 </script>
-
-<style scoped>
-/* Status Bar Spacer - CRITICAL FOR DYNAMIC ISLAND */
-.status-bar-spacer {
-  height: max(20px, env(safe-area-inset-top));
-  background: #000000;
-  position: fixed;
-  top: 0;
-  left: 0;
-  right: 0;
-  z-index: 9999;
-}
-
-/* Header - Pure Black */
-.app-header {
-  background: #000000;
-  border-bottom: 1px solid #333333;
-}
 
 .app-title {
   font-size: 1.1rem;

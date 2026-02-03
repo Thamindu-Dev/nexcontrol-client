@@ -70,6 +70,7 @@
                 <div class="col-12">
                   <q-btn
                     type="submit"
+                    outline
                     color="white"
                     class="full-width"
                     label="Add Device"
@@ -366,3 +367,22 @@ onMounted(() => {
   loadDevices();
 });
 </script>
+
+<style scoped>
+/* OLED Theme Styles */
+.glass-card {
+  background: #000000;
+  border: 1px solid #333333;
+  border-radius: 12px;
+}
+
+/* Code styling */
+code {
+  background: #0A0A0A;
+  border: 1px solid #333333;
+  border-radius: 4px;
+  padding: 2px 6px;
+  color: #22d3ee;
+  font-family: 'Courier New', monospace;
+}
+</style>

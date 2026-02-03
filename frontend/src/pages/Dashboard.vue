@@ -72,7 +72,7 @@
                     size="80px"
                     color="cyan"
                     track-color="rgba(34, 211, 238, 0.1)"
-                    :indeterminate="loading.stats"
+                    :indeterminate="loadingWithDisks.stats"
                     class="circular-progress"
                   />
                 </div>
@@ -82,7 +82,7 @@
         </div>
       </div>
 
-      <!-- Row 2: Memory & Disk (Side by Side) -->
+      <!-- Row 2: Memory & Primary Disk -->
       <div class="row q-gutter-md q-mb-lg">
         <!-- Memory Card -->
         <div class="col-6">
@@ -111,13 +111,13 @@
           </q-card>
         </div>
 
-        <!-- Disk Card -->
+        <!-- Primary Disk Card -->
         <div class="col-6">
           <q-card class="stat-card" flat bordered>
             <q-card-section class="q-pa-md">
               <div class="row items-center q-mb-sm">
                 <q-icon name="folder_open" size="20px" color="grey-5" class="q-mr-xs" />
-                <div class="text-caption text-grey-6 text-weight-bold">DISK</div>
+                <div class="text-caption text-grey-6 text-weight-bold">PRIMARY DISK</div>
               </div>
               <div class="text-h4 text-weight-bold text-white q-mb-sm">
                 {{ stats.disk?.percent?.toFixed(1) || 0 }}<span class="text-caption text-grey-6">%</span>
@@ -133,6 +133,120 @@
               />
               <div class="text-caption text-grey-7">
                 {{ formatBytes(stats.disk?.used) }} / {{ formatBytes(stats.disk?.total) }}
+              </div>
+            </q-card-section>
+          </q-card>
+        </div>
+      </div>
+
+      <!-- All Storage Devices (USB, Partitions, etc.) -->
+      <div class="row q-gutter-md q-mb-lg">
+        <div class="col-12">
+          <q-card class="storage-card" flat bordered>
+            <q-card-section class="q-pa-md">
+              <div class="row items-center q-mb-md">
+                <q-icon name="sd_storage" size="20px" color="grey-5" class="q-mr-sm" />
+                <div class="text-subtitle2 text-white">All Storage Devices</div>
+                <q-space />
+                <q-btn
+                  flat
+                  round
+                  dense
+                  icon="refresh"
+                  size="sm"
+                  class="header-btn"
+                  :loading="loadingState.disks"
+                  @click="refreshDisks"
+                >
+                  <q-tooltip>Refresh storage list</q-tooltip>
+                </q-btn>
+              </div>
+            </q-card-section>
+
+            <q-card-section class="q-pt-none q-pb-md q-px-md">
+              <!-- Empty State -->
+              <div v-if="allDisks.length === 0 && !loadingState.disks" class="text-center q-pa-xl">
+                <q-icon name="search" size="48px" color="grey-8" />
+                <div class="text-caption q-mt-sm">No storage devices found</div>
+              </div>
+
+              <!-- Loading State -->
+              <div v-else-if="loadingState.disks" class="text-center q-pa-xl">
+                <q-spinner color="grey-6" size="32px" />
+                <div class="text-caption text-grey-7 q-mt-sm">Scanning for storage devices...</div>
+              </div>
+
+              <!-- Disks List -->
+              <div v-else class="q-gutter-sm">
+                <q-card
+                  v-for="(disk, index) in allDisks"
+                  :key="index"
+                  :class="['disk-item', disk.is_removable ? 'removable-disk' : '']"
+                  flat
+                  bordered
+                >
+                  <q-card-section class="q-pa-sm">
+                    <div class="row items-center q-mb-xs">
+                      <div class="col-auto q-mr-sm">
+                        <q-icon
+                          :name="disk.is_removable ? 'usb' : 'hard_disk'"
+                          size="20px"
+                          :color="disk.is_removable ? 'cyan' : 'grey-5'"
+                        />
+                      </div>
+                      <div class="col">
+                        <div class="row items-center">
+                          <div class="text-subtitle2 text-white q-mr-sm">
+                            {{ getDiskName(disk) }}
+                          </div>
+                          <q-chip
+                            v-if="disk.is_removable"
+                            label="USB/External"
+                            size="sm"
+                            color="cyan"
+                            text-color="white"
+                            class="q-pa-none"
+                            style="background: rgba(34, 211, 238, 0.15); border: 1px solid rgba(34, 211, 238, 0.3);"
+                          />
+                        </div>
+                        <div class="text-caption text-grey-6">
+                          {{ disk.mountpoint || disk.device }}
+                        </div>
+                      </div>
+                      <div class="col-auto text-right">
+                        <div v-if="disk.percent !== null" class="text-h6 text-weight-bold text-white">
+                          {{ disk.percent }}<span class="text-caption text-grey-6">%</span>
+                        </div>
+                        <div v-else class="text-caption text-grey-7">
+                          N/A
+                        </div>
+                      </div>
+                    </div>
+
+                    <!-- Progress Bar (if usage data available) -->
+                    <q-linear-progress
+                      v-if="disk.percent !== null"
+                      :value="disk.percent"
+                      :thickness="3"
+                      :color="disk.is_removable ? 'cyan' : 'white'"
+                      track-color="rgba(255,255,255,0.1)"
+                      rounded
+                      class="q-mt-xs"
+                    />
+
+                    <!-- Additional Info -->
+                    <div class="row q-mt-xs">
+                      <div class="col-12">
+                        <div v-if="disk.total" class="text-caption text-grey-7">
+                          {{ formatBytes(disk.used) }} / {{ formatBytes(disk.total) }} used
+                        </div>
+                        <div class="text-caption text-grey-8">
+                          {{ disk.fstype }} {{ disk.opts ? `(${disk.opts})` : '' }}
+                        </div>
+                      </div>
+                    </div>
+                  </q-card-section>
+                </q-card>
               </div>
             </q-card-section>
           </q-card>
@@ -351,12 +465,21 @@ import { useAuthStore } from '../stores/auth';
 import { useSystemStore } from '../stores/system';
 import { useSettingsStore } from '../stores/settings';
 import LineChart from '../components/LineChart.vue';
+import api from '../services/ApiService';
+
+// Simple logger
+const logger = {
+  info: (msg) => console.log(`[Dashboard] ${msg}`),
+  error: (msg) => console.error(`[Dashboard] ${msg}`)
+};
+
+// Get OS platform for disk naming
+const OS_PLATFORM = navigator.platform || 'unknown';
 
 // Define component name for ESLint multi-word rule
 defineOptions({
   name: 'DashboardPage'
 });
-import api from '../services/ApiService';
 
 const router = useRouter();
 const $q = useQuasar();
@@ -374,6 +497,22 @@ const processes = computed(() => systemStore.processes);
 const powerActionLoading = ref(false);
 const autoRefresh = ref(false);
 const refreshInterval = ref(5000);
+
+// Multi-disk state
+const allDisks = ref([]);
+const diskLoading = ref(false);
+
+// Computed loading state with disks
+const loadingWithDisks = computed(() => ({
+  ...loading.value,
+  disks: diskLoading.value
+}));
+
+// Helper for template
+const loadingState = {
+  get stats() { return loading.value; },
+  get disks() { return diskLoading.value; }
+};
 
 // Computed
 const serverStatusText = computed(() => {
@@ -564,6 +703,64 @@ function goToProcesses() {
 }
 
 /**
+ * Refresh all storage devices (USB, partitions, etc.)
+ */
+async function refreshDisks() {
+  diskLoading.value = true;
+  try {
+    const response = await api.get('/api/stats/disks');
+    if (response.disks) {
+      allDisks.value = response.disks;
+      logger.info(`Found ${response.disks.length} storage devices`);
+    }
+  } catch (error) {
+    logger.error('Failed to fetch storage devices:', error);
+    $q.notify({
+      type: 'negative',
+      message: error.message || 'Failed to scan for storage devices',
+      position: 'bottom',
+      classes: 'notification-glossy'
+    });
+  } finally {
+    diskLoading.value = false;
+  }
+}
+
+/**
+ * Get a friendly name for a disk
+ */
+function getDiskName(disk) {
+  if (!disk) return 'Unknown Disk';
+
+  // For removable drives, show more descriptive name
+  if (disk.is_removable) {
+    if (OS_PLATFORM === 'win32') {
+      // Windows: D:, E:, etc. -> "Drive D", "Drive E"
+      const match = disk.device.match(/^([A-Z]):/);
+      if (match) {
+        return `Drive ${match[1]}`;
+      }
+    }
+    return disk.mountpoint || disk.device || 'External Drive';
+  }
+
+  // For system drives, show mountpoint or device
+  if (disk.mountpoint) {
+    if (disk.mountpoint === '/') return 'Root (/)';
+    if (OS_PLATFORM === 'win32') {
+      // Windows: C:\ -> "System (C:)"
+      const match = disk.device.match(/^([A-Z]):/);
+      if (match) {
+        return `System (${match[0]})`;
+      }
+    }
+    return disk.mountpoint;
+  }
+
+  return disk.device || 'Storage';
+}
+
+/**
  * Lifecycle hooks
  */
 onMounted(async () => {
@@ -577,6 +774,9 @@ onMounted(async () => {
   // Fetch containers and processes
   await systemStore.fetchContainers();
   await systemStore.fetchProcesses();
+
+  // Fetch all storage devices
+  await refreshDisks();
 });
 
 onUnmounted(() => {
@@ -596,7 +796,8 @@ onUnmounted(() => {
 .power-card,
 .chart-card,
 .settings-card,
-.action-card {
+.action-card,
+.storage-card {
   background: #000000;
   border: 1px solid #333333;
   border-radius: 12px;
@@ -604,8 +805,20 @@ onUnmounted(() => {
 }
 
 .stat-card:hover,
-.action-card:hover {
+.action-card:hover,
+.storage-card:hover {
   border-color: #444444;
+}
+
+/* Individual Disk Items */
+.disk-item {
+  background: #0A0A0A;
+  border: 1px solid #333333;
+}
+
+.removable-disk {
+  border: 1px solid rgba(34, 211, 238, 0.2);
+  background: rgba(34, 211, 238, 0.02);
 }
 
 /* Header Section */

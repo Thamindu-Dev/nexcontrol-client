@@ -234,19 +234,15 @@ export const useSystemStore = defineStore('system', {
      * Fetch all system statistics (polling mode)
      */
     async fetchStats() {
-      // Don't fetch if WebSocket is connected and working
-      if (this.webSocketEnabled && this.isWebSocketConnected) {
-        console.log('[System] Skipping fetch: WebSocket is connected');
-        return;
-      }
-
+      // Fetch stats and update history
+      // Even if WebSocket is connected, we want to ensure data is available
       this.loading.stats = true;
       this.errors.stats = null;
 
       try {
         const data = await api.get('/api/stats/all');
         this.stats = data;
-        this.updateHistory();
+        this.updateHistory(data);
       } catch (error) {
         console.error('Failed to fetch stats:', error);
         this.errors.stats = error.message || 'Failed to fetch stats';
@@ -503,7 +499,8 @@ export const useSystemStore = defineStore('system', {
             ...data,
             timestamp: Math.floor(Date.now() / 1000)
           };
-          this.updateHistory();
+          // Pass data directly to updateHistory for immediate processing
+          this.updateHistory(data);
         }
       };
 
@@ -541,15 +538,21 @@ export const useSystemStore = defineStore('system', {
 
     /**
      * Update historical data for charts
+     * @param {Object} data - Optional data object to use directly (avoids reactivity timing issues)
      */
-    updateHistory() {
+    updateHistory(data = null) {
       const now = Date.now();
+
+      // Extract values from data if provided, otherwise use getters
+      const cpuValue = data?.cpu?.cpu_percent ?? this.cpuUsage;
+      const memoryValue = data?.memory?.percent ?? this.memoryUsage;
+      const diskValue = data?.disk?.percent ?? this.diskUsage;
 
       // Add current stats to history
       this.history.timestamps.push(now);
-      this.history.cpu.push(this.cpuUsage);
-      this.history.memory.push(this.memoryUsage);
-      this.history.disk.push(this.diskUsage);
+      this.history.cpu.push(cpuValue);
+      this.history.memory.push(memoryValue);
+      this.history.disk.push(diskValue);
 
       // Keep only the last maxHistoryLength entries
       if (this.history.timestamps.length > this.maxHistoryLength) {
@@ -558,6 +561,13 @@ export const useSystemStore = defineStore('system', {
         this.history.memory.shift();
         this.history.disk.shift();
       }
+
+      console.log('[System] History updated:', {
+        cpu: cpuValue,
+        memory: memoryValue,
+        disk: diskValue,
+        dataPoints: this.history.timestamps.length
+      });
     },
 
     /**

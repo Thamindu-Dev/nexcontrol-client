@@ -54,6 +54,7 @@
               <div class="text-subtitle2">Actions</div>
               <q-space />
               <q-btn
+                outline
                 color="white"
                 icon="screenshot"
                 label="Capture Screenshot"
@@ -75,8 +76,8 @@
               <div class="text-h6">Screenshot Preview</div>
               <q-space />
               <q-btn
-                flat
-                color="secondary"
+                outline
+                color="white"
                 icon="download"
                 label="Download"
                 @click="downloadScreenshot"
@@ -234,9 +235,16 @@ onMounted(async () => {
 </script>
 
 <style scoped>
+/* OLED Theme Styles */
+.q-card {
+  background: #000000;
+  border: 1px solid #333333;
+  border-radius: 12px;
+}
+
 .screenshot-image {
-  border: 1px solid #e0e0e0;
-  border-radius: 4px;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  border: 1px solid #333333;
+  border-radius: 8px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.5);
 }
 </style>

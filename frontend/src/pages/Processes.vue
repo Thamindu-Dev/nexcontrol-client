@@ -242,3 +242,31 @@ onMounted(async () => {
   await refreshProcesses();
 });
 </script>
+
+<style scoped>
+/* OLED Theme Styles */
+.glass-card {
+  background: #000000;
+  border: 1px solid #333333;
+  border-radius: 12px;
+}
+
+/* Table Styling */
+.q-table {
+  background: transparent;
+}
+
+.q-table th {
+  color: #FFFFFF;
+  font-weight: 600;
+}
+
+.q-table td {
+  color: #E0E0E0;
+  border-bottom: 1px solid #1A1A1A;
+}
+
+.q-table tr:hover td {
+  background: #0A0A0A;
+}
+</style>

@@ -726,3 +726,12 @@ onMounted(async () => {
   await loadThresholdConfig();
 });
 </script>
+
+<style scoped>
+/* OLED Theme Styles */
+.q-card {
+  background: #000000;
+  border: 1px solid #333333;
+  border-radius: 12px;
+}
+</style>

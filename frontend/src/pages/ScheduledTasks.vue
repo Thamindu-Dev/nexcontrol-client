@@ -25,6 +25,7 @@
       <div class="col-12">
         <q-btn
           @click="showCreateDialog = true"
+          outline
           color="white"
           icon="add"
           label="Create New Task"
@@ -155,6 +156,7 @@
               <div class="col-6 q-pl-sm">
                 <q-btn
                   type="submit"
+                  outline
                   color="white"
                   label="Create"
                   class="full-width"
@@ -348,5 +350,21 @@ onMounted(() => {
   loadTasks();
 });
 </script>
+
+<style scoped>
+/* OLED Theme Styles */
+.glass-card {
+  background: #000000;
+  border: 1px solid #333333;
+  border-radius: 12px;
+}
+
+/* Dialog Styling */
+:deep(.q-card) {
+  background: #0A0A0A;
+  border: 1px solid #333333;
+  color: #FFFFFF;
+}
+</style>
 
 

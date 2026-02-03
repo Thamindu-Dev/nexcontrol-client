@@ -311,3 +311,22 @@ onMounted(async () => {
   await refreshContainers();
 });
 </script>
+
+<style scoped>
+/* Container Cards - OLED Theme */
+.glass-card {
+  background: #000000;
+  border: 1px solid #333333;
+  border-radius: 12px;
+}
+
+/* Preformatted text for logs */
+pre {
+  background: #0A0A0A !important;
+  border: 1px solid #333333;
+  border-radius: 8px;
+  color: #E0E0E0;
+  font-family: 'Courier New', monospace;
+  font-size: 0.85rem;
+}
+</style>

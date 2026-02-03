@@ -11,6 +11,9 @@
 -->
 <template>
   <div class="login-page">
+    <!-- iOS Safe Area Spacer -->
+    <div class="safe-area-spacer-top"></div>
+
     <!-- Black Background -->
     <div class="background"></div>
 
@@ -486,10 +489,30 @@ onMounted(() => {
 </script>
 
 <style scoped>
+/* iOS Safe Area Support */
+.safe-area-spacer-top {
+  height: constant(safe-area-inset-top);
+  height: env(safe-area-inset-top);
+  background: #000000;
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  z-index: 9999;
+}
+
 .login-page {
   min-height: 100vh;
   position: relative;
   background: #000000;
+  padding-top: constant(safe-area-inset-top);
+  padding-top: env(safe-area-inset-top);
+  padding-bottom: constant(safe-area-inset-bottom);
+  padding-bottom: env(safe-area-inset-bottom);
+  padding-left: constant(safe-area-inset-left);
+  padding-left: env(safe-area-inset-left);
+  padding-right: constant(safe-area-inset-right);
+  padding-right: env(safe-area-inset-right);
 }
 
 /* Background */
