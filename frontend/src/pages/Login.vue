@@ -770,6 +770,8 @@ onMounted(() => {
 /* Fix for safe areas on devices with notches */
 @supports (padding: max(0px)) {
   .login-page {
+    padding-top: max(16px, env(safe-area-inset-top));
+    padding-bottom: max(16px, env(safe-area-inset-bottom));
     padding-left: max(16px, env(safe-area-inset-left));
     padding-right: max(16px, env(safe-area-inset-right));
   }

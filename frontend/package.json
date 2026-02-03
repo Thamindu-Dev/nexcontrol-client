@@ -12,7 +12,7 @@
     "test": "vitest",
     "test:ui": "vitest --ui",
     "test:coverage": "vitest --coverage",
-    "dev": "quasar dev",
+    "dev": "npx quasar dev",
     "build": "quasar build",
     "postinstall": "quasar prepare",
     "cap:sync": "./scripts/sync.sh all",

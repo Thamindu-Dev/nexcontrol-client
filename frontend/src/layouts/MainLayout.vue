@@ -11,6 +11,13 @@
 -->
 <template>
   <q-layout view="lHh Lpr lFf">
+    <!-- Animated Background -->
+    <div class="animated-background">
+      <div class="gradient-orb orb-1"></div>
+      <div class="gradient-orb orb-2"></div>
+      <div class="gradient-orb orb-3"></div>
+    </div>
+
     <!-- Header -->
     <q-header elevated class="glass-header">
       <q-toolbar>
@@ -671,17 +678,20 @@ onUnmounted(() => {
 /* Safe area support for devices with notches */
 @supports (padding: max(0px)) {
   .glass-header {
+    padding-top: max(0px, env(safe-area-inset-top));
     padding-left: max(0px, env(safe-area-inset-left));
     padding-right: max(0px, env(safe-area-inset-right));
   }
 
   .glass-footer {
+    padding-bottom: max(0px, env(safe-area-inset-bottom));
     padding-left: max(0px, env(safe-area-inset-left));
     padding-right: max(0px, env(safe-area-inset-right));
   }
 
   .glass-drawer {
     padding-left: max(0px, env(safe-area-inset-left));
+    padding-bottom: max(0px, env(safe-area-inset-bottom));
   }
 }
 
@@ -714,5 +724,59 @@ onUnmounted(() => {
   .drawer-header {
     padding: 16px !important;
   }
+}
+
+/* Animated Background */
+.animated-background {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: linear-gradient(135deg, #0f0c29 0%, #302b63 50%, #24243e 100%);
+  z-index: 0;
+  pointer-events: none;
+}
+
+/* Animated Orbs */
+.gradient-orb {
+  position: absolute;
+  border-radius: 50%;
+  filter: blur(80px);
+  opacity: 0.6;
+  animation: float 20s infinite;
+}
+
+.orb-1 {
+  width: 400px;
+  height: 400px;
+  background: radial-gradient(circle, #3b82f6 0%, transparent 70%);
+  top: -100px;
+  left: -100px;
+}
+
+.orb-2 {
+  width: 300px;
+  height: 300px;
+  background: radial-gradient(circle, #8b5cf6 0%, transparent 70%);
+  bottom: -50px;
+  right: -50px;
+  animation-delay: -5s;
+}
+
+.orb-3 {
+  width: 250px;
+  height: 250px;
+  background: radial-gradient(circle, #06b6d4 0%, transparent 70%);
+  top: 40%;
+  left: 40%;
+  transform: translate(-50%, -50%);
+  animation-delay: -10s;
+}
+
+@keyframes float {
+  0%, 100% { transform: translate(0, 0) scale(1); }
+  33% { transform: translate(30px, -50px) scale(1.1); }
+  66% { transform: translate(-20px, 20px) scale(0.9); }
 }
 </style>

@@ -99,9 +99,9 @@ function handleApiError(response, errorData) {
   // Handle 401 Unauthorized - token expired or invalid
   if (response.status === 401) {
     clearToken();
-    // Redirect to login (handled by router guard)
-    if (window.location.pathname !== '/login') {
-      window.location.href = '/login';
+    // Redirect to login using hash mode safe approach
+    if (!window.location.hash.includes('login')) {
+      window.location.href = '/#/login';
     }
     throw new Error('Authentication required. Please login again.');
   }

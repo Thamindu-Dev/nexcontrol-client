@@ -39,7 +39,7 @@
     <!-- No Docker Available Message -->
     <div v-if="!dockerAvailable" class="row q-mt-lg">
       <div class="col-12">
-        <q-card flat bordered class="q-pa-xl text-center">
+        <q-card class="glass-card q-pa-xl text-center">
           <q-icon
             name="warning"
             size="xl"
@@ -58,7 +58,7 @@
     <!-- Containers List -->
     <div v-else-if="containers.length === 0 && !loading.containers" class="row q-mt-lg">
       <div class="col-12">
-        <q-card flat bordered class="q-pa-xl text-center">
+        <q-card class="glass-card q-pa-xl text-center">
           <q-icon
             name="inventory_2"
             size="xl"
@@ -77,7 +77,7 @@
         :key="container.id"
         class="col-12 col-sm-6 col-md-4"
       >
-        <q-card>
+        <q-card class="glass-card">
           <q-card-section>
             <div class="row items-center q-mb-sm">
               <div class="col">
@@ -150,7 +150,7 @@
 
     <!-- Logs Dialog -->
     <q-dialog v-model="showLogs" maximized>
-      <q-card>
+      <q-card class="glass-card">
         <q-card-section>
           <div class="row items-center q-gutter-sm">
             <div class="text-h6">Container Logs</div>

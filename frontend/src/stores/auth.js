@@ -66,7 +66,7 @@ export const useAuthStore = defineStore('auth', {
         const now = Math.floor(Date.now() / 1000)
 
         // Check if token is expired or will expire in next 5 minutes
-        return payload.exp < (now - 300)
+        return payload.exp < (now + 300)
       } catch {
         return true
       }
