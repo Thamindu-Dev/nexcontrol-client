@@ -25,7 +25,7 @@
         <div class="col-12">
           <div class="row items-center q-gutter-sm">
             <div class="text-h4 text-weight-bold text-white">
-              <q-icon name="dashboard" class="q-mr-sm" color="primary" />
+              <q-icon name="dashboard" class="q-mr-sm" color="white" />
               Dashboard
             </div>
             <q-space />
@@ -60,8 +60,8 @@
           <q-card class="stat-card glass-card glossy" flat bordered>
             <q-card-section>
               <div class="row items-center q-mb-sm">
-                <q-icon name="memory" size="32px" color="cyan" class="q-mr-sm stat-icon" />
-                <div class="text-subtitle2 text-blue-1">CPU Usage</div>
+                <q-icon name="memory" size="32px" color="white" class="q-mr-sm stat-icon" />
+                <div class="text-subtitle2 text-white">CPU Usage</div>
               </div>
               <div class="row items-center q-mt-sm">
                 <div class="col">
@@ -75,7 +75,7 @@
                       :value="stats.cpu?.cpu_percent || 0"
                       :thickness="0.25"
                       size="70px"
-                      color="cyan"
+                      color="white"
                       track-color="rgba(255,255,255,0.1)"
                       :indeterminate="loading.stats"
                       class="circular-progress"
@@ -96,8 +96,8 @@
           <q-card class="stat-card glass-card glossy" flat bordered>
             <q-card-section>
               <div class="row items-center q-mb-sm">
-                <q-icon name="storage" size="32px" color="purple" class="q-mr-sm stat-icon" />
-                <div class="text-subtitle2 text-blue-1">Memory</div>
+                <q-icon name="storage" size="32px" color="white" class="q-mr-sm stat-icon" />
+                <div class="text-subtitle2 text-white">Memory</div>
               </div>
               <div class="q-mt-sm">
                 <div class="text-h3 text-weight-bold text-white">
@@ -107,7 +107,7 @@
                   <q-linear-progress
                     :value="stats.memory?.percent || 0"
                     :thickness="8"
-                    color="purple"
+                    color="white"
                     track-color="rgba(255,255,255,0.1)"
                     :indeterminate="loading.stats"
                     rounded
@@ -128,8 +128,8 @@
           <q-card class="stat-card glass-card glossy" flat bordered>
             <q-card-section>
               <div class="row items-center q-mb-sm">
-                <q-icon name="folder_open" size="32px" color="orange" class="q-mr-sm stat-icon" />
-                <div class="text-subtitle2 text-blue-1">Disk</div>
+                <q-icon name="folder_open" size="32px" color="white" class="q-mr-sm stat-icon" />
+                <div class="text-subtitle2 text-white">Disk</div>
               </div>
               <div class="q-mt-sm">
                 <div class="text-h3 text-weight-bold text-white">
@@ -139,7 +139,7 @@
                   <q-linear-progress
                     :value="stats.disk?.percent || 0"
                     :thickness="8"
-                    color="orange"
+                    color="white"
                     track-color="rgba(255,255,255,0.1)"
                     :indeterminate="loading.stats"
                     rounded
@@ -160,8 +160,8 @@
           <q-card class="stat-card glass-card glossy" flat bordered>
             <q-card-section>
               <div class="row items-center q-mb-sm">
-                <q-icon name="videogame_asset" size="32px" color="green" class="q-mr-sm stat-icon" />
-                <div class="text-subtitle2 text-blue-1">GPU</div>
+                <q-icon name="videogame_asset" size="32px" color="white" class="q-mr-sm stat-icon" />
+                <div class="text-subtitle2 text-white">GPU</div>
               </div>
               <div class="text-h3 text-weight-bold text-white q-mt-sm">
                 {{ gpuTemp || '--' }}
@@ -243,6 +243,28 @@
         </div>
       </div>
 
+      <!-- Historical Charts -->
+      <div class="row q-gutter-md q-mb-xl">
+        <div class="col-12">
+          <q-card class="glass-card glossy" flat bordered>
+            <q-card-section>
+              <div class="text-subtitle1 text-weight-bold text-white q-mb-md">
+                <q-icon name="show_chart" color="white" class="q-mr-sm" />
+                Historical Usage (Last {{ systemStore.history.timestamps.length }} data points)
+              </div>
+              <div v-if="systemStore.history.timestamps.length > 0" class="q-pb-md">
+                <LineChart :data="systemStore.combinedChartData" :height="250" />
+              </div>
+              <div v-else class="text-center text-grey-4 q-py-xl">
+                <q-icon name="show_chart" size="64px" color="grey-6" />
+                <div class="text-subtitle2 q-mt-md">No historical data available</div>
+                <div class="text-caption">Enable auto-refresh or real-time mode to see charts</div>
+              </div>
+            </q-card-section>
+          </q-card>
+        </div>
+      </div>
+
       <!-- Quick Actions -->
       <div class="row q-gutter-md q-mb-xl">
         <div class="col-12 col-sm-6">
@@ -257,7 +279,7 @@
               <div class="row items-center">
                 <div class="col">
                   <div class="text-subtitle1 text-weight-bold text-white q-mb-xs">
-                    <q-icon name="view_in_ar" color="primary" class="q-mr-sm" />
+                    <q-icon name="view_in_ar" color="white" class="q-mr-sm" />
                     Docker Manager
                   </div>
                   <div class="text-caption text-grey-4">
@@ -266,7 +288,7 @@
                   </div>
                 </div>
                 <div class="col-auto">
-                  <q-icon name="arrow_forward" size="lg" color="primary" class="arrow-icon" />
+                  <q-icon name="arrow_forward" size="lg" color="white" class="arrow-icon" />
                 </div>
               </div>
             </q-card-section>
@@ -285,7 +307,7 @@
               <div class="row items-center">
                 <div class="col">
                   <div class="text-subtitle1 text-weight-bold text-white q-mb-xs">
-                    <q-icon name="memory" color="primary" class="q-mr-sm" />
+                    <q-icon name="memory" color="white" class="q-mr-sm" />
                     Process Manager
                   </div>
                   <div class="text-caption text-grey-4">
@@ -294,7 +316,7 @@
                   </div>
                 </div>
                 <div class="col-auto">
-                  <q-icon name="arrow_forward" size="lg" color="primary" class="arrow-icon" />
+                  <q-icon name="arrow_forward" size="lg" color="white" class="arrow-icon" />
                 </div>
               </div>
             </q-card-section>
@@ -309,7 +331,7 @@
             <q-card-section>
               <div class="row items-center justify-between">
                 <div class="row items-center">
-                  <q-icon :name="systemStore.webSocketEnabled ? 'wifi' : 'autorenew'" size="24px" :color="systemStore.isWebSocketConnected ? 'positive' : 'primary'" class="q-mr-sm" />
+                  <q-icon :name="systemStore.webSocketEnabled ? 'wifi' : 'autorenew'" size="24px" :color="systemStore.isWebSocketConnected ? 'white' : 'white'" class="q-mr-sm" />
                   <div>
                     <div class="text-subtitle1 text-weight-bold text-white">
                       Update Mode
@@ -329,7 +351,7 @@
                   <div class="row q-gutter-sm">
                     <!-- Real-time toggle -->
                     <q-btn
-                      :color="systemStore.webSocketEnabled ? 'positive' : 'grey-7'"
+                      :color="systemStore.webSocketEnabled ? 'white' : 'grey-7'"
                       :label="systemStore.webSocketEnabled ? 'Real-time' : 'Real-time'"
                       :outline="!systemStore.webSocketEnabled"
                       size="md"
@@ -345,7 +367,7 @@
                     <!-- Auto-refresh toggle (disabled when WebSocket is active) -->
                     <q-toggle
                       v-model="autoRefresh"
-                      color="primary"
+                      color="white"
                       size="md"
                       keep-color
                       dark
@@ -372,6 +394,7 @@ import { useQuasar } from 'quasar';
 import { useAuthStore } from '../stores/auth';
 import { useSystemStore } from '../stores/system';
 import { useSettingsStore } from '../stores/settings';
+import LineChart from '../components/LineChart.vue';
 
 // Define component name for ESLint multi-word rule
 defineOptions({
@@ -642,7 +665,7 @@ onUnmounted(() => {
 .orb-1 {
   width: 400px;
   height: 400px;
-  background: radial-gradient(circle, #3b82f6 0%, transparent 70%);
+  background: radial-gradient(circle, rgba(255, 255, 255, 0.1) 0%, transparent 70%);
   top: -150px;
   right: -150px;
   animation-delay: 0s;
@@ -651,7 +674,7 @@ onUnmounted(() => {
 .orb-2 {
   width: 350px;
   height: 350px;
-  background: radial-gradient(circle, #8b5cf6 0%, transparent 70%);
+  background: radial-gradient(circle, rgba(255, 255, 255, 0.08) 0%, transparent 70%);
   bottom: -100px;
   left: -100px;
   animation-delay: -8s;
@@ -660,7 +683,7 @@ onUnmounted(() => {
 .orb-3 {
   width: 300px;
   height: 300px;
-  background: radial-gradient(circle, #06b6d4 0%, transparent 70%);
+  background: radial-gradient(circle, rgba(255, 255, 255, 0.06) 0%, transparent 70%);
   top: 40%;
   left: 20%;
   animation-delay: -15s;
@@ -669,7 +692,7 @@ onUnmounted(() => {
 .orb-4 {
   width: 250px;
   height: 250px;
-  background: radial-gradient(circle, #f59e0b 0%, transparent 70%);
+  background: radial-gradient(circle, rgba(255, 255, 255, 0.05) 0%, transparent 70%);
   bottom: 30%;
   right: 15%;
   animation-delay: -20s;
@@ -725,8 +748,8 @@ onUnmounted(() => {
 
 /* Status Badge */
 .status-badge {
-  background: rgba(59, 130, 246, 0.2);
-  border: 1px solid rgba(59, 130, 246, 0.3);
+  background: rgba(255, 255, 255, 0.1);
+  border: 1px solid rgba(255, 255, 255, 0.2);
   backdrop-filter: blur(10px);
 }
 
@@ -808,27 +831,27 @@ onUnmounted(() => {
 }
 
 .power-shutdown {
-  background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);
+  background: linear-gradient(135deg, #6b7280 0%, #4b5563 100%);
 }
 
 .power-shutdown:hover {
-  background: linear-gradient(135deg, #f87171 0%, #ef4444 100%);
+  background: linear-gradient(135deg, #9ca3af 0%, #6b7280 100%);
 }
 
 .power-hibernate {
-  background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);
+  background: linear-gradient(135deg, #4b5563 0%, #374151 100%);
 }
 
 .power-hibernate:hover {
-  background: linear-gradient(135deg, #fbbf24 0%, #f59e0b 100%);
+  background: linear-gradient(135deg, #6b7280 0%, #4b5563 100%);
 }
 
 .power-restart {
-  background: linear-gradient(135deg, #eab308 0%, #ca8a04 100%);
+  background: linear-gradient(135deg, #374151 0%, #1f2937 100%);
 }
 
 .power-restart:hover {
-  background: linear-gradient(135deg, #facc15 0%, #eab308 100%);
+  background: linear-gradient(135deg, #4b5563 0%, #374151 100%);
 }
 
 /* Action Cards */

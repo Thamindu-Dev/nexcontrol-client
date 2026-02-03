@@ -66,7 +66,16 @@ export const useSystemStore = defineStore('system', {
     // WebSocket (real-time mode)
     webSocketEnabled: false,
     webSocketState: WebSocketState.DISCONNECTED,
-    _wsEventHandlers: null
+    _wsEventHandlers: null,
+
+    // Historical data for charts (max 60 data points = 5 minutes at 5s interval)
+    history: {
+      cpu: [],
+      memory: [],
+      disk: [],
+      timestamps: []
+    },
+    maxHistoryLength: 60
   }),
 
   getters: {
@@ -116,6 +125,107 @@ export const useSystemStore = defineStore('system', {
      */
     updateMode: (state) => {
       return state.webSocketEnabled ? 'real-time' : 'polling';
+    },
+
+    /**
+     * Get chart data for CPU usage
+     */
+    cpuChartData: (state) => {
+      return {
+        labels: state.history.timestamps.map(t => {
+          const date = new Date(t);
+          return date.toLocaleTimeString('en-US', { hour12: false, hour: '2-digit', minute: '2-digit', second: '2-digit' });
+        }),
+        datasets: [{
+          label: 'CPU Usage (%)',
+          data: state.history.cpu,
+          borderColor: 'rgb(255, 99, 132)',
+          backgroundColor: 'rgba(255, 99, 132, 0.2)',
+          tension: 0.4,
+          fill: true,
+          pointRadius: 2,
+          pointHoverRadius: 5
+        }]
+      };
+    },
+
+    /**
+     * Get chart data for Memory usage
+     */
+    memoryChartData: (state) => {
+      return {
+        labels: state.history.timestamps.map(t => {
+          const date = new Date(t);
+          return date.toLocaleTimeString('en-US', { hour12: false, hour: '2-digit', minute: '2-digit', second: '2-digit' });
+        }),
+        datasets: [{
+          label: 'Memory Usage (%)',
+          data: state.history.memory,
+          borderColor: 'rgb(153, 102, 255)',
+          backgroundColor: 'rgba(153, 102, 255, 0.2)',
+          tension: 0.4,
+          fill: true,
+          pointRadius: 2,
+          pointHoverRadius: 5
+        }]
+      };
+    },
+
+    /**
+     * Get chart data for Disk usage
+     */
+    diskChartData: (state) => {
+      return {
+        labels: state.history.timestamps.map(t => {
+          const date = new Date(t);
+          return date.toLocaleTimeString('en-US', { hour12: false, hour: '2-digit', minute: '2-digit', second: '2-digit' });
+        }),
+        datasets: [{
+          label: 'Disk Usage (%)',
+          data: state.history.disk,
+          borderColor: 'rgb(75, 192, 192)',
+          backgroundColor: 'rgba(75, 192, 192, 0.2)',
+          tension: 0.4,
+          fill: true,
+          pointRadius: 2,
+          pointHoverRadius: 5
+        }]
+      };
+    },
+
+    /**
+     * Get combined chart data for all metrics
+     */
+    combinedChartData: (state) => {
+      return {
+        labels: state.history.timestamps.map(t => {
+          const date = new Date(t);
+          return date.toLocaleTimeString('en-US', { hour12: false, hour: '2-digit', minute: '2-digit', second: '2-digit' });
+        }),
+        datasets: [
+          {
+            label: 'CPU',
+            data: state.history.cpu,
+            borderColor: 'rgb(255, 99, 132)',
+            backgroundColor: 'rgba(255, 99, 132, 0.2)',
+            tension: 0.4
+          },
+          {
+            label: 'Memory',
+            data: state.history.memory,
+            borderColor: 'rgb(153, 102, 255)',
+            backgroundColor: 'rgba(153, 102, 255, 0.2)',
+            tension: 0.4
+          },
+          {
+            label: 'Disk',
+            data: state.history.disk,
+            borderColor: 'rgb(75, 192, 192)',
+            backgroundColor: 'rgba(75, 192, 192, 0.2)',
+            tension: 0.4
+          }
+        ]
+      };
     }
   },
 
@@ -136,6 +246,7 @@ export const useSystemStore = defineStore('system', {
       try {
         const data = await api.get('/api/stats/all');
         this.stats = data;
+        this.updateHistory();
       } catch (error) {
         console.error('Failed to fetch stats:', error);
         this.errors.stats = error.message || 'Failed to fetch stats';
@@ -392,6 +503,7 @@ export const useSystemStore = defineStore('system', {
             ...data,
             timestamp: Math.floor(Date.now() / 1000)
           };
+          this.updateHistory();
         }
       };
 
@@ -425,6 +537,37 @@ export const useSystemStore = defineStore('system', {
       } catch {
         this.screenshotAvailable = false;
       }
+    },
+
+    /**
+     * Update historical data for charts
+     */
+    updateHistory() {
+      const now = Date.now();
+
+      // Add current stats to history
+      this.history.timestamps.push(now);
+      this.history.cpu.push(this.cpuUsage);
+      this.history.memory.push(this.memoryUsage);
+      this.history.disk.push(this.diskUsage);
+
+      // Keep only the last maxHistoryLength entries
+      if (this.history.timestamps.length > this.maxHistoryLength) {
+        this.history.timestamps.shift();
+        this.history.cpu.shift();
+        this.history.memory.shift();
+        this.history.disk.shift();
+      }
+    },
+
+    /**
+     * Clear historical data
+     */
+    clearHistory() {
+      this.history.timestamps = [];
+      this.history.cpu = [];
+      this.history.memory = [];
+      this.history.disk = [];
     }
   }
 });

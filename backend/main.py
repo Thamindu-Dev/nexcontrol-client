@@ -58,8 +58,9 @@ logger = logging.getLogger(__name__)
 
 from fastapi import FastAPI, HTTPException, Depends, status, Request, Response, WebSocket, WebSocketDisconnect
 from fastapi.middleware.cors import CORSMiddleware
+from contextlib import asynccontextmanager
 from fastapi.responses import JSONResponse
-from pydantic import BaseModel, Field, validator, constr
+from pydantic import BaseModel, Field, field_validator, constr
 from slowapi import Limiter, _rate_limit_exceeded_handler
 from slowapi.util import get_remote_address
 from slowapi.errors import RateLimitExceeded
@@ -165,6 +166,42 @@ ALLOWED_ORIGINS = os.getenv("ALLOWED_ORIGINS", "*").split(",")
 # FASTAPI APP INITIALIZATION
 # ============================================================
 
+# Lifespan context manager for background services
+# Note: Managers are instantiated later in the file, but lifespan is called at runtime
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    """Manage lifespan events for background services"""
+    # Startup
+    logger.info("Starting scheduled task manager...")
+    await scheduled_task_manager.start_scheduler()
+    logger.info("Starting threshold notification manager...")
+    await threshold_notification_manager.start_monitor()
+
+    yield
+
+    # Shutdown
+    logger.info("Stopping scheduled task manager...")
+    await scheduled_task_manager.stop_scheduler()
+    logger.info("Stopping threshold notification manager...")
+    await threshold_notification_manager.stop_monitor()
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    """Manage lifespan events for background services"""
+    # Startup
+    logger.info("Starting scheduled task manager...")
+    await scheduled_task_manager.start_scheduler()
+    logger.info("Starting threshold notification manager...")
+    await threshold_notification_manager.start_monitor()
+
+    yield
+
+    # Shutdown
+    logger.info("Stopping scheduled task manager...")
+    await scheduled_task_manager.stop_scheduler()
+    logger.info("Stopping threshold notification manager...")
+    await threshold_notification_manager.stop_monitor()
+
+
 # Initialize rate limiter
 limiter = Limiter(key_func=get_remote_address)
 app = FastAPI(
@@ -172,7 +209,8 @@ app = FastAPI(
     description="Secure Remote PC Controller Backend",
     version="1.0.0",
     docs_url="/docs",
-    redoc_url="/redoc"
+    redoc_url="/redoc",
+    lifespan=lifespan
 )
 app.state.limiter = limiter
 app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
@@ -204,7 +242,8 @@ class LoginRequest(BaseModel):
         description="App password for authentication"
     )
 
-    @validator('password')
+    @field_validator('password')
+    @classmethod
     def validate_password(cls, v):
         """Prevent common injection patterns"""
         if any(char in v for char in [';', '|', '&', '$', '`', '\n', '\r']):
@@ -222,7 +261,8 @@ class EncryptedPayload(BaseModel):
     data: str = Field(..., min_length=1, description="Base64-encoded encrypted data (includes nonce)")
     timestamp: float = Field(..., description="Unix timestamp for replay attack prevention")
 
-    @validator('timestamp')
+    @field_validator('timestamp')
+    @classmethod
     def validate_timestamp_format(cls, v):
         """Validate timestamp is reasonable"""
         if v < 0 or v > (time.time() + 3600):
@@ -240,7 +280,8 @@ class PowerActionRequest(BaseModel):
     action: str = Field(..., description="Action: shutdown, hibernate, restart")
     delay_seconds: int = Field(0, ge=0, le=86400, description="Delay before execution (0-86400 seconds)")
 
-    @validator('action')
+    @field_validator('action')
+    @classmethod
     def validate_action(cls, v):
         """Validate action is allowed"""
         allowed = ['shutdown', 'hibernate', 'restart']
@@ -259,7 +300,8 @@ class ScheduledTask(BaseModel):
     enabled: bool = Field(True, description="Whether the task is enabled")
     created_at: str = Field(..., description="Creation timestamp in ISO format")
 
-    @validator('action')
+    @field_validator('action')
+    @classmethod
     def validate_action(cls, v):
         """Validate action is allowed"""
         allowed = ['shutdown', 'hibernate', 'restart']
@@ -274,7 +316,8 @@ class CreateScheduledTaskRequest(BaseModel):
     action: str = Field(..., description="Action: shutdown, hibernate, restart")
     scheduled_time: str = Field(..., description="Scheduled time in ISO format (YYYY-MM-DDTHH:MM:SS)")
 
-    @validator('action')
+    @field_validator('action')
+    @classmethod
     def validate_action(cls, v):
         """Validate action is allowed"""
         allowed = ['shutdown', 'hibernate', 'restart']
@@ -282,7 +325,8 @@ class CreateScheduledTaskRequest(BaseModel):
             raise ValueError(f"Action must be one of: {', '.join(allowed)}")
         return v.lower()
 
-    @validator('scheduled_time')
+    @field_validator('scheduled_time')
+    @classmethod
     def validate_scheduled_time(cls, v):
         """Validate scheduled time is in the future"""
         try:
@@ -302,7 +346,8 @@ class UpdateScheduledTaskRequest(BaseModel):
     action: Optional[str] = Field(None, description="Action: shutdown, hibernate, restart")
     scheduled_time: Optional[str] = Field(None, description="Scheduled time in ISO format")
 
-    @validator('action')
+    @field_validator('action')
+    @classmethod
     def validate_action(cls, v):
         """Validate action is allowed"""
         if v is None:
@@ -1797,8 +1842,6 @@ scheduled_task_manager = ScheduledTaskManager()
 
 # Initialize Threshold Notification Manager singleton
 threshold_notification_manager = ThresholdNotificationManager()
-
-
 # ============================================================
 # PROCESS MANAGER CLASS
 # ============================================================
@@ -2768,28 +2811,6 @@ async def check_thresholds_now(current_user: dict = Depends(get_current_user)):
 
 
 # ============================================================
-# LIFECYCLE EVENTS
-# ============================================================
-
-@app.on_event("startup")
-async def startup_event():
-    """Initialize background services on startup"""
-    logger.info("Starting scheduled task manager...")
-    await scheduled_task_manager.start_scheduler()
-    logger.info("Starting threshold notification manager...")
-    await threshold_notification_manager.start_monitor()
-
-
-@app.on_event("shutdown")
-async def shutdown_event():
-    """Cleanup background services on shutdown"""
-    logger.info("Stopping scheduled task manager...")
-    await scheduled_task_manager.stop_scheduler()
-    logger.info("Stopping threshold notification manager...")
-    await threshold_notification_manager.stop_monitor()
-
-
-# ============================================================
 # API ROUTES: DOCKER MANAGEMENT
 # ============================================================
 
@@ -3341,8 +3362,13 @@ class WebSocketConnectionManager:
 # Global WebSocket manager
 websocket_manager = WebSocketConnectionManager()
 
+# Initialize manager singletons
+docker_manager = DockerManager()
+scheduled_task_manager = ScheduledTaskManager()
+threshold_notification_manager = ThresholdNotificationManager()
 
-@app.websocket("/ws/stats", tags=["WebSocket"])
+
+@app.websocket("/ws/stats")
 async def websocket_stats(websocket: WebSocket):
     """
     WebSocket endpoint for real-time system stats streaming.

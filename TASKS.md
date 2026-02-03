@@ -358,8 +358,16 @@
   - [x] System store WebSocket integration
   - [x] Dashboard toggle for real-time mode
 - [ ] **Multiple PCs:** Control multiple PCs from one app
-- [ ] **Schedule Tasks:** Schedule shutdown/restart commands
-- [ ] **Notification System:** Push notifications for threshold alerts
+- [x] **Schedule Tasks:** Schedule shutdown/restart commands ✅ COMPLETED
+  - [x] Backend ScheduledTaskManager with storage
+  - [x] API endpoints (create, list, update, delete, toggle)
+  - [x] Frontend ScheduledTasks.vue page
+  - [x] Navigation link in MainLayout
+- [x] **Notification System:** Threshold alerts ✅ COMPLETED
+  - [x] Backend ThresholdNotificationManager
+  - [x] API endpoints for config and alerts
+  - [x] Frontend threshold settings in Settings.vue
+  - [x] WebSocket broadcast for real-time alerts
 
 ### Medium Priority
 - [x] **Biometric Auth Framework:** Fingerprint/FaceID service ✅ COMPLETED
@@ -372,11 +380,17 @@
 - [ ] **Command Terminal:** Web-based terminal/CLI
 
 ### Low Priority
-- [ ] **Dark Mode Toggle:** Auto-switch based on system preference
-  - Note: UI is already dark themed, just needs toggle
+- [x] **Dark Mode Toggle:** Auto-switch based on system preference ✅ COMPLETED
+  - [x] Settings page with dark mode toggle
+  - [x] Follow system theme option
+  - [x] Persistent storage via SecureStorage
 - [ ] **Customizable Dashboard:** Widget arrangement
 - [ ] **Themes:** Color scheme customization
-- [ ] **Data Visualization:** Graphs for CPU/Memory history
+- [x] **Data Visualization:** Graphs for CPU/Memory history ✅ COMPLETED
+  - [x] Chart.js and vue-chartjs integration
+  - [x] Historical data tracking in system store
+  - [x] LineChart component with glassmorphism style
+  - [x] Dashboard combined chart (CPU, Memory, Disk)
 - [ ] **Export Logs:** Download system logs
 
 ---

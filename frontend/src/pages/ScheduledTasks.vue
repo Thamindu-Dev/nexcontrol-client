@@ -25,7 +25,7 @@
       <div class="col-12">
         <q-btn
           @click="showCreateDialog = true"
-          color="primary"
+          color="white"
           icon="add"
           label="Create New Task"
           class="full-width"
@@ -61,7 +61,7 @@
               <div class="col-auto">
                 <div class="row q-gutter-xs">
                   <q-btn
-                    :color="task.enabled ? 'orange' : 'green'"
+                    :color="task.enabled ? 'grey-7' : 'grey-6'"
                     :icon="task.enabled ? 'pause' : 'play_arrow'"
                     round
                     flat
@@ -71,7 +71,7 @@
                     <q-tooltip>{{ task.enabled ? 'Disable' : 'Enable' }} task</q-tooltip>
                   </q-btn>
                   <q-btn
-                    color="red"
+                    color="grey-8"
                     icon="delete"
                     round
                     flat
@@ -155,7 +155,7 @@
               <div class="col-6 q-pl-sm">
                 <q-btn
                   type="submit"
-                  color="primary"
+                  color="white"
                   label="Create"
                   class="full-width"
                   :loading="creating"

@@ -58,7 +58,7 @@
                 <div class="col-12">
                   <q-btn
                     type="submit"
-                    color="primary"
+                    color="white"
                     class="full-width"
                     label="Save Server Config"
                     :loading="savingServer"
@@ -103,7 +103,7 @@
               <div class="col-12">
                 <q-btn
                   @click="saveEncryptionKey"
-                  color="secondary"
+                  color="grey-7"
                   class="full-width"
                   :loading="savingKey"
                   label="Save Encryption Key"
@@ -138,7 +138,7 @@
               <div class="col-auto">
                 <q-toggle
                   v-model="darkMode"
-                  color="primary"
+                  color="white"
                   size="lg"
                   checked-icon="nights_stay"
                   unchecked-icon="wb_sunny"
@@ -161,7 +161,7 @@
               <div class="col-auto">
                 <q-toggle
                   v-model="autoDarkMode"
-                  color="primary"
+                  color="white"
                   size="md"
                   @update:model-value="toggleAutoDarkMode"
                 />
@@ -185,7 +185,7 @@
               <q-toggle
                 v-model="preferences.autoConnect"
                 label="Auto-connect on start"
-                color="primary"
+                color="white"
               />
 
               <q-select
@@ -217,7 +217,7 @@
             <q-toggle
               v-model="thresholdConfig.enabled"
               label="Enable Threshold Monitoring"
-              color="primary"
+              color="white"
               class="q-mb-md"
             />
 
@@ -229,7 +229,7 @@
               label
               label-always
               :markers="thresholdMarkers"
-              color="orange"
+              color="grey-7"
               class="q-mb-md"
             >
               <template v-slot:label>
@@ -245,7 +245,7 @@
               label
               label-always
               :markers="thresholdMarkers"
-              color="purple"
+              color="grey-7"
               class="q-mb-md"
             >
               <template v-slot:label>
@@ -261,7 +261,7 @@
               label
               label-always
               :markers="thresholdMarkers"
-              color="red"
+              color="grey-8"
               class="q-mb-md"
             >
               <template v-slot:label>
@@ -271,7 +271,7 @@
 
             <q-btn
               @click="saveThresholdConfig"
-              color="primary"
+              color="white"
               class="full-width q-mt-md"
               :loading="savingThreshold"
               label="Save Threshold Settings"

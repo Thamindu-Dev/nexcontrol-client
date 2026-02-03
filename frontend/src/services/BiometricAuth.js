@@ -270,7 +270,7 @@ export async function isLocked() {
   try {
     const locked = await getItem(STORAGE_KEYS.BIOMETRIC_LOCKED);
     return locked === 'true';
-  } catch (error) {
+  } catch {
     return false;
   }
 }

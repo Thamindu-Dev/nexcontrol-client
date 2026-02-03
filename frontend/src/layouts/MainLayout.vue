@@ -58,7 +58,7 @@
       <div class="drawer-header q-pa-lg">
         <div class="row items-center q-mb-md">
           <div class="logo-wrapper-large q-mr-sm">
-            <q-icon name="computer" size="32px" color="primary" />
+            <q-icon name="computer" size="32px" color="white" />
           </div>
           <div>
             <div class="text-h6 text-weight-bold text-white">NexControl</div>
@@ -69,7 +69,7 @@
           <div class="row items-center">
             <q-icon
               :name="isConnected ? 'check_circle' : 'error'"
-              :color="isConnected ? 'positive' : 'negative'"
+              :color="isConnected ? 'white' : 'grey-7'"
               size="20px"
               class="q-mr-sm"
             />
@@ -108,7 +108,7 @@
             <q-item-label caption class="text-grey-4">{{ link.caption }}</q-item-label>
           </q-item-section>
           <q-item-section side v-if="link.link === $route.path">
-            <q-icon name="chevron_right" color="primary" size="20px" />
+            <q-icon name="chevron_right" color="white" size="20px" />
           </q-item-section>
         </q-item>
 
@@ -132,7 +132,7 @@
               <q-icon
                 name="refresh"
                 size="24px"
-                :class="{ 'rotating': loading, 'text-primary': loading }"
+                :class="{ 'rotating': loading, 'text-white': loading }"
               />
             </div>
           </q-item-section>

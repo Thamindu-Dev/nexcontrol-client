@@ -109,7 +109,7 @@
               <q-btn
                 v-if="container.state === 'running'"
                 flat
-                color="orange"
+                color="grey-7"
                 icon="stop"
                 @click="stopContainer(container.id)"
                 :loading="actionLoading[container.id]"
@@ -119,7 +119,7 @@
               <q-btn
                 v-else
                 flat
-                color="green"
+                color="grey-6"
                 icon="play_arrow"
                 @click="startContainer(container.id)"
                 :loading="actionLoading[container.id]"
@@ -128,7 +128,7 @@
               </q-btn>
               <q-btn
                 flat
-                color="blue"
+                color="grey-8"
                 icon="refresh"
                 @click="restartContainer(container.id)"
                 :loading="actionLoading[container.id]"
@@ -161,7 +161,7 @@
 
         <q-card-section class="q-pt-none">
           <div v-if="logsLoading" class="text-center q-pa-lg">
-            <q-spinner color="primary" size="3em" />
+            <q-spinner color="white" size="3em" />
             <div class="q-mt-md">Loading logs...</div>
           </div>
           <pre v-else class="bg-grey-10 q-pa-md" style="max-height: 400px; overflow-y: auto;">{{ logs || 'No logs available' }}</pre>

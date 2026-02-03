@@ -54,7 +54,7 @@
               <div class="text-subtitle2">Actions</div>
               <q-space />
               <q-btn
-                color="primary"
+                color="white"
                 icon="screenshot"
                 label="Capture Screenshot"
                 :loading="capturing"

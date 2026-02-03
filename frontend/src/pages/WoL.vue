@@ -70,7 +70,7 @@
                 <div class="col-12">
                   <q-btn
                     type="submit"
-                    color="primary"
+                    color="white"
                     class="full-width"
                     label="Add Device"
                   />
@@ -169,7 +169,7 @@
                     <q-btn
                       flat
                       round
-                      color="primary"
+                      color="white"
                       icon="power_settings_new"
                       @click="wakeDevice(device)"
                       :loading="waking[device.id]"

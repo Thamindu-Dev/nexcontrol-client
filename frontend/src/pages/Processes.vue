@@ -38,7 +38,7 @@
             <div class="text-subtitle2">Sort by:</div>
             <q-btn-toggle
               v-model="sortBy"
-              toggle-color="primary"
+              toggle-color="white"
               :options="[
                 { label: 'CPU', value: 'cpu' },
                 { label: 'Memory', value: 'memory' }
