@@ -221,162 +221,6 @@
   min-height: calc(50px + constant(safe-area-inset-top));
   min-height: calc(50px + env(safe-area-inset-top));
 }
-import { useRouter } from 'vue-router';
-import { useQuasar } from 'quasar';
-import { useAuthStore } from '../stores/auth';
-import { useSettingsStore } from '../stores/settings';
-import { useSystemStore } from '../stores/system';
-
-const router = useRouter();
-const $q = useQuasar();
-
-// Stores
-const authStore = useAuthStore();
-const settingsStore = useSettingsStore();
-const systemStore = useSystemStore();
-
-// State
-const leftDrawerOpen = ref(false);
-const isConnected = ref(true);
-const loading = ref(false);
-
-// Navigation links
-const navigationLinks = [
-  {
-    title: 'Dashboard',
-    caption: 'System Overview',
-    icon: 'dashboard',
-    link: '/dashboard'
-  },
-  {
-    title: 'Docker',
-    caption: 'Container Management',
-    icon: 'inventory_2',
-    link: '/docker'
-  },
-  {
-    title: 'Processes',
-    caption: 'Process Manager',
-    icon: 'memory',
-    link: '/processes'
-  },
-  {
-    title: 'Screenshot',
-    caption: 'Remote Screenshot',
-    icon: 'screenshot',
-    link: '/screenshot'
-  },
-  {
-    title: 'Wake on LAN',
-    caption: 'WoL Manager',
-    icon: 'power_settings_new',
-    link: '/wol'
-  },
-  {
-    title: 'Scheduled Tasks',
-    caption: 'Schedule power actions',
-    icon: 'schedule',
-    link: '/scheduled-tasks'
-  }
-];
-
-// Computed
-const serverInfo = computed(() => {
-  const server = settingsStore.server;
-  if (server) {
-    return `${server.protocol || 'http'}://${server.host}:${server.port}`;
-  }
-  return 'Not configured';
-});
-
-/**
- * Toggle left drawer
- */
-function toggleLeftDrawer() {
-  leftDrawerOpen.value = !leftDrawerOpen.value;
-}
-
-/**
- * Navigate to route
- */
-function navigateTo(path) {
-  router.push(path);
-}
-
-/**
- * Logout
- */
-function logout() {
-  $q.dialog({
-    title: 'Logout',
-    message: 'Are you sure you want to logout?',
-    cancel: true,
-    persistent: true,
-    class: 'glass-dialog'
-  }).onOk(async () => {
-    await authStore.logout();
-    router.push('/login');
-  });
-}
-
-/**
- * Refresh all stats
- */
-async function refreshStats() {
-  loading.value = true;
-  try {
-    await Promise.all([
-      systemStore.fetchCPUStats(),
-      systemStore.fetchMemoryStats(),
-      systemStore.fetchDiskStats(),
-      systemStore.fetchGPUStats()
-    ]);
-    isConnected.value = true;
-    $q.notify({
-      type: 'positive',
-      message: 'Stats refreshed successfully',
-      position: 'bottom',
-      classes: 'notification-glossy'
-    });
-  } catch {
-    isConnected.value = false;
-    $q.notify({
-      type: 'negative',
-      message: 'Failed to refresh stats',
-      position: 'bottom',
-      classes: 'notification-glossy'
-    });
-  } finally {
-    loading.value = false;
-  }
-}
-
-/**
- * Connection check interval
- */
-let connectionCheckInterval;
-
-/**
- * Lifecycle
- */
-onMounted(() => {
-  // Check connection every 30 seconds
-  connectionCheckInterval = setInterval(async () => {
-    try {
-      await systemStore.fetchCPUStats();
-      isConnected.value = true;
-    } catch {
-      isConnected.value = false;
-    }
-  }, 30000);
-});
-
-onUnmounted(() => {
-  if (connectionCheckInterval) {
-    clearInterval(connectionCheckInterval);
-  }
-});
-</script>
 
 .app-title {
   font-size: 1.1rem;
@@ -636,3 +480,162 @@ onUnmounted(() => {
   }
 }
 </style>
+
+<script setup>
+import { ref, computed, onMounted, onUnmounted } from 'vue';
+import { useRouter } from 'vue-router';
+import { useQuasar } from 'quasar';
+import { useAuthStore } from '../stores/auth';
+import { useSettingsStore } from '../stores/settings';
+import { useSystemStore } from '../stores/system';
+
+const router = useRouter();
+const $q = useQuasar();
+
+// Stores
+const authStore = useAuthStore();
+const settingsStore = useSettingsStore();
+const systemStore = useSystemStore();
+
+// State
+const leftDrawerOpen = ref(false);
+const isConnected = ref(true);
+const loading = ref(false);
+
+// Navigation links
+const navigationLinks = [
+  {
+    title: 'Dashboard',
+    caption: 'System Overview',
+    icon: 'dashboard',
+    link: '/dashboard'
+  },
+  {
+    title: 'Docker',
+    caption: 'Container Management',
+    icon: 'inventory_2',
+    link: '/docker'
+  },
+  {
+    title: 'Processes',
+    caption: 'Process Manager',
+    icon: 'memory',
+    link: '/processes'
+  },
+  {
+    title: 'Screenshot',
+    caption: 'Remote Screenshot',
+    icon: 'screenshot',
+    link: '/screenshot'
+  },
+  {
+    title: 'Wake on LAN',
+    caption: 'WoL Manager',
+    icon: 'power_settings_new',
+    link: '/wol'
+  },
+  {
+    title: 'Scheduled Tasks',
+    caption: 'Schedule power actions',
+    icon: 'schedule',
+    link: '/scheduled-tasks'
+  }
+];
+
+// Computed
+const serverInfo = computed(() => {
+  const server = settingsStore.server;
+  if (server) {
+    return `${server.protocol || 'http'}://${server.host}:${server.port}`;
+  }
+  return 'Not configured';
+});
+
+/**
+ * Toggle left drawer
+ */
+function toggleLeftDrawer() {
+  leftDrawerOpen.value = !leftDrawerOpen.value;
+}
+
+/**
+ * Navigate to route
+ */
+function navigateTo(path) {
+  router.push(path);
+}
+
+/**
+ * Logout
+ */
+function logout() {
+  $q.dialog({
+    title: 'Logout',
+    message: 'Are you sure you want to logout?',
+    cancel: true,
+    persistent: true,
+    class: 'glass-dialog'
+  }).onOk(async () => {
+    await authStore.logout();
+    router.push('/login');
+  });
+}
+
+/**
+ * Refresh all stats
+ */
+async function refreshStats() {
+  loading.value = true;
+  try {
+    await Promise.all([
+      systemStore.fetchCPUStats(),
+      systemStore.fetchMemoryStats(),
+      systemStore.fetchDiskStats(),
+      systemStore.fetchGPUStats()
+    ]);
+    isConnected.value = true;
+    $q.notify({
+      type: 'positive',
+      message: 'Stats refreshed successfully',
+      position: 'bottom',
+      classes: 'notification-glossy'
+    });
+  } catch {
+    isConnected.value = false;
+    $q.notify({
+      type: 'negative',
+      message: 'Failed to refresh stats',
+      position: 'bottom',
+      classes: 'notification-glossy'
+    });
+  } finally {
+    loading.value = false;
+  }
+}
+
+/**
+ * Connection check interval
+ */
+let connectionCheckInterval;
+
+/**
+ * Lifecycle
+ */
+onMounted(() => {
+  // Check connection every 30 seconds
+  connectionCheckInterval = setInterval(async () => {
+    try {
+      await systemStore.fetchCPUStats();
+      isConnected.value = true;
+    } catch {
+      isConnected.value = false;
+    }
+  }, 30000);
+});
+
+onUnmounted(() => {
+  if (connectionCheckInterval) {
+    clearInterval(connectionCheckInterval);
+  }
+});
+</script>
