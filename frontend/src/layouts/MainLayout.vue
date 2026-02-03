@@ -11,13 +11,6 @@
 -->
 <template>
   <q-layout view="lHh Lpr lFf">
-    <!-- Animated Background -->
-    <div class="animated-background">
-      <div class="gradient-orb orb-1"></div>
-      <div class="gradient-orb orb-2"></div>
-      <div class="gradient-orb orb-3"></div>
-    </div>
-
     <!-- Header -->
     <q-header elevated class="glass-header">
       <q-toolbar>
@@ -167,7 +160,7 @@
     </q-drawer>
 
     <!-- Page Container -->
-    <q-page-container class="bg-transparent">
+    <q-page-container class="bg-black">
       <router-view />
     </q-page-container>
 
@@ -312,7 +305,7 @@ async function refreshStats() {
     $q.notify({
       type: 'positive',
       message: 'Stats refreshed successfully',
-      position: 'top',
+      position: 'bottom',
       classes: 'notification-glossy'
     });
   } catch {
@@ -320,7 +313,7 @@ async function refreshStats() {
     $q.notify({
       type: 'negative',
       message: 'Failed to refresh stats',
-      position: 'top',
+      position: 'bottom',
       classes: 'notification-glossy'
     });
   } finally {
@@ -356,9 +349,9 @@ onUnmounted(() => {
 </script>
 
 <style scoped>
-/* Header */
+/* Header - Pure Black with Safe Area Support */
 .glass-header {
-  background: rgba(15, 12, 41, 0.85);
+  background: rgba(0, 0, 0, 0.95);
   backdrop-filter: blur(20px);
   -webkit-backdrop-filter: blur(20px);
   border-bottom: 1px solid rgba(255, 255, 255, 0.1);
@@ -367,42 +360,29 @@ onUnmounted(() => {
 .app-title {
   font-size: 1.25rem;
   font-weight: 700;
-  background: linear-gradient(135deg, #3b82f6, #8b5cf6);
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
-  background-clip: text;
+  color: #FFFFFF;
 }
 
 .logo-wrapper {
   width: 40px;
   height: 40px;
-  background: linear-gradient(135deg, #3b82f6, #8b5cf6);
+  background: rgba(255, 255, 255, 0.1);
   border-radius: 10px;
   display: flex;
   align-items: center;
   justify-content: center;
-  box-shadow: 0 4px 12px rgba(59, 130, 246, 0.3);
+  border: 1px solid rgba(255, 255, 255, 0.2);
 }
 
 .logo-wrapper-large {
   width: 50px;
   height: 50px;
-  background: linear-gradient(135deg, #3b82f6, #8b5cf6);
+  background: rgba(255, 255, 255, 0.1);
   border-radius: 12px;
   display: flex;
   align-items: center;
   justify-content: center;
-  box-shadow: 0 6px 16px rgba(59, 130, 246, 0.4);
-  animation: pulse-glow 3s ease-in-out infinite;
-}
-
-@keyframes pulse-glow {
-  0%, 100% {
-    box-shadow: 0 6px 16px rgba(59, 130, 246, 0.4);
-  }
-  50% {
-    box-shadow: 0 6px 24px rgba(139, 92, 246, 0.6);
-  }
+  border: 1px solid rgba(255, 255, 255, 0.2);
 }
 
 /* Menu Button */
@@ -434,9 +414,9 @@ onUnmounted(() => {
   transform: scale(1.05);
 }
 
-/* Drawer */
+/* Drawer - Pure Black */
 .glass-drawer {
-  background: rgba(15, 12, 41, 0.95);
+  background: rgba(0, 0, 0, 0.98);
   backdrop-filter: blur(30px);
   -webkit-backdrop-filter: blur(30px);
   border-right: 1px solid rgba(255, 255, 255, 0.1);
@@ -444,12 +424,12 @@ onUnmounted(() => {
 
 .drawer-header {
   border-bottom: 1px solid rgba(255, 255, 255, 0.1);
-  background: linear-gradient(135deg, rgba(59, 130, 246, 0.1) 0%, rgba(139, 92, 246, 0.1) 100%);
+  background: rgba(255, 255, 255, 0.02);
 }
 
 .connection-indicator {
-  background: rgba(59, 130, 246, 0.15);
-  border: 1px solid rgba(59, 130, 246, 0.3);
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.1);
   backdrop-filter: blur(10px);
 }
 
@@ -459,7 +439,7 @@ onUnmounted(() => {
 }
 
 .section-label {
-  color: #90caf9;
+  color: #B0B0B0;
   font-size: 0.75rem;
   font-weight: 600;
   letter-spacing: 0.5px;
@@ -482,9 +462,9 @@ onUnmounted(() => {
 }
 
 .nav-item-active {
-  background: linear-gradient(135deg, rgba(59, 130, 246, 0.2), rgba(139, 92, 246, 0.2)) !important;
-  border: 1px solid rgba(59, 130, 246, 0.3);
-  box-shadow: 0 4px 12px rgba(59, 130, 246, 0.2);
+  background: rgba(255, 255, 255, 0.1) !important;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4);
 }
 
 .icon-wrapper {
@@ -499,12 +479,12 @@ onUnmounted(() => {
 }
 
 .icon-active {
-  background: linear-gradient(135deg, #3b82f6, #8b5cf6);
-  box-shadow: 0 4px 12px rgba(59, 130, 246, 0.4);
+  background: rgba(255, 255, 255, 0.15);
+  border: 1px solid rgba(255, 255, 255, 0.3);
 }
 
 .nav-item:hover .icon-wrapper {
-  background: rgba(59, 130, 246, 0.15);
+  background: rgba(255, 255, 255, 0.1);
   transform: scale(1.05);
 }
 
@@ -526,16 +506,16 @@ onUnmounted(() => {
   }
 }
 
-/* Footer */
+/* Footer - Pure Black */
 .glass-footer {
-  background: rgba(15, 12, 41, 0.85);
+  background: rgba(0, 0, 0, 0.95);
   backdrop-filter: blur(20px);
   -webkit-backdrop-filter: blur(20px);
   border-top: 1px solid rgba(255, 255, 255, 0.1);
 }
 
 .footer-content {
-  background: rgba(59, 130, 246, 0.05);
+  background: rgba(255, 255, 255, 0.02);
   border-radius: 8px;
   padding: 12px 16px;
 }
@@ -549,13 +529,13 @@ onUnmounted(() => {
 }
 
 .status-connected {
-  background: #4ade80;
-  box-shadow: 0 0 8px #4ade80;
+  background: #FFFFFF;
+  box-shadow: 0 0 8px rgba(255, 255, 255, 0.5);
 }
 
 .status-disconnected {
-  background: #ef4444;
-  box-shadow: 0 0 8px #ef4444;
+  background: #808080;
+  box-shadow: 0 0 8px rgba(128, 128, 128, 0.5);
 }
 
 @keyframes pulse-dot {
@@ -569,22 +549,23 @@ onUnmounted(() => {
   }
 }
 
-/* Page Container */
-.bg-transparent {
-  background: transparent !important;
+/* Page Container - Pure Black */
+.bg-black {
+  background: #000000 !important;
 }
 
 /* Dialog Styling */
 :deep(.glass-dialog) {
   backdrop-filter: blur(20px);
-  background: rgba(30, 30, 30, 0.9) !important;
+  background: rgba(30, 30, 30, 0.95) !important;
   border: 1px solid rgba(255, 255, 255, 0.1);
 }
 
 /* Notification Styling */
 :deep(.notification-glossy) {
   backdrop-filter: blur(10px);
-  background: rgba(30, 30, 30, 0.9) !important;
+  background: rgba(30, 30, 30, 0.95) !important;
+  border: 1px solid rgba(255, 255, 255, 0.1);
 }
 
 /* Smooth Transitions */
@@ -597,85 +578,7 @@ onUnmounted(() => {
   background-color: transparent !important;
 }
 
-/* Responsive Adjustments */
-/* Extra small devices (phones, < 576px) */
-@media (max-width: 575.98px) {
-  /* Hide drawer text on very small screens */
-  .nav-item :deep(.q-item__label) {
-    font-size: 0.9rem;
-  }
-
-  /* Adjust header for mobile */
-  .app-title {
-    font-size: 1rem !important;
-  }
-
-  .logo-wrapper {
-    width: 36px !important;
-    height: 36px !important;
-  }
-
-  .logo-wrapper-large {
-    width: 40px !important;
-    height: 40px !important;
-  }
-
-  /* Make nav items more tap-friendly */
-  .nav-item {
-    min-height: 48px;
-  }
-
-  /* Adjust footer for mobile */
-  .footer-content {
-    flex-direction: column;
-    align-items: flex-start !important;
-    gap: 8px;
-  }
-
-  /* Hide some elements on very small screens */
-  .text-caption {
-    font-size: 0.7rem;
-  }
-}
-
-/* Small devices (landscape phones, ≥ 576px) */
-@media (min-width: 576px) and (max-width: 767.98px) {
-  /* Adjust drawer for small tablets */
-}
-
-/* Medium devices (tablets, ≥ 768px) */
-@media (min-width: 768px) and (max-width: 991.98px) {
-  /* Tablet drawer adjustments */
-}
-
-/* Large devices (desktops, ≥ 992px) */
-@media (min-width: 992px) {
-  /* Desktop optimizations */
-}
-
-/* Touch device optimizations */
-@media (hover: none) and (pointer: coarse) {
-  /* Make nav items larger for touch */
-  .nav-item {
-    min-height: 48px;
-    padding: 12px !important;
-  }
-
-  /* Increase touch targets */
-  .q-btn.glass-btn {
-    min-width: 44px;
-    min-height: 44px;
-  }
-
-  /* Remove hover effects */
-  .nav-item:hover,
-  .glass-btn:hover,
-  .glass-card:hover {
-    transform: none !important;
-  }
-}
-
-/* Safe area support for devices with notches */
+/* Safe Area Support - CRITICAL FOR NOTCH DEVICES */
 @supports (padding: max(0px)) {
   .glass-header {
     padding-top: max(0px, env(safe-area-inset-top));
@@ -695,28 +598,74 @@ onUnmounted(() => {
   }
 }
 
-/* Mobile drawer adjustments */
+/* Responsive Adjustments */
+@media (max-width: 575.98px) {
+  .nav-item :deep(.q-item__label) {
+    font-size: 0.9rem;
+  }
+
+  .app-title {
+    font-size: 1rem !important;
+  }
+
+  .logo-wrapper {
+    width: 36px !important;
+    height: 36px !important;
+  }
+
+  .logo-wrapper-large {
+    width: 40px !important;
+    height: 40px !important;
+  }
+
+  .nav-item {
+    min-height: 48px;
+  }
+
+  .footer-content {
+    flex-direction: column;
+    align-items: flex-start !important;
+    gap: 8px;
+  }
+
+  .text-caption {
+    font-size: 0.7rem;
+  }
+}
+
+@media (hover: none) and (pointer: coarse) {
+  .nav-item {
+    min-height: 48px;
+    padding: 12px !important;
+  }
+
+  .q-btn.glass-btn {
+    min-width: 44px;
+    min-height: 44px;
+  }
+
+  .nav-item:hover,
+  .glass-btn:hover {
+    transform: none !important;
+  }
+}
+
 @media (max-width: 767.98px) {
-  /* Full width drawer on mobile */
   .glass-drawer {
     width: 280px !important;
   }
 
-  /* Adjust logo in drawer */
   .logo-wrapper-large {
     width: 45px !important;
     height: 45px !important;
   }
 
-  /* Hide connection indicator details on mobile */
   .connection-indicator .text-caption {
     display: none;
   }
 }
 
-/* Landscape mobile adjustments */
 @media (max-width: 767.98px) and (orientation: landscape) {
-  /* Reduce padding in landscape */
   .q-pa-lg {
     padding: 12px !important;
   }
@@ -724,59 +673,5 @@ onUnmounted(() => {
   .drawer-header {
     padding: 16px !important;
   }
-}
-
-/* Animated Background */
-.animated-background {
-  position: fixed;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  background: linear-gradient(135deg, #0f0c29 0%, #302b63 50%, #24243e 100%);
-  z-index: 0;
-  pointer-events: none;
-}
-
-/* Animated Orbs */
-.gradient-orb {
-  position: absolute;
-  border-radius: 50%;
-  filter: blur(80px);
-  opacity: 0.6;
-  animation: float 20s infinite;
-}
-
-.orb-1 {
-  width: 400px;
-  height: 400px;
-  background: radial-gradient(circle, #3b82f6 0%, transparent 70%);
-  top: -100px;
-  left: -100px;
-}
-
-.orb-2 {
-  width: 300px;
-  height: 300px;
-  background: radial-gradient(circle, #8b5cf6 0%, transparent 70%);
-  bottom: -50px;
-  right: -50px;
-  animation-delay: -5s;
-}
-
-.orb-3 {
-  width: 250px;
-  height: 250px;
-  background: radial-gradient(circle, #06b6d4 0%, transparent 70%);
-  top: 40%;
-  left: 40%;
-  transform: translate(-50%, -50%);
-  animation-delay: -10s;
-}
-
-@keyframes float {
-  0%, 100% { transform: translate(0, 0) scale(1); }
-  33% { transform: translate(30px, -50px) scale(1.1); }
-  66% { transform: translate(-20px, 20px) scale(0.9); }
 }
 </style>
