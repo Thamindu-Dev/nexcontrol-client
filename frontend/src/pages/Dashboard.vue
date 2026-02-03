@@ -302,36 +302,59 @@
         </div>
       </div>
 
-      <!-- Auto-Refresh Toggle -->
+      <!-- Update Mode Toggle (Auto-Refresh / Real-Time) -->
       <div class="row q-mt-md">
         <div class="col-12">
           <q-card class="glass-card glossy" flat bordered>
             <q-card-section>
               <div class="row items-center justify-between">
                 <div class="row items-center">
-                  <q-icon name="autorenew" size="24px" color="primary" class="q-mr-sm" />
+                  <q-icon :name="systemStore.webSocketEnabled ? 'wifi' : 'autorenew'" size="24px" :color="systemStore.isWebSocketConnected ? 'positive' : 'primary'" class="q-mr-sm" />
                   <div>
-                    <div class="text-subtitle1 text-weight-bold text-white">Auto-Refresh</div>
+                    <div class="text-subtitle1 text-weight-bold text-white">
+                      Update Mode
+                    </div>
                     <div class="text-caption text-grey-4">
-                      {{ autoRefresh ? `Every ${refreshInterval/1000}s` : 'Disabled' }}
+                      <span v-if="systemStore.webSocketEnabled" class="text-positive">
+                        <q-icon name="flash_on" size="14px" class="q-mr-xs" />
+                        Real-time (WebSocket)
+                      </span>
+                      <span v-else>
+                        {{ autoRefresh ? `Polling every ${refreshInterval/1000}s` : 'Manual refresh' }}
+                      </span>
                     </div>
                   </div>
                 </div>
                 <div class="col-auto">
-                  <q-toggle
-                    v-model="autoRefresh"
-                    color="primary"
-                    size="md"
-                    keep-color
-                    dark
-                    @update:model-value="toggleAutoRefresh"
-                  >
-                    <template v-slot:label>
-                      <span class="text-subtitle2 text-grey-3 q-ml-sm">
-                        {{ autoRefresh ? 'On' : 'Off' }}
-                      </span>
-                    </template>
-                  </q-toggle>
+                  <div class="row q-gutter-sm">
+                    <!-- Real-time toggle -->
+                    <q-btn
+                      :color="systemStore.webSocketEnabled ? 'positive' : 'grey-7'"
+                      :label="systemStore.webSocketEnabled ? 'Real-time' : 'Real-time'"
+                      :outline="!systemStore.webSocketEnabled"
+                      size="md"
+                      class="glossy"
+                      @click="toggleWebSocket"
+                      :loading="systemStore.webSocketState === 'connecting'"
+                    >
+                      <q-icon name="flash_on" class="q-mr-xs" size="18px" />
+                      <q-tooltip v-if="!systemStore.webSocketEnabled">Enable real-time updates via WebSocket</q-tooltip>
+                      <q-tooltip v-else>Disable real-time updates</q-tooltip>
+                    </q-btn>
+
+                    <!-- Auto-refresh toggle (disabled when WebSocket is active) -->
+                    <q-toggle
+                      v-model="autoRefresh"
+                      color="primary"
+                      size="md"
+                      keep-color
+                      dark
+                      :disable="systemStore.webSocketEnabled"
+                      @update:model-value="toggleAutoRefresh"
+                    >
+                      <q-tooltip v-if="systemStore.webSocketEnabled">Auto-refresh is disabled in real-time mode</q-tooltip>
+                    </q-toggle>
+                  </div>
                 </div>
               </div>
             </q-card-section>
@@ -423,6 +446,29 @@ function toggleAutoRefresh(value) {
     systemStore.enableAutoRefresh(refreshInterval.value);
   } else {
     systemStore.disableAutoRefresh();
+  }
+}
+
+/**
+ * Toggle WebSocket real-time mode
+ */
+function toggleWebSocket() {
+  if (systemStore.webSocketEnabled) {
+    systemStore.disableWebSocket();
+    $q.notify({
+      type: 'info',
+      message: 'Switched to polling mode',
+      position: 'top',
+      classes: 'notification-glossy'
+    });
+  } else {
+    systemStore.enableWebSocket();
+    $q.notify({
+      type: 'positive',
+      message: 'Real-time updates enabled',
+      position: 'top',
+      classes: 'notification-glossy'
+    });
   }
 }
 
@@ -862,9 +908,123 @@ onUnmounted(() => {
 }
 
 /* Responsive adjustments */
-@media (max-width: 600px) {
+/* Extra small devices (phones, less than 576px) */
+@media (max-width: 575.98px) {
+  .text-h3 {
+    font-size: 1.75rem !important;
+  }
+
+  .text-h4 {
+    font-size: 1.5rem !important;
+  }
+
+  .text-h5 {
+    font-size: 1.1rem !important;
+  }
+
+  /* Reduce icon sizes on mobile */
+  .stat-icon {
+    font-size: 24px !important;
+  }
+
+  /* Adjust circular progress size */
+  .circular-progress-wrapper :deep(.q-circular-progress) {
+    width: 50px !important;
+    height: 50px !important;
+  }
+
+  /* Stack stat cards vertically */
+  .stat-card {
+    margin-bottom: 16px;
+  }
+
+  /* Power buttons stack */
+  .power-btn {
+    margin-bottom: 12px;
+  }
+
+  /* Adjust header */
+  .header-section .text-h4 {
+    font-size: 1.5rem !important;
+  }
+
+  /* Reduce button sizes */
+  .power-btn, .action-btn {
+    min-height: 44px; /* iOS touch target minimum */
+  }
+}
+
+/* Small devices (landscape phones, 576px and up) */
+@media (min-width: 576px) and (max-width: 767.98px) {
   .text-h3 {
     font-size: 2rem;
+  }
+}
+
+/* Medium devices (tablets, 768px and up) */
+@media (min-width: 768px) and (max-width: 991.98px) {
+  /* Tablet adjustments */
+  .glass-card {
+    margin-bottom: 16px;
+  }
+}
+
+/* Large devices (desktops, 992px and up) */
+@media (min-width: 992px) {
+  /* Desktop optimizations */
+}
+
+/* Extra large devices (large desktops, 1200px and up) */
+@media (min-width: 1200px) {
+  /* Extra large desktop */
+}
+
+/* Touch device optimizations */
+@media (hover: none) and (pointer: coarse) {
+  /* Remove hover effects on touch devices */
+  .glass-btn:hover,
+  .glass-card:hover,
+  .power-btn:hover,
+  .action-card:hover,
+  .nav-item:hover {
+    transform: none !important;
+  }
+
+  /* Ensure touch targets are large enough */
+  .q-btn,
+  .action-card,
+  .nav-item {
+    min-height: 44px;
+    min-width: 44px;
+  }
+
+  /* Remove arrow icons on touch */
+  .arrow-icon {
+    display: none;
+  }
+}
+
+/* Landscape mode on mobile */
+@media (max-width: 767.98px) and (orientation: landscape) {
+  .dashboard-page {
+    min-height: 100vh;
+  }
+
+  /* Reduce vertical spacing in landscape */
+  .glass-card {
+    margin-bottom: 8px;
+  }
+
+  .q-pa-xl {
+    padding: 16px !important;
+  }
+}
+
+/* Fix for small screens with notch */
+@supports (padding: max(0px)) {
+  .dashboard-page {
+    padding-left: max(16px, env(safe-area-inset-left));
+    padding-right: max(16px, env(safe-area-inset-right));
   }
 }
 </style>

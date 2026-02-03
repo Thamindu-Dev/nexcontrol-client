@@ -20,16 +20,20 @@
 import ApiService from './ApiService';
 import { encryptPayload, decryptResponse, setAESKey } from './EncryptionService';
 import WoLService from './WoLService';
+import { wsService, WebSocketState } from './WebSocketService';
 
 export {
   ApiService,
   encryptPayload,
   decryptResponse,
   setAESKey,
-  WoLService
+  WoLService,
+  wsService,
+  WebSocketState
 };
 
 export default {
   ApiService,
-  WoLService
+  WoLService,
+  wsService
 };

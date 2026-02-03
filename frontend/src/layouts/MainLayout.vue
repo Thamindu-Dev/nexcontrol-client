@@ -241,6 +241,12 @@ const navigationLinks = [
     caption: 'WoL Manager',
     icon: 'power_settings_new',
     link: '/wol'
+  },
+  {
+    title: 'Scheduled Tasks',
+    caption: 'Schedule power actions',
+    icon: 'schedule',
+    link: '/scheduled-tasks'
   }
 ];
 
@@ -582,5 +588,131 @@ onUnmounted(() => {
 /* Remove default active background */
 :deep(.q-item.q-item--active) {
   background-color: transparent !important;
+}
+
+/* Responsive Adjustments */
+/* Extra small devices (phones, < 576px) */
+@media (max-width: 575.98px) {
+  /* Hide drawer text on very small screens */
+  .nav-item :deep(.q-item__label) {
+    font-size: 0.9rem;
+  }
+
+  /* Adjust header for mobile */
+  .app-title {
+    font-size: 1rem !important;
+  }
+
+  .logo-wrapper {
+    width: 36px !important;
+    height: 36px !important;
+  }
+
+  .logo-wrapper-large {
+    width: 40px !important;
+    height: 40px !important;
+  }
+
+  /* Make nav items more tap-friendly */
+  .nav-item {
+    min-height: 48px;
+  }
+
+  /* Adjust footer for mobile */
+  .footer-content {
+    flex-direction: column;
+    align-items: flex-start !important;
+    gap: 8px;
+  }
+
+  /* Hide some elements on very small screens */
+  .text-caption {
+    font-size: 0.7rem;
+  }
+}
+
+/* Small devices (landscape phones, ≥ 576px) */
+@media (min-width: 576px) and (max-width: 767.98px) {
+  /* Adjust drawer for small tablets */
+}
+
+/* Medium devices (tablets, ≥ 768px) */
+@media (min-width: 768px) and (max-width: 991.98px) {
+  /* Tablet drawer adjustments */
+}
+
+/* Large devices (desktops, ≥ 992px) */
+@media (min-width: 992px) {
+  /* Desktop optimizations */
+}
+
+/* Touch device optimizations */
+@media (hover: none) and (pointer: coarse) {
+  /* Make nav items larger for touch */
+  .nav-item {
+    min-height: 48px;
+    padding: 12px !important;
+  }
+
+  /* Increase touch targets */
+  .q-btn.glass-btn {
+    min-width: 44px;
+    min-height: 44px;
+  }
+
+  /* Remove hover effects */
+  .nav-item:hover,
+  .glass-btn:hover,
+  .glass-card:hover {
+    transform: none !important;
+  }
+}
+
+/* Safe area support for devices with notches */
+@supports (padding: max(0px)) {
+  .glass-header {
+    padding-left: max(0px, env(safe-area-inset-left));
+    padding-right: max(0px, env(safe-area-inset-right));
+  }
+
+  .glass-footer {
+    padding-left: max(0px, env(safe-area-inset-left));
+    padding-right: max(0px, env(safe-area-inset-right));
+  }
+
+  .glass-drawer {
+    padding-left: max(0px, env(safe-area-inset-left));
+  }
+}
+
+/* Mobile drawer adjustments */
+@media (max-width: 767.98px) {
+  /* Full width drawer on mobile */
+  .glass-drawer {
+    width: 280px !important;
+  }
+
+  /* Adjust logo in drawer */
+  .logo-wrapper-large {
+    width: 45px !important;
+    height: 45px !important;
+  }
+
+  /* Hide connection indicator details on mobile */
+  .connection-indicator .text-caption {
+    display: none;
+  }
+}
+
+/* Landscape mobile adjustments */
+@media (max-width: 767.98px) and (orientation: landscape) {
+  /* Reduce padding in landscape */
+  .q-pa-lg {
+    padding: 12px !important;
+  }
+
+  .drawer-header {
+    padding: 16px !important;
+  }
 }
 </style>

@@ -6,6 +6,7 @@
 fastapi==0.104.1
 uvicorn[standard]==0.24.0
 python-multipart==0.0.6
+websockets==12.0
 
 # System Monitoring & Process Management
 psutil==5.9.6

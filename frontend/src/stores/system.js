@@ -1,5 +1,5 @@
 /**
- * ==============================================================================
+ * =============================================================================
  * NexControl - Remote PC Controller
  * Copyright (C) 2026 Thamindu-Dev
  *
@@ -7,7 +7,7 @@
  * it under the terms of the GNU General Public License as published by
  * the Free Software Foundation, either version 3 of the License, or
  * (at your option) any later version.
- * ==============================================================================
+ * =============================================================================
  */
 
 /**
@@ -15,11 +15,12 @@
  * System Store - System Statistics & Monitoring
  * =============================================================
  * Manages real-time system statistics
- * Handles auto-refresh and data caching
+ * Supports both polling and WebSocket (real-time) modes
  */
 
 import { defineStore } from 'pinia';
 import api from '../services/ApiService';
+import { wsService, WebSocketState } from '../services/WebSocketService';
 
 export const useSystemStore = defineStore('system', {
   state: () => ({
@@ -57,10 +58,15 @@ export const useSystemStore = defineStore('system', {
       processes: null
     },
 
-    // Auto-refresh
+    // Auto-refresh (polling mode)
     autoRefresh: false,
     refreshInterval: 5000,
-    refreshTimer: null
+    refreshTimer: null,
+
+    // WebSocket (real-time mode)
+    webSocketEnabled: false,
+    webSocketState: WebSocketState.DISCONNECTED,
+    _wsEventHandlers: null
   }),
 
   getters: {
@@ -96,14 +102,34 @@ export const useSystemStore = defineStore('system', {
       if (!state.stats.timestamp) return true;
       const now = Math.floor(Date.now() / 1000);
       return (now - state.stats.timestamp) > 10;
+    },
+
+    /**
+     * Check if WebSocket is connected
+     */
+    isWebSocketConnected: (state) => {
+      return state.webSocketEnabled && state.webSocketState === WebSocketState.CONNECTED;
+    },
+
+    /**
+     * Get update mode (polling vs real-time)
+     */
+    updateMode: (state) => {
+      return state.webSocketEnabled ? 'real-time' : 'polling';
     }
   },
 
   actions: {
     /**
-     * Fetch all system statistics
+     * Fetch all system statistics (polling mode)
      */
     async fetchStats() {
+      // Don't fetch if WebSocket is connected and working
+      if (this.webSocketEnabled && this.isWebSocketConnected) {
+        console.log('[System] Skipping fetch: WebSocket is connected');
+        return;
+      }
+
       this.loading.stats = true;
       this.errors.stats = null;
 
@@ -264,9 +290,14 @@ export const useSystemStore = defineStore('system', {
     },
 
     /**
-     * Enable auto-refresh
+     * Enable auto-refresh (polling mode)
      */
     enableAutoRefresh(interval = 5000) {
+      // Disable WebSocket if enabled
+      if (this.webSocketEnabled) {
+        this.disableWebSocket();
+      }
+
       this.disableAutoRefresh();
       this.autoRefresh = true;
       this.refreshInterval = interval;
@@ -281,7 +312,7 @@ export const useSystemStore = defineStore('system', {
     },
 
     /**
-     * Disable auto-refresh
+     * Disable auto-refresh (polling mode)
      */
     disableAutoRefresh() {
       this.autoRefresh = false;
@@ -300,6 +331,88 @@ export const useSystemStore = defineStore('system', {
         this.enableAutoRefresh(interval);
       }
       this.refreshInterval = interval;
+    },
+
+    /**
+     * Enable WebSocket (real-time mode)
+     */
+    enableWebSocket() {
+      // Disable polling if enabled
+      if (this.autoRefresh) {
+        this.disableAutoRefresh();
+      }
+
+      this.webSocketEnabled = true;
+      this._setupWebSocketHandlers();
+      wsService.connect({ keepAliveInterval: 30000 });
+
+      console.log('[System] WebSocket enabled');
+    },
+
+    /**
+     * Disable WebSocket (real-time mode)
+     */
+    disableWebSocket() {
+      this.webSocketEnabled = false;
+      this._removeWebSocketHandlers();
+      wsService.disconnect();
+      this.webSocketState = WebSocketState.DISCONNECTED;
+
+      console.log('[System] WebSocket disabled');
+    },
+
+    /**
+     * Setup WebSocket event handlers
+     */
+    _setupWebSocketHandlers() {
+      // Remove old handlers if any
+      this._removeWebSocketHandlers();
+
+      // Create handler functions
+      this._wsEventHandlers = {
+        onConnected: () => {
+          this.webSocketState = WebSocketState.CONNECTED;
+          console.log('[System] WebSocket connected - receiving real-time updates');
+        },
+
+        onDisconnected: () => {
+          this.webSocketState = WebSocketState.DISCONNECTED;
+          console.log('[System] WebSocket disconnected');
+        },
+
+        onError: (error) => {
+          this.webSocketState = WebSocketState.ERROR;
+          console.error('[System] WebSocket error:', error);
+        },
+
+        onStats: (data) => {
+          // Update stats from WebSocket
+          this.stats = {
+            ...this.stats,
+            ...data,
+            timestamp: Math.floor(Date.now() / 1000)
+          };
+        }
+      };
+
+      // Register handlers
+      wsService.on('connected', this._wsEventHandlers.onConnected);
+      wsService.on('disconnected', this._wsEventHandlers.onDisconnected);
+      wsService.on('error', this._wsEventHandlers.onError);
+      wsService.on('stats', this._wsEventHandlers.onStats);
+    },
+
+    /**
+     * Remove WebSocket event handlers
+     */
+    _removeWebSocketHandlers() {
+      if (this._wsEventHandlers) {
+        wsService.off('connected', this._wsEventHandlers.onConnected);
+        wsService.off('disconnected', this._wsEventHandlers.onDisconnected);
+        wsService.off('error', this._wsEventHandlers.onError);
+        wsService.off('stats', this._wsEventHandlers.onStats);
+        this._wsEventHandlers = null;
+      }
     },
 
     /**

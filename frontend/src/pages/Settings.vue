@@ -113,6 +113,63 @@
           </q-card-section>
         </q-card>
       </div>
+
+    <!-- Appearance -->
+    <div class="row q-mb-md">
+      <div class="col-12 col-md-6">
+        <q-card>
+          <q-card-section>
+            <div class="text-h6">Appearance</div>
+          </q-card-section>
+
+          <q-card-section>
+            <div class="text-caption text-grey q-mb-md">
+              Customize the app's appearance and theme.
+            </div>
+
+            <!-- Dark Mode Toggle -->
+            <div class="row items-center q-mb-md">
+              <div class="col">
+                <div class="text-subtitle1 q-mb-xs">Dark Mode</div>
+                <div class="text-caption text-grey">
+                  {{ darkModeStatus }}
+                </div>
+              </div>
+              <div class="col-auto">
+                <q-toggle
+                  v-model="darkMode"
+                  color="primary"
+                  size="lg"
+                  checked-icon="nights_stay"
+                  unchecked-icon="wb_sunny"
+                  @update:model-value="toggleDarkMode"
+                >
+                  <q-tooltip v-if="!darkMode">Enable dark theme</q-tooltip>
+                  <q-tooltip v-else>Disable dark theme</q-tooltip>
+                </q-toggle>
+              </div>
+            </div>
+
+            <!-- Auto Dark Mode -->
+            <div class="row items-center">
+              <div class="col">
+                <div class="text-subtitle2 q-mb-xs">Follow System</div>
+                <div class="text-caption text-grey">
+                  Automatically switch based on device settings
+                </div>
+              </div>
+              <div class="col-auto">
+                <q-toggle
+                  v-model="autoDarkMode"
+                  color="primary"
+                  size="md"
+                  @update:model-value="toggleAutoDarkMode"
+                />
+              </div>
+            </div>
+          </q-card-section>
+        </q-card>
+      </div>
     </div>
 
     <!-- Preferences -->
@@ -141,6 +198,84 @@
                 map
               />
             </div>
+          </q-card-section>
+        </q-card>
+      </div>
+
+      <!-- Threshold Notifications -->
+      <div class="col-12 col-md-6">
+        <q-card>
+          <q-card-section>
+            <div class="text-h6">Threshold Alerts</div>
+          </q-card-section>
+
+          <q-card-section>
+            <div class="text-caption text-grey q-mb-md">
+              Configure alerts when system resources exceed thresholds.
+            </div>
+
+            <q-toggle
+              v-model="thresholdConfig.enabled"
+              label="Enable Threshold Monitoring"
+              color="primary"
+              class="q-mb-md"
+            />
+
+            <q-slider
+              v-model="thresholdConfig.cpu_threshold"
+              :min="0"
+              :max="100"
+              :step="5"
+              label
+              label-always
+              :markers="thresholdMarkers"
+              color="orange"
+              class="q-mb-md"
+            >
+              <template v-slot:label>
+                CPU Alert: {{ thresholdConfig.cpu_threshold }}%
+              </template>
+            </q-slider>
+
+            <q-slider
+              v-model="thresholdConfig.memory_threshold"
+              :min="0"
+              :max="100"
+              :step="5"
+              label
+              label-always
+              :markers="thresholdMarkers"
+              color="purple"
+              class="q-mb-md"
+            >
+              <template v-slot:label>
+                Memory Alert: {{ thresholdConfig.memory_threshold }}%
+              </template>
+            </q-slider>
+
+            <q-slider
+              v-model="thresholdConfig.disk_threshold"
+              :min="0"
+              :max="100"
+              :step="5"
+              label
+              label-always
+              :markers="thresholdMarkers"
+              color="red"
+              class="q-mb-md"
+            >
+              <template v-slot:label>
+                Disk Alert: {{ thresholdConfig.disk_threshold }}%
+              </template>
+            </q-slider>
+
+            <q-btn
+              @click="saveThresholdConfig"
+              color="primary"
+              class="full-width q-mt-md"
+              :loading="savingThreshold"
+              label="Save Threshold Settings"
+            />
           </q-card-section>
         </q-card>
       </div>
@@ -193,11 +328,13 @@
 </template>
 
 <script setup>
-import { ref, reactive, onMounted } from 'vue';
+import { ref, reactive, computed, onMounted } from 'vue';
 import { useRouter } from 'vue-router';
 import { useQuasar } from 'quasar';
 import { useAuthStore } from '../stores/auth';
 import { useSettingsStore } from '../stores/settings';
+import { getItem, setItem } from '../services/SecureStorage';
+import apiService from '../services/ApiService';
 
 // Define component name for ESLint multi-word rule
 defineOptions({
@@ -235,6 +372,131 @@ const refreshOptions = [
   { label: '10 seconds', value: 10000 },
   { label: '30 seconds', value: 30000 }
 ];
+
+// Dark Mode
+const darkMode = ref($q.dark.isActive);
+const autoDarkMode = ref(false);
+
+/**
+ * Computed property for dark mode status text
+ */
+const darkModeStatus = computed(() => {
+  if (autoDarkMode.value) return 'Following system';
+  return darkMode.value ? 'Enabled' : 'Disabled';
+});
+
+/**
+ * Toggle dark mode
+ */
+async function toggleDarkMode(value) {
+  darkMode.value = value;
+  $q.dark.set(value);
+
+  // Save to storage
+  await setItem('nexcontrol_dark_mode', value ? 'true' : 'false');
+  await setItem('nexcontrol_auto_dark_mode', 'false');
+  autoDarkMode.value = false;
+
+  $q.notify({
+    type: 'info',
+    message: value ? 'Dark mode enabled' : 'Dark mode disabled',
+    position: 'top'
+  });
+}
+
+/**
+ * Toggle auto dark mode (follow system)
+ */
+async function toggleAutoDarkMode(value) {
+  autoDarkMode.value = value;
+
+  if (value) {
+    $q.dark.set('auto');
+    darkMode.value = $q.dark.isActive;
+    await setItem('nexcontrol_auto_dark_mode', 'true');
+    await setItem('nexcontrol_dark_mode', 'false');
+
+    $q.notify({
+      type: 'info',
+      message: 'Following system theme',
+      position: 'top'
+    });
+  } else {
+    // Switch back to manual mode
+    $q.dark.set(darkMode.value);
+    await setItem('nexcontrol_auto_dark_mode', 'false');
+    await setItem('nexcontrol_dark_mode', darkMode.value ? 'true' : 'false');
+
+    $q.notify({
+      type: 'info',
+      message: 'Manual theme mode',
+      position: 'top'
+    });
+  }
+}
+
+// Threshold Notifications
+const thresholdConfig = reactive({
+  enabled: true,
+  cpu_threshold: 80,
+  memory_threshold: 85,
+  disk_threshold: 90
+});
+const savingThreshold = ref(false);
+const thresholdMarkers = [
+  { value: 0, label: '0%' },
+  { value: 25, label: '25%' },
+  { value: 50, label: '50%' },
+  { value: 75, label: '75%' },
+  { value: 100, label: '100%' }
+];
+
+/**
+ * Save threshold configuration
+ */
+async function saveThresholdConfig() {
+  savingThreshold.value = true;
+
+  try {
+    const response = await apiService.put('/api/threshold/config', null, {
+      cpu_threshold: thresholdConfig.cpu_threshold,
+      memory_threshold: thresholdConfig.memory_threshold,
+      disk_threshold: thresholdConfig.disk_threshold,
+      enabled: thresholdConfig.enabled
+    });
+
+    if (response.success) {
+      $q.notify({
+        type: 'positive',
+        message: 'Threshold settings saved',
+        position: 'top'
+      });
+    }
+  } catch (error) {
+    $q.notify({
+      type: 'negative',
+      message: error.message || 'Failed to save threshold settings',
+      position: 'top'
+    });
+  } finally {
+    savingThreshold.value = false;
+  }
+}
+
+/**
+ * Load threshold configuration
+ */
+async function loadThresholdConfig() {
+  try {
+    const response = await apiService.get('/api/threshold/config');
+    if (response.success && response.data) {
+      Object.assign(thresholdConfig, response.data);
+    }
+  } catch (error) {
+    // Silently fail - use defaults
+    console.error('Failed to load threshold config:', error);
+  }
+}
 
 /**
  * Validate IP address (private/local only for security)
@@ -425,7 +687,7 @@ function resetAllSettings() {
 /**
  * Load settings on mount
  */
-onMounted(() => {
+onMounted(async () => {
   settingsStore.loadSettings();
 
   // Load server config
@@ -439,5 +701,27 @@ onMounted(() => {
   if (savedPrefs) {
     Object.assign(preferences, { ...savedPrefs });
   }
+
+  // Load dark mode settings
+  const savedDarkMode = await getItem('nexcontrol_dark_mode');
+  const savedAutoDarkMode = await getItem('nexcontrol_auto_dark_mode');
+
+  if (savedAutoDarkMode === 'true') {
+    autoDarkMode.value = true;
+    $q.dark.set('auto');
+    darkMode.value = $q.dark.isActive;
+  } else if (savedDarkMode === 'true') {
+    darkMode.value = true;
+    $q.dark.set(true);
+  } else if (savedDarkMode === 'false') {
+    darkMode.value = false;
+    $q.dark.set(false);
+  } else {
+    // Default to auto if no setting saved
+    darkMode.value = $q.dark.isActive;
+  }
+
+  // Load threshold configuration
+  await loadThresholdConfig();
 });
 </script>

@@ -51,6 +51,11 @@ const routes = [
         meta: { requiresAuth: true }
       },
       {
+        path: 'scheduled-tasks',
+        component: () => import('pages/ScheduledTasks.vue'),
+        meta: { requiresAuth: true }
+      },
+      {
         path: 'settings',
         component: () => import('pages/Settings.vue'),
         meta: { requiresAuth: true }

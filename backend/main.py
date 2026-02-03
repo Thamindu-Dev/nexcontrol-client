@@ -29,6 +29,7 @@ import time
 import logging
 import re
 import secrets
+import asyncio
 from datetime import datetime, timedelta
 from typing import Optional, List, Dict, Any
 from functools import wraps
@@ -55,7 +56,7 @@ logger = logging.getLogger(__name__)
 # IMPORTS
 # ============================================================
 
-from fastapi import FastAPI, HTTPException, Depends, status, Request, Response
+from fastapi import FastAPI, HTTPException, Depends, status, Request, Response, WebSocket, WebSocketDisconnect
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 from pydantic import BaseModel, Field, validator, constr
@@ -246,6 +247,99 @@ class PowerActionRequest(BaseModel):
         if v.lower() not in allowed:
             raise ValueError(f"Action must be one of: {', '.join(allowed)}")
         return v.lower()
+
+
+# Scheduled Task Models
+class ScheduledTask(BaseModel):
+    """Scheduled task model"""
+    id: str = Field(..., description="Unique task ID")
+    name: str = Field(..., min_length=1, max_length=100, description="Task name")
+    action: str = Field(..., description="Action: shutdown, hibernate, restart")
+    scheduled_time: str = Field(..., description="Scheduled time in ISO format")
+    enabled: bool = Field(True, description="Whether the task is enabled")
+    created_at: str = Field(..., description="Creation timestamp in ISO format")
+
+    @validator('action')
+    def validate_action(cls, v):
+        """Validate action is allowed"""
+        allowed = ['shutdown', 'hibernate', 'restart']
+        if v.lower() not in allowed:
+            raise ValueError(f"Action must be one of: {', '.join(allowed)}")
+        return v.lower()
+
+
+class CreateScheduledTaskRequest(BaseModel):
+    """Create scheduled task request schema"""
+    name: str = Field(..., min_length=1, max_length=100, description="Task name")
+    action: str = Field(..., description="Action: shutdown, hibernate, restart")
+    scheduled_time: str = Field(..., description="Scheduled time in ISO format (YYYY-MM-DDTHH:MM:SS)")
+
+    @validator('action')
+    def validate_action(cls, v):
+        """Validate action is allowed"""
+        allowed = ['shutdown', 'hibernate', 'restart']
+        if v.lower() not in allowed:
+            raise ValueError(f"Action must be one of: {', '.join(allowed)}")
+        return v.lower()
+
+    @validator('scheduled_time')
+    def validate_scheduled_time(cls, v):
+        """Validate scheduled time is in the future"""
+        try:
+            scheduled_dt = datetime.fromisoformat(v.replace('Z', '+00:00'))
+            if scheduled_dt <= datetime.now(scheduled_dt.tzinfo):
+                raise ValueError("Scheduled time must be in the future")
+        except ValueError as e:
+            if "must be in the future" in str(e):
+                raise
+            raise ValueError("Invalid datetime format. Use ISO format: YYYY-MM-DDTHH:MM:SS")
+        return v
+
+
+class UpdateScheduledTaskRequest(BaseModel):
+    """Update scheduled task request schema"""
+    name: Optional[str] = Field(None, min_length=1, max_length=100, description="Task name")
+    action: Optional[str] = Field(None, description="Action: shutdown, hibernate, restart")
+    scheduled_time: Optional[str] = Field(None, description="Scheduled time in ISO format")
+
+    @validator('action')
+    def validate_action(cls, v):
+        """Validate action is allowed"""
+        if v is None:
+            return v
+        allowed = ['shutdown', 'hibernate', 'restart']
+        if v.lower() not in allowed:
+            raise ValueError(f"Action must be one of: {', '.join(allowed)}")
+        return v.lower()
+
+
+# Threshold Notification Models
+class ThresholdConfig(BaseModel):
+    """Threshold configuration model"""
+    cpu_threshold: int = Field(80, ge=0, le=100, description="CPU usage threshold percentage")
+    memory_threshold: int = Field(85, ge=0, le=100, description="Memory usage threshold percentage")
+    disk_threshold: int = Field(90, ge=0, le=100, description="Disk usage threshold percentage")
+    enabled: bool = Field(True, description="Whether threshold monitoring is enabled")
+
+    class Config:
+        json_schema_extra = {
+            "example": {
+                "cpu_threshold": 80,
+                "memory_threshold": 85,
+                "disk_threshold": 90,
+                "enabled": True
+            }
+        }
+
+
+class ThresholdAlert(BaseModel):
+    """Threshold alert model"""
+    id: str
+    metric_type: str = Field(..., description="Type: cpu, memory, disk")
+    threshold: int = Field(..., description="Threshold value that was exceeded")
+    current_value: float = Field(..., description="Current value that exceeded threshold")
+    timestamp: str = Field(..., description="Alert timestamp")
+    acknowledged: bool = Field(False, description="Whether alert was acknowledged")
 
 # ============================================================
 # SECURITY MANAGER CLASS
@@ -1006,6 +1100,495 @@ class PowerManager:
 
 
 # ============================================================
+# SCHEDULED TASK MANAGER CLASS
+# ============================================================
+
+class ScheduledTaskManager:
+    """
+    Manage scheduled power tasks
+    Supports scheduling shutdown, restart, hibernate operations
+    Uses in-memory storage with optional persistent file storage
+    """
+
+    def __init__(self, storage_file: str = "scheduled_tasks.json"):
+        """
+        Initialize scheduled task manager
+
+        Args:
+            storage_file: Optional file path for persistent storage
+        """
+        self.storage_file = storage_file
+        self.tasks: Dict[str, ScheduledTask] = {}
+        self._scheduler_task = None
+        self._running = False
+        self._load_tasks()
+        logger.info("ScheduledTaskManager initialized")
+
+    def _load_tasks(self):
+        """Load tasks from persistent storage if available"""
+        try:
+            if os.path.exists(self.storage_file):
+                import json
+                with open(self.storage_file, 'r') as f:
+                    data = json.load(f)
+                    for task_data in data:
+                        task = ScheduledTask(**task_data)
+                        self.tasks[task.id] = task
+                        # Clean up expired/disabled tasks on load
+                        if not task.enabled:
+                            self.tasks.pop(task.id, None)
+                logger.info(f"Loaded {len(self.tasks)} scheduled tasks from storage")
+        except Exception as e:
+            logger.error(f"Error loading scheduled tasks: {type(e).__name__}")
+
+    def _save_tasks(self):
+        """Save tasks to persistent storage"""
+        try:
+            import json
+            with open(self.storage_file, 'w') as f:
+                tasks_data = [task.dict() for task in self.tasks.values()]
+                json.dump(tasks_data, f, indent=2)
+        except Exception as e:
+            logger.error(f"Error saving scheduled tasks: {type(e).__name__}")
+
+    def create_task(self, name: str, action: str, scheduled_time: str) -> ScheduledTask:
+        """
+        Create a new scheduled task
+
+        Args:
+            name: Task name
+            action: Power action (shutdown, hibernate, restart)
+            scheduled_time: ISO format datetime string
+
+        Returns:
+            Created ScheduledTask object
+        """
+        import uuid
+        task_id = str(uuid.uuid4())
+        task = ScheduledTask(
+            id=task_id,
+            name=name,
+            action=action,
+            scheduled_time=scheduled_time,
+            enabled=True,
+            created_at=datetime.now().isoformat()
+        )
+        self.tasks[task_id] = task
+        self._save_tasks()
+        logger.info(f"Created scheduled task: {name} ({action}) at {scheduled_time}")
+        return task
+
+    def get_task(self, task_id: str) -> Optional[ScheduledTask]:
+        """
+        Get a task by ID
+
+        Args:
+            task_id: Task ID
+
+        Returns:
+            ScheduledTask object or None
+        """
+        return self.tasks.get(task_id)
+
+    def list_tasks(self) -> List[ScheduledTask]:
+        """
+        List all tasks
+
+        Returns:
+            List of ScheduledTask objects
+        """
+        return list(self.tasks.values())
+
+    def update_task(self, task_id: str, **kwargs) -> Optional[ScheduledTask]:
+        """
+        Update a task
+
+        Args:
+            task_id: Task ID
+            **kwargs: Fields to update
+
+        Returns:
+            Updated ScheduledTask or None if not found
+        """
+        task = self.tasks.get(task_id)
+        if not task:
+            return None
+
+        for key, value in kwargs.items():
+            if hasattr(task, key) and value is not None:
+                setattr(task, key, value)
+
+        self._save_tasks()
+        logger.info(f"Updated scheduled task: {task_id}")
+        return task
+
+    def delete_task(self, task_id: str) -> bool:
+        """
+        Delete a task
+
+        Args:
+            task_id: Task ID
+
+        Returns:
+            True if deleted, False if not found
+        """
+        if task_id in self.tasks:
+            del self.tasks[task_id]
+            self._save_tasks()
+            logger.info(f"Deleted scheduled task: {task_id}")
+            return True
+        return False
+
+    def toggle_task(self, task_id: str) -> Optional[ScheduledTask]:
+        """
+        Toggle task enabled state
+
+        Args:
+            task_id: Task ID
+
+        Returns:
+            Updated ScheduledTask or None if not found
+        """
+        task = self.tasks.get(task_id)
+        if not task:
+            return None
+
+        task.enabled = not task.enabled
+        self._save_tasks()
+        logger.info(f"Toggled scheduled task {task_id}: enabled={task.enabled}")
+        return task
+
+    async def start_scheduler(self):
+        """Start the background task scheduler"""
+        if self._running:
+            return
+
+        self._running = True
+        self._scheduler_task = asyncio.create_task(self._scheduler_loop())
+        logger.info("Scheduled task manager started")
+
+    async def stop_scheduler(self):
+        """Stop the background task scheduler"""
+        self._running = False
+        if self._scheduler_task:
+            self._scheduler_task.cancel()
+            try:
+                await self._scheduler_task
+            except asyncio.CancelledError:
+                pass
+        logger.info("Scheduled task manager stopped")
+
+    async def _scheduler_loop(self):
+        """Background loop that checks and executes scheduled tasks"""
+        while self._running:
+            try:
+                now = datetime.now()
+                for task_id, task in list(self.tasks.items()):
+                    if not task.enabled:
+                        continue
+
+                    try:
+                        scheduled_dt = datetime.fromisoformat(task.scheduled_time.replace('Z', '+00:00'))
+
+                        # Execute task if time has arrived
+                        if scheduled_dt <= now:
+                            logger.info(f"Executing scheduled task: {task.name} ({task.action})")
+                            await self._execute_task(task)
+
+                            # Delete executed one-time tasks
+                            self.delete_task(task_id)
+
+                    except Exception as e:
+                        logger.error(f"Error processing task {task_id}: {type(e).__name__}")
+
+                # Check every second
+                await asyncio.sleep(1)
+
+            except asyncio.CancelledError:
+                break
+            except Exception as e:
+                logger.error(f"Scheduler loop error: {type(e).__name__}")
+                await asyncio.sleep(5)
+
+    async def _execute_task(self, task: ScheduledTask):
+        """
+        Execute a scheduled task
+
+        Args:
+            task: ScheduledTask to execute
+        """
+        try:
+            if task.action == "shutdown":
+                result = PowerManager.shutdown(0)
+            elif task.action == "restart":
+                result = PowerManager.restart(0)
+            elif task.action == "hibernate":
+                result = PowerManager.hibernate()
+            else:
+                logger.error(f"Unknown action: {task.action}")
+                return
+
+            if result.get("success"):
+                logger.info(f"Task executed successfully: {task.name}")
+            else:
+                logger.error(f"Task execution failed: {task.name} - {result.get('message')}")
+
+        except Exception as e:
+            logger.error(f"Error executing task {task.name}: {type(e).__name__}")
+
+
+# ============================================================
+# THRESHOLD NOTIFICATION MANAGER CLASS
+# ============================================================
+
+class ThresholdNotificationManager:
+    """
+    Manage threshold-based notifications
+    Monitors system metrics and alerts when thresholds are exceeded
+    Stores alert history and manages notification delivery
+    """
+
+    def __init__(self, storage_file: str = "threshold_alerts.json"):
+        """
+        Initialize threshold notification manager
+
+        Args:
+            storage_file: Optional file path for alert history storage
+        """
+        self.storage_file = storage_file
+        self.config = ThresholdConfig()
+        self.alerts: List[ThresholdAlert] = []
+        self._monitor_task = None
+        self._running = False
+        self._last_alert_time = {}  # Track last alert time to prevent spam
+        self._alert_cooldown = 300  # 5 minutes cooldown between alerts for same metric
+        self._load_alerts()
+        logger.info("ThresholdNotificationManager initialized")
+
+    def _load_alerts(self):
+        """Load alert history from persistent storage if available"""
+        try:
+            if os.path.exists(self.storage_file):
+                import json
+                with open(self.storage_file, 'r') as f:
+                    data = json.load(f)
+                    for alert_data in data:
+                        alert = ThresholdAlert(**alert_data)
+                        self.alerts.append(alert)
+                logger.info(f"Loaded {len(self.alerts)} alerts from storage")
+        except Exception as e:
+            logger.error(f"Error loading alerts: {type(e).__name__}")
+
+    def _save_alerts(self):
+        """Save alerts to persistent storage"""
+        try:
+            import json
+            # Keep only last 100 alerts
+            alerts_to_save = self.alerts[-100:] if len(self.alerts) > 100 else self.alerts
+            with open(self.storage_file, 'w') as f:
+                alerts_data = [alert.dict() for alert in alerts_to_save]
+                json.dump(alerts_data, f, indent=2)
+        except Exception as e:
+            logger.error(f"Error saving alerts: {type(e).__name__}")
+
+    def get_config(self) -> ThresholdConfig:
+        """Get current threshold configuration"""
+        return self.config
+
+    def update_config(self, **kwargs) -> ThresholdConfig:
+        """
+        Update threshold configuration
+
+        Args:
+            **kwargs: Fields to update (cpu_threshold, memory_threshold, disk_threshold, enabled)
+
+        Returns:
+            Updated ThresholdConfig
+        """
+        for key, value in kwargs.items():
+            if hasattr(self.config, key) and value is not None:
+                setattr(self.config, key, value)
+        logger.info(f"Threshold config updated: {kwargs}")
+        return self.config
+
+    def get_alerts(self, limit: int = 50, unacknowledged_only: bool = False) -> List[ThresholdAlert]:
+        """
+        Get alert history
+
+        Args:
+            limit: Maximum number of alerts to return
+            unacknowledged_only: If True, only return unacknowledged alerts
+
+        Returns:
+            List of ThresholdAlert objects
+        """
+        alerts = self.alerts
+        if unacknowledged_only:
+            alerts = [a for a in alerts if not a.acknowledged]
+        # Return most recent first
+        return sorted(alerts, key=lambda x: x.timestamp, reverse=True)[:limit]
+
+    def acknowledge_alert(self, alert_id: str) -> bool:
+        """
+        Acknowledge an alert
+
+        Args:
+            alert_id: Alert ID to acknowledge
+
+        Returns:
+            True if acknowledged, False if not found
+        """
+        for alert in self.alerts:
+            if alert.id == alert_id:
+                alert.acknowledged = True
+                self._save_alerts()
+                return True
+        return False
+
+    def acknowledge_all_alerts(self) -> int:
+        """
+        Acknowledge all alerts
+
+        Returns:
+            Number of alerts acknowledged
+        """
+        count = 0
+        for alert in self.alerts:
+            if not alert.acknowledged:
+                alert.acknowledged = True
+                count += 1
+        if count > 0:
+            self._save_alerts()
+        return count
+
+    def _check_threshold(self, metric_type: str, current_value: float, threshold: int) -> Optional[ThresholdAlert]:
+        """
+        Check if threshold is exceeded and create alert if needed
+
+        Args:
+            metric_type: Type of metric (cpu, memory, disk)
+            current_value: Current metric value
+            threshold: Threshold value
+
+        Returns:
+            ThresholdAlert if threshold exceeded and cooldown passed, None otherwise
+        """
+        import uuid
+
+        # Check if threshold exceeded
+        if current_value < threshold:
+            return None
+
+        # Check cooldown to prevent alert spam
+        now = time.time()
+        last_alert = self._last_alert_time.get(metric_type, 0)
+        if now - last_alert < self._alert_cooldown:
+            return None
+
+        # Create alert
+        alert = ThresholdAlert(
+            id=str(uuid.uuid4()),
+            metric_type=metric_type,
+            threshold=threshold,
+            current_value=current_value,
+            timestamp=datetime.now().isoformat(),
+            acknowledged=False
+        )
+
+        self.alerts.append(alert)
+        self._last_alert_time[metric_type] = now
+        self._save_alerts()
+
+        logger.warning(f"Threshold alert: {metric_type.upper()} at {current_value:.1f}% exceeds threshold {threshold}%")
+        return alert
+
+    def check_thresholds(self) -> List[ThresholdAlert]:
+        """
+        Check all thresholds against current system stats
+
+        Returns:
+            List of new alerts triggered
+        """
+        if not self.config.enabled:
+            return []
+
+        new_alerts = []
+
+        try:
+            # Get current stats
+            stats = SystemMonitor.get_all_stats()
+
+            # Check CPU threshold
+            if self.config.cpu_threshold > 0:
+                cpu_usage = stats.get('cpu', {}).get('usage_percent', 0)
+                alert = self._check_threshold('cpu', cpu_usage, self.config.cpu_threshold)
+                if alert:
+                    new_alerts.append(alert)
+
+            # Check Memory threshold
+            if self.config.memory_threshold > 0:
+                memory_usage = stats.get('memory', {}).get('usage_percent', 0)
+                alert = self._check_threshold('memory', memory_usage, self.config.memory_threshold)
+                if alert:
+                    new_alerts.append(alert)
+
+            # Check Disk threshold
+            if self.config.disk_threshold > 0:
+                disk_usage = stats.get('disk', {}).get('usage_percent', 0)
+                alert = self._check_threshold('disk', disk_usage, self.config.disk_threshold)
+                if alert:
+                    new_alerts.append(alert)
+
+        except Exception as e:
+            logger.error(f"Error checking thresholds: {type(e).__name__}")
+
+        return new_alerts
+
+    async def start_monitor(self):
+        """Start the background threshold monitor"""
+        if self._running:
+            return
+
+        self._running = True
+        self._monitor_task = asyncio.create_task(self._monitor_loop())
+        logger.info("Threshold notification manager started")
+
+    async def stop_monitor(self):
+        """Stop the background threshold monitor"""
+        self._running = False
+        if self._monitor_task:
+            self._monitor_task.cancel()
+            try:
+                await self._monitor_task
+            except asyncio.CancelledError:
+                pass
+        logger.info("Threshold notification manager stopped")
+
+    async def _monitor_loop(self):
+        """Background loop that periodically checks thresholds"""
+        while self._running:
+            try:
+                # Check thresholds
+                new_alerts = self.check_thresholds()
+
+                # Send WebSocket notifications for new alerts
+                for alert in new_alerts:
+                    await websocket_manager.broadcast({
+                        'type': 'threshold_alert',
+                        'data': alert.dict()
+                    })
+
+                # Check every 30 seconds
+                await asyncio.sleep(30)
+
+            except asyncio.CancelledError:
+                break
+            except Exception as e:
+                logger.error(f"Monitor loop error: {type(e).__name__}")
+                await asyncio.sleep(60)
+
+
+# ============================================================
 # DOCKER MANAGER CLASS
 # ============================================================
 
@@ -1208,6 +1791,12 @@ class DockerManager:
 
 # Initialize Docker Manager singleton
 docker_manager = DockerManager()
+
+# Initialize Scheduled Task Manager singleton
+scheduled_task_manager = ScheduledTaskManager()
+
+# Initialize Threshold Notification Manager singleton
+threshold_notification_manager = ThresholdNotificationManager()
 
 
 # ============================================================
@@ -1860,6 +2449,347 @@ async def restart(
 
 
 # ============================================================
+# API ROUTES: SCHEDULED TASKS
+# ============================================================
+
+@app.post("/api/schedule", tags=["Scheduled Tasks"])
+async def create_scheduled_task(
+    request: CreateScheduledTaskRequest,
+    current_user: dict = Depends(get_current_user)
+):
+    """
+    Create a new scheduled power task
+
+    Args:
+        request: Task creation request with name, action, scheduled_time
+        current_user: Authenticated user
+
+    Returns:
+        Created task details
+    """
+    task = scheduled_task_manager.create_task(
+        name=request.name,
+        action=request.action,
+        scheduled_time=request.scheduled_time
+    )
+    return {
+        "success": True,
+        "message": "Task created successfully",
+        "data": task.dict()
+    }
+
+
+@app.get("/api/schedule", tags=["Scheduled Tasks"])
+async def list_scheduled_tasks(current_user: dict = Depends(get_current_user)):
+    """
+    List all scheduled tasks
+
+    Args:
+        current_user: Authenticated user
+
+    Returns:
+        List of all scheduled tasks
+    """
+    tasks = scheduled_task_manager.list_tasks()
+    return {
+        "success": True,
+        "tasks": [task.dict() for task in tasks]
+    }
+
+
+@app.get("/api/schedule/{task_id}", tags=["Scheduled Tasks"])
+async def get_scheduled_task(
+    task_id: str,
+    current_user: dict = Depends(get_current_user)
+):
+    """
+    Get a specific scheduled task by ID
+
+    Args:
+        task_id: Task ID
+        current_user: Authenticated user
+
+    Returns:
+        Task details or error if not found
+    """
+    task = scheduled_task_manager.get_task(task_id)
+    if not task:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Task not found"
+        )
+    return {
+        "success": True,
+        "data": task.dict()
+    }
+
+
+@app.put("/api/schedule/{task_id}", tags=["Scheduled Tasks"])
+async def update_scheduled_task(
+    task_id: str,
+    request: UpdateScheduledTaskRequest,
+    current_user: dict = Depends(get_current_user)
+):
+    """
+    Update a scheduled task
+
+    Args:
+        task_id: Task ID
+        request: Update request with optional fields
+        current_user: Authenticated user
+
+    Returns:
+        Updated task or error if not found
+    """
+    # Prepare update dict
+    update_data = {}
+    if request.name is not None:
+        update_data['name'] = request.name
+    if request.action is not None:
+        update_data['action'] = request.action
+    if request.scheduled_time is not None:
+        update_data['scheduled_time'] = request.scheduled_time
+
+    task = scheduled_task_manager.update_task(task_id, **update_data)
+    if not task:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Task not found"
+        )
+    return {
+        "success": True,
+        "message": "Task updated successfully",
+        "data": task.dict()
+    }
+
+
+@app.put("/api/schedule/{task_id}/toggle", tags=["Scheduled Tasks"])
+async def toggle_scheduled_task(
+    task_id: str,
+    current_user: dict = Depends(get_current_user)
+):
+    """
+    Toggle a scheduled task enabled/disabled
+
+    Args:
+        task_id: Task ID
+        current_user: Authenticated user
+
+    Returns:
+        Updated task or error if not found
+    """
+    task = scheduled_task_manager.toggle_task(task_id)
+    if not task:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Task not found"
+        )
+    return {
+        "success": True,
+        "message": f"Task {'enabled' if task.enabled else 'disabled'}",
+        "data": task.dict()
+    }
+
+
+@app.delete("/api/schedule/{task_id}", tags=["Scheduled Tasks"])
+async def delete_scheduled_task(
+    task_id: str,
+    current_user: dict = Depends(get_current_user)
+):
+    """
+    Delete a scheduled task
+
+    Args:
+        task_id: Task ID
+        current_user: Authenticated user
+
+    Returns:
+        Success message
+    """
+    if not scheduled_task_manager.delete_task(task_id):
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Task not found"
+        )
+    return {
+        "success": True,
+        "message": "Task deleted successfully"
+    }
+
+
+# ============================================================
+# API ROUTES: THRESHOLD NOTIFICATIONS
+# ============================================================
+
+@app.get("/api/threshold/config", tags=["Threshold Notifications"])
+async def get_threshold_config(current_user: dict = Depends(get_current_user)):
+    """
+    Get current threshold configuration
+
+    Args:
+        current_user: Authenticated user
+
+    Returns:
+        Current threshold configuration
+    """
+    config = threshold_notification_manager.get_config()
+    return {
+        "success": True,
+        "data": config.dict()
+    }
+
+
+@app.put("/api/threshold/config", tags=["Threshold Notifications"])
+async def update_threshold_config(
+    cpu_threshold: Optional[int] = None,
+    memory_threshold: Optional[int] = None,
+    disk_threshold: Optional[int] = None,
+    enabled: Optional[bool] = None,
+    current_user: dict = Depends(get_current_user)
+):
+    """
+    Update threshold configuration
+
+    Args:
+        cpu_threshold: CPU usage threshold (0-100)
+        memory_threshold: Memory usage threshold (0-100)
+        disk_threshold: Disk usage threshold (0-100)
+        enabled: Whether monitoring is enabled
+        current_user: Authenticated user
+
+    Returns:
+        Updated threshold configuration
+    """
+    # Build update dict with only provided values
+    update_data = {}
+    if cpu_threshold is not None:
+        update_data['cpu_threshold'] = cpu_threshold
+    if memory_threshold is not None:
+        update_data['memory_threshold'] = memory_threshold
+    if disk_threshold is not None:
+        update_data['disk_threshold'] = disk_threshold
+    if enabled is not None:
+        update_data['enabled'] = enabled
+
+    config = threshold_notification_manager.update_config(**update_data)
+    return {
+        "success": True,
+        "message": "Threshold configuration updated",
+        "data": config.dict()
+    }
+
+
+@app.get("/api/threshold/alerts", tags=["Threshold Notifications"])
+async def get_threshold_alerts(
+    limit: int = 50,
+    unacknowledged_only: bool = False,
+    current_user: dict = Depends(get_current_user)
+):
+    """
+    Get threshold alert history
+
+    Args:
+        limit: Maximum number of alerts to return
+        unacknowledged_only: If True, only return unacknowledged alerts
+        current_user: Authenticated user
+
+    Returns:
+        List of threshold alerts
+    """
+    alerts = threshold_notification_manager.get_alerts(limit=limit, unacknowledged_only=unacknowledged_only)
+    return {
+        "success": True,
+        "alerts": [alert.dict() for alert in alerts]
+    }
+
+
+@app.put("/api/threshold/alerts/{alert_id}/acknowledge", tags=["Threshold Notifications"])
+async def acknowledge_alert(
+    alert_id: str,
+    current_user: dict = Depends(get_current_user)
+):
+    """
+    Acknowledge a specific alert
+
+    Args:
+        alert_id: Alert ID to acknowledge
+        current_user: Authenticated user
+
+    Returns:
+        Success message
+    """
+    if not threshold_notification_manager.acknowledge_alert(alert_id):
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Alert not found"
+        )
+    return {
+        "success": True,
+        "message": "Alert acknowledged"
+    }
+
+
+@app.put("/api/threshold/alerts/acknowledge-all", tags=["Threshold Notifications"])
+async def acknowledge_all_alerts(current_user: dict = Depends(get_current_user)):
+    """
+    Acknowledge all alerts
+
+    Args:
+        current_user: Authenticated user
+
+    Returns:
+        Success message with count
+    """
+    count = threshold_notification_manager.acknowledge_all_alerts()
+    return {
+        "success": True,
+        "message": f"Acknowledged {count} alerts",
+        "count": count
+    }
+
+
+@app.post("/api/threshold/check", tags=["Threshold Notifications"])
+async def check_thresholds_now(current_user: dict = Depends(get_current_user)):
+    """
+    Manually trigger threshold check
+
+    Args:
+        current_user: Authenticated user
+
+    Returns:
+        List of any new alerts triggered
+    """
+    new_alerts = threshold_notification_manager.check_thresholds()
+    return {
+        "success": True,
+        "alerts_triggered": len(new_alerts),
+        "alerts": [alert.dict() for alert in new_alerts]
+    }
+
+
+# ============================================================
+# LIFECYCLE EVENTS
+# ============================================================
+
+@app.on_event("startup")
+async def startup_event():
+    """Initialize background services on startup"""
+    logger.info("Starting scheduled task manager...")
+    await scheduled_task_manager.start_scheduler()
+    logger.info("Starting threshold notification manager...")
+    await threshold_notification_manager.start_monitor()
+
+
+@app.on_event("shutdown")
+async def shutdown_event():
+    """Cleanup background services on shutdown"""
+    logger.info("Stopping scheduled task manager...")
+    await scheduled_task_manager.stop_scheduler()
+    logger.info("Stopping threshold notification manager...")
+    await threshold_notification_manager.stop_monitor()
+
+
+# ============================================================
 # API ROUTES: DOCKER MANAGEMENT
 # ============================================================
 
@@ -2329,6 +3259,160 @@ async def health_check():
             "docker": docker_manager.available
         }
     }
+
+
+# ============================================================
+# WEBSOCKET SUPPORT - Real-time Stats Streaming
+# ============================================================
+
+class WebSocketConnectionManager:
+    """Manages WebSocket connections for real-time stats broadcasting"""
+
+    def __init__(self):
+        self.active_connections: List[WebSocket] = []
+        self._broadcast_task = None
+        self._is_running = False
+
+    async def connect(self, websocket: WebSocket):
+        """Accept and register a new WebSocket connection"""
+        await websocket.accept()
+        self.active_connections.append(websocket)
+        logger.info(f"[WebSocket] Client connected. Total connections: {len(self.active_connections)}")
+
+    def disconnect(self, websocket: WebSocket):
+        """Remove a WebSocket connection"""
+        if websocket in self.active_connections:
+            self.active_connections.remove(websocket)
+        logger.info(f"[WebSocket] Client disconnected. Total connections: {len(self.active_connections)}")
+
+    async def send_personal_message(self, message: dict, websocket: WebSocket):
+        """Send a message to a specific client"""
+        try:
+            await websocket.send_json(message)
+        except Exception as e:
+            logger.error(f"[WebSocket] Error sending message: {e}")
+            self.disconnect(websocket)
+
+    async def broadcast(self, message: dict):
+        """Broadcast a message to all connected clients"""
+        disconnected = []
+        for connection in self.active_connections:
+            try:
+                await connection.send_json(message)
+            except Exception as e:
+                logger.warning(f"[WebSocket] Failed to send to client: {e}")
+                disconnected.append(connection)
+
+        # Remove disconnected clients
+        for conn in disconnected:
+            self.disconnect(conn)
+
+    async def start_broadcasting(self, interval: float = 1.0):
+        """Start background task to broadcast stats at regular intervals"""
+        if self._is_running:
+            return
+
+        self._is_running = True
+        logger.info(f"[WebSocket] Starting stats broadcast every {interval}s")
+
+        while self._is_running:
+            try:
+                # Get current stats
+                stats = SystemMonitor.get_all_stats()
+
+                # Broadcast to all connected clients
+                await self.broadcast({
+                    "type": "stats_update",
+                    "data": stats,
+                    "timestamp": time.time()
+                })
+
+                await asyncio.sleep(interval)
+            except Exception as e:
+                logger.error(f"[WebSocket] Broadcast error: {e}")
+                await asyncio.sleep(interval)
+
+    def stop_broadcasting(self):
+        """Stop the background broadcast task"""
+        self._is_running = False
+        logger.info("[WebSocket] Stopped stats broadcast")
+
+
+# Global WebSocket manager
+websocket_manager = WebSocketConnectionManager()
+
+
+@app.websocket("/ws/stats", tags=["WebSocket"])
+async def websocket_stats(websocket: WebSocket):
+    """
+    WebSocket endpoint for real-time system stats streaming.
+
+    Connect to this endpoint to receive continuous updates of:
+    - CPU usage
+    - Memory usage
+    - Disk usage
+    - GPU temperature
+    - Network stats
+
+    No authentication required (for local network convenience)
+
+    Example:
+        ws = new WebSocket("ws://localhost:8000/ws/stats")
+        ws.onmessage = (event) => {
+            const data = JSON.parse(event.data)
+            console.log(data.data.cpu.cpu_percent)
+        }
+    """
+    await websocket_manager.connect(websocket)
+
+    # Start broadcasting if this is the first connection
+    if len(websocket_manager.active_connections) == 1:
+        # Note: In production, you'd want to run this in a proper background task
+        # For now, we'll send initial stats and let clients poll as needed
+        try:
+            # Send initial stats immediately
+            stats = SystemMonitor.get_all_stats()
+            await websocket_manager.send_personal_message({
+                "type": "stats_update",
+                "data": stats,
+                "timestamp": time.time()
+            }, websocket)
+
+            # Keep connection alive and handle incoming messages
+            while True:
+                try:
+                    # Wait for client messages (ping/pong, control commands)
+                    data = await websocket.receive_text()
+
+                    # Handle client requests
+                    if data == "ping":
+                        await websocket_manager.send_personal_message({"type": "pong"}, websocket)
+                    elif data == "get_stats":
+                        stats = SystemMonitor.get_all_stats()
+                        await websocket_manager.send_personal_message({
+                            "type": "stats_update",
+                            "data": stats,
+                            "timestamp": time.time()
+                        }, websocket)
+
+                except WebSocketDisconnect:
+                    break
+                except Exception as e:
+                    logger.error(f"[WebSocket] Error receiving message: {e}")
+                    break
+
+        finally:
+            websocket_manager.disconnect(websocket)
+    else:
+        # Just keep the connection alive
+        try:
+            while True:
+                await websocket.receive_text()
+        except WebSocketDisconnect:
+            websocket_manager.disconnect(websocket)
+        except Exception as e:
+            logger.error(f"[WebSocket] Connection error: {e}")
+            websocket_manager.disconnect(websocket)
 
 
 # ============================================================

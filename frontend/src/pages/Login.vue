@@ -687,4 +687,113 @@ onMounted(() => {
   backdrop-filter: blur(10px);
   background: rgba(30, 30, 30, 0.9) !important;
 }
+
+/* Responsive Adjustments */
+/* Extra small devices (phones, < 576px) */
+@media (max-width: 575.98px) {
+  .glass-card {
+    margin: 16px !important;
+  }
+
+  .text-h4 {
+    font-size: 1.5rem !important;
+  }
+
+  .text-subtitle1 {
+    font-size: 1rem !important;
+  }
+
+  /* Reduce icon sizes */
+  .logo-icon {
+    width: 60px !important;
+    height: 60px !important;
+    font-size: 50px !important;
+  }
+
+  /* Make buttons full width with proper touch targets */
+  .connect-btn, .q-btn {
+    min-height: 44px; /* iOS touch target minimum */
+  }
+
+  /* Stack elements vertically on very small screens */
+  .row {
+    flex-direction: column;
+  }
+
+  .col-12.col-sm-8.col-md-6.col-lg-4 {
+    width: 100% !important;
+    flex: 0 0 100%;
+  }
+}
+
+/* Small devices (landscape phones, ≥ 576px) */
+@media (min-width: 576px) and (max-width: 767.98px) {
+  .text-h4 {
+    font-size: 1.75rem !important;
+  }
+
+  .glass-card {
+    margin: 16px !important;
+  }
+}
+
+/* Medium devices (tablets, ≥ 768px) */
+@media (min-width: 768px) and (max-width: 991.98px) {
+  /* Tablet specific adjustments */
+}
+
+/* Touch device optimizations */
+@media (hover: none) and (pointer: coarse) {
+  /* Improve touch targets */
+  .q-btn {
+    min-height: 44px;
+    min-width: 44px;
+  }
+
+  /* Remove hover transitions on touch devices */
+  .connect-btn:hover,
+  .glossy:hover::before {
+    transform: none;
+  }
+
+  /* Remove hover effects */
+  .styled-input:hover :deep(.q-field__control) {
+    background: rgba(255, 255, 255, 0.05) !important;
+  }
+
+  /* Make inputs more tap-friendly */
+  .q-input :deep(.q-field__native) {
+    min-height: 44px;
+  }
+}
+
+/* Fix for safe areas on devices with notches */
+@supports (padding: max(0px)) {
+  .login-page {
+    padding-left: max(16px, env(safe-area-inset-left));
+    padding-right: max(16px, env(safe-area-inset-right));
+  }
+
+  .glass-card {
+    margin-left: max(0px, env(safe-area-inset-left));
+    margin-right: max(0px, env(safe-area-inset-right));
+  }
+}
+
+/* Landscape orientation on mobile */
+@media (max-width: 767.98px) and (orientation: landscape) {
+  .q-pa-xl {
+    padding: 12px !important;
+  }
+
+  .logo-container {
+    padding: 12px !important;
+  }
+
+  .logo-icon {
+    width: 50px !important;
+    height: 50px !important;
+    font-size: 40px !important;
+  }
+}
 </style>

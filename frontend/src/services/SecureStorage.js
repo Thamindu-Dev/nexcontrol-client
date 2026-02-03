@@ -180,6 +180,7 @@ export const STORAGE_KEYS = {
   REFRESH_TOKEN: 'nexcontrol_refresh_token',
   SERVER_CONFIG: 'nexcontrol_server_config',
   BIOMETRIC_ENABLED: 'nexcontrol_biometric_enabled',
+  BIOMETRIC_LOCKED: 'nexcontrol_biometric_locked',
   THEME: 'nexcontrol_theme',
   LANGUAGE: 'nexcontrol_language'
 };
