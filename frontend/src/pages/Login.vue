@@ -234,15 +234,37 @@ async function handleLogin() {
     const testUrl = `${serverUrl}/api/test/connection`;
 
     try {
+      // Add timeout to prevent hanging
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 10000); // 10 second timeout
+
       const testResponse = await fetch(testUrl, {
         method: 'GET',
-        headers: { 'Content-Type': 'application/json' }
+        headers: { 'Content-Type': 'application/json' },
+        signal: controller.signal
       });
+
+      clearTimeout(timeoutId);
       console.log('[Login] Test connection response:', testResponse.status);
+
+      // Parse the response body to ensure it's valid
+      let testData;
+      try {
+        testData = await testResponse.json();
+        console.log('[Login] Test connection data:', testData);
+      } catch (parseError) {
+        console.error('[Login] Failed to parse test response:', parseError);
+        // Even if parsing fails, if status is OK, continue
+      }
 
       // If test fails, don't proceed with login
       if (!testResponse.ok) {
         throw new Error(`Server returned ${testResponse.status}`);
+      }
+
+      // Check for expected response
+      if (!testData || !testData.status || (testData.status !== 'connected' && testData.status !== 'ok')) {
+        console.warn('[Login] Unexpected test response:', testData);
       }
     } catch (testError) {
       console.error('[Login] Connection test failed:', testError);
@@ -263,6 +285,7 @@ async function handleLogin() {
 
     // SECOND: Attempt login now that connection is confirmed
     console.log('[Login] Connection OK, calling authStore.login...');
+
     const result = await authStore.login(password.value);
     console.log('[Login] Login result:', result);
 
