@@ -22,3 +22,10 @@
 <script setup>
 //
 </script>
+
+<style scoped>
+/* OLED Theme */
+.q-page {
+  background: #000000;
+}
+</style>
