@@ -11,8 +11,11 @@
 -->
 <template>
   <q-layout view="lHh Lpr lFf">
+    <!-- Status Bar Spacer for Dynamic Island / Notch -->
+    <div class="status-bar-spacer"></div>
+
     <!-- Header -->
-    <q-header elevated class="glass-header">
+    <q-header elevated class="app-header">
       <q-toolbar>
         <q-btn
           flat
@@ -20,14 +23,14 @@
           round
           icon="menu"
           aria-label="Menu"
-          class="menu-btn glass-btn"
+          class="header-btn"
           @click="toggleLeftDrawer"
         />
 
         <q-toolbar-title>
           <div class="row items-center">
             <div class="logo-wrapper q-mr-sm">
-              <q-icon name="computer" size="24px" color="white" />
+              <q-icon name="computer" size="22px" color="white" />
             </div>
             <span class="app-title">NexControl</span>
           </div>
@@ -38,7 +41,7 @@
           round
           dense
           icon="logout"
-          class="glass-btn logout-btn"
+          class="header-btn logout-btn"
           @click="logout"
           v-if="authStore.isAuthenticated"
         >
@@ -52,7 +55,7 @@
       v-model="leftDrawerOpen"
       show-if-above
       bordered
-      class="glass-drawer"
+      class="app-drawer"
       :width="280"
     >
       <div class="drawer-header q-pa-lg">
@@ -62,27 +65,26 @@
           </div>
           <div>
             <div class="text-h6 text-weight-bold text-white">NexControl</div>
-            <div class="text-caption text-grey-4">Remote PC Controller</div>
+            <div class="text-caption text-grey-5">Remote PC Controller</div>
           </div>
         </div>
         <div class="connection-indicator q-pa-sm rounded-borders">
           <div class="row items-center">
             <q-icon
               :name="isConnected ? 'check_circle' : 'error'"
-              :color="isConnected ? 'white' : 'grey-7'"
-              size="20px"
+              :color="isConnected ? 'cyan' : 'grey-6'"
+              size="18px"
               class="q-mr-sm"
             />
             <span class="text-subtitle2 text-white">{{ isConnected ? 'Connected' : 'Disconnected' }}</span>
           </div>
-          <div class="text-caption text-grey-4 q-mt-xs">{{ serverInfo }}</div>
+          <div class="text-caption text-grey-6 q-mt-xs">{{ serverInfo }}</div>
         </div>
       </div>
 
       <q-list class="drawer-list">
         <!-- Navigation Section -->
         <q-item-label header class="section-label">
-          <q-icon name="navigation" size="16px" class="q-mr-xs" />
           Navigation
         </q-item-label>
 
@@ -93,30 +95,29 @@
           :active="link.link === $route.path"
           active-class="nav-item-active"
           @click="navigateTo(link.link)"
-          class="nav-item glass-btn"
+          class="nav-item"
           v-ripple
         >
           <q-item-section avatar>
             <div class="icon-wrapper" :class="{ 'icon-active': link.link === $route.path }">
-              <q-icon :name="link.icon" size="24px" />
+              <q-icon :name="link.icon" size="22px" :color="link.link === $route.path ? 'cyan' : 'grey-5'" />
             </div>
           </q-item-section>
           <q-item-section>
             <q-item-label :class="{ 'text-weight-bold': link.link === $route.path, 'text-white': true }">
               {{ link.title }}
             </q-item-label>
-            <q-item-label caption class="text-grey-4">{{ link.caption }}</q-item-label>
+            <q-item-label caption class="text-grey-6">{{ link.caption }}</q-item-label>
           </q-item-section>
           <q-item-section side v-if="link.link === $route.path">
-            <q-icon name="chevron_right" color="white" size="20px" />
+            <q-icon name="chevron_right" color="cyan" size="20px" />
           </q-item-section>
         </q-item>
 
-        <q-separator class="q-my-md bg-white" style="opacity: 0.1" />
+        <q-separator class="q-my-md bg-grey-9" style="opacity: 0.5" />
 
         <!-- System Section -->
         <q-item-label header class="section-label">
-          <q-icon name="settings" size="16px" class="q-mr-xs" />
           System
         </q-item-label>
 
@@ -124,15 +125,16 @@
           clickable
           @click="refreshStats"
           :disable="loading"
-          class="nav-item glass-btn"
+          class="nav-item"
           v-ripple
         >
           <q-item-section avatar>
             <div class="icon-wrapper">
               <q-icon
                 name="refresh"
-                size="24px"
-                :class="{ 'rotating': loading, 'text-white': loading }"
+                size="22px"
+                :color="loading ? 'cyan' : 'grey-5'"
+                :class="{ 'rotating': loading }"
               />
             </div>
           </q-item-section>
@@ -144,12 +146,12 @@
         <q-item
           clickable
           @click="navigateTo('/settings')"
-          class="nav-item glass-btn"
+          class="nav-item"
           v-ripple
         >
           <q-item-section avatar>
             <div class="icon-wrapper">
-              <q-icon name="settings" size="24px" />
+              <q-icon name="settings" size="22px" color="grey-5" />
             </div>
           </q-item-section>
           <q-item-section>
@@ -165,7 +167,7 @@
     </q-page-container>
 
     <!-- Footer -->
-    <q-footer v-if="authStore.isAuthenticated" elevated class="glass-footer">
+    <q-footer v-if="authStore.isAuthenticated" elevated class="app-footer">
       <q-toolbar class="q-pa-none">
         <div class="row col-12 items-center q-pa-sm footer-content">
           <div class="row items-center">
@@ -173,14 +175,14 @@
             <span class="text-subtitle2 text-white q-mr-md">
               {{ isConnected ? 'Connected' : 'Disconnected' }}
             </span>
-            <q-separator vertical class="q-mx-md bg-white" style="opacity: 0.2" />
-            <span class="text-caption text-grey-3">
+            <q-separator vertical class="q-mx-md bg-grey-8" style="opacity: 0.3" />
+            <span class="text-caption text-grey-6">
               <q-icon name="dns" size="14px" class="q-mr-xs" />
               {{ serverInfo }}
             </span>
           </div>
           <q-space />
-          <div class="text-caption text-grey-4">
+          <div class="text-caption text-grey-7">
             © 2026 Thamindu-Dev | v1.0.0
           </div>
         </div>
@@ -349,88 +351,83 @@ onUnmounted(() => {
 </script>
 
 <style scoped>
-/* Header - Pure Black with Safe Area Support */
-.glass-header {
-  background: rgba(0, 0, 0, 0.95);
-  backdrop-filter: blur(20px);
-  -webkit-backdrop-filter: blur(20px);
-  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+/* Status Bar Spacer - CRITICAL FOR DYNAMIC ISLAND */
+.status-bar-spacer {
+  height: max(20px, env(safe-area-inset-top));
+  background: #000000;
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  z-index: 9999;
+}
+
+/* Header - Pure Black */
+.app-header {
+  background: #000000;
+  border-bottom: 1px solid #333333;
 }
 
 .app-title {
-  font-size: 1.25rem;
+  font-size: 1.1rem;
   font-weight: 700;
   color: #FFFFFF;
+  letter-spacing: 0.5px;
 }
 
 .logo-wrapper {
-  width: 40px;
-  height: 40px;
-  background: rgba(255, 255, 255, 0.1);
+  width: 36px;
+  height: 36px;
+  background: #0A0A0A;
+  border: 1px solid #333333;
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.logo-wrapper-large {
+  width: 48px;
+  height: 48px;
+  background: #0A0A0A;
+  border: 1px solid #333333;
   border-radius: 10px;
   display: flex;
   align-items: center;
   justify-content: center;
-  border: 1px solid rgba(255, 255, 255, 0.2);
 }
 
-.logo-wrapper-large {
-  width: 50px;
-  height: 50px;
-  background: rgba(255, 255, 255, 0.1);
-  border-radius: 12px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  border: 1px solid rgba(255, 255, 255, 0.2);
+/* Header Buttons */
+.header-btn {
+  color: #FFFFFF;
+  background: transparent;
+  border: 1px solid #333333;
+  border-radius: 8px;
 }
 
-/* Menu Button */
-.menu-btn {
-  background: rgba(255, 255, 255, 0.05);
-  border: 1px solid rgba(255, 255, 255, 0.1);
-}
-
-/* Logout Button */
 .logout-btn {
-  color: #f87171;
+  color: #ef4444;
+  border-color: #333333;
 }
 
 .logout-btn:hover {
   background: rgba(239, 68, 68, 0.1);
-  color: #ef4444;
-}
-
-/* Glass Button */
-.glass-btn {
-  background: rgba(255, 255, 255, 0.05);
-  backdrop-filter: blur(10px);
-  border: 1px solid rgba(255, 255, 255, 0.1);
-  transition: all 0.3s ease;
-}
-
-.glass-btn:hover {
-  background: rgba(255, 255, 255, 0.1);
-  transform: scale(1.05);
 }
 
 /* Drawer - Pure Black */
-.glass-drawer {
-  background: rgba(0, 0, 0, 0.98);
-  backdrop-filter: blur(30px);
-  -webkit-backdrop-filter: blur(30px);
-  border-right: 1px solid rgba(255, 255, 255, 0.1);
+.app-drawer {
+  background: #000000;
+  border-right: 1px solid #333333;
 }
 
 .drawer-header {
-  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
-  background: rgba(255, 255, 255, 0.02);
+  border-bottom: 1px solid #333333;
+  background: #000000;
 }
 
 .connection-indicator {
-  background: rgba(255, 255, 255, 0.05);
-  border: 1px solid rgba(255, 255, 255, 0.1);
-  backdrop-filter: blur(10px);
+  background: #0A0A0A;
+  border: 1px solid #333333;
 }
 
 /* Drawer List */
@@ -439,10 +436,10 @@ onUnmounted(() => {
 }
 
 .section-label {
-  color: #B0B0B0;
-  font-size: 0.75rem;
+  color: #666666;
+  font-size: 0.7rem;
   font-weight: 600;
-  letter-spacing: 0.5px;
+  letter-spacing: 1px;
   text-transform: uppercase;
   padding-left: 8px;
   margin-bottom: 8px;
@@ -450,77 +447,66 @@ onUnmounted(() => {
 
 /* Navigation Items */
 .nav-item {
-  border-radius: 12px;
+  border-radius: 10px;
   margin-bottom: 4px;
-  padding: 12px 16px;
-  transition: all 0.3s ease;
+  padding: 10px 12px;
+  transition: all 0.2s ease;
+  background: transparent;
 }
 
 .nav-item:hover {
-  background: rgba(255, 255, 255, 0.08);
-  transform: translateX(4px);
+  background: #0A0A0A;
 }
 
 .nav-item-active {
-  background: rgba(255, 255, 255, 0.1) !important;
-  border: 1px solid rgba(255, 255, 255, 0.2);
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4);
+  background: #0A0A0A !important;
+  border: 1px solid rgba(34, 211, 238, 0.3);
 }
 
 .icon-wrapper {
-  width: 40px;
-  height: 40px;
-  border-radius: 10px;
-  background: rgba(255, 255, 255, 0.05);
+  width: 36px;
+  height: 36px;
+  border-radius: 8px;
+  background: #0A0A0A;
+  border: 1px solid #333333;
   display: flex;
   align-items: center;
   justify-content: center;
-  transition: all 0.3s ease;
+  transition: all 0.2s ease;
 }
 
 .icon-active {
-  background: rgba(255, 255, 255, 0.15);
-  border: 1px solid rgba(255, 255, 255, 0.3);
+  background: rgba(34, 211, 238, 0.1);
+  border-color: rgba(34, 211, 238, 0.5);
 }
 
 .nav-item:hover .icon-wrapper {
-  background: rgba(255, 255, 255, 0.1);
-  transform: scale(1.05);
+  background: #111111;
 }
 
-.nav-item-active .icon-wrapper {
-  transform: scale(1.05);
-}
-
-/* Rotating animation for refresh icon */
+/* Rotating animation */
 .rotating {
   animation: rotate 1s linear infinite;
 }
 
 @keyframes rotate {
-  from {
-    transform: rotate(0deg);
-  }
-  to {
-    transform: rotate(360deg);
-  }
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
 }
 
 /* Footer - Pure Black */
-.glass-footer {
-  background: rgba(0, 0, 0, 0.95);
-  backdrop-filter: blur(20px);
-  -webkit-backdrop-filter: blur(20px);
-  border-top: 1px solid rgba(255, 255, 255, 0.1);
+.app-footer {
+  background: #000000;
+  border-top: 1px solid #333333;
 }
 
 .footer-content {
-  background: rgba(255, 255, 255, 0.02);
+  background: #0A0A0A;
   border-radius: 8px;
-  padding: 12px 16px;
+  padding: 10px 12px;
 }
 
-/* Status Dot */
+/* Status Dot - Neon Cyan when connected */
 .status-dot {
   width: 8px;
   height: 8px;
@@ -529,13 +515,13 @@ onUnmounted(() => {
 }
 
 .status-connected {
-  background: #FFFFFF;
-  box-shadow: 0 0 8px rgba(255, 255, 255, 0.5);
+  background: #22d3ee;
+  box-shadow: 0 0 8px rgba(34, 211, 238, 0.6);
 }
 
 .status-disconnected {
-  background: #808080;
-  box-shadow: 0 0 8px rgba(128, 128, 128, 0.5);
+  background: #666666;
+  box-shadow: none;
 }
 
 @keyframes pulse-dot {
@@ -549,68 +535,34 @@ onUnmounted(() => {
   }
 }
 
-/* Page Container - Pure Black */
+/* Page Container */
 .bg-black {
   background: #000000 !important;
 }
 
 /* Dialog Styling */
 :deep(.glass-dialog) {
-  backdrop-filter: blur(20px);
-  background: rgba(30, 30, 30, 0.95) !important;
-  border: 1px solid rgba(255, 255, 255, 0.1);
+  background: #0A0A0A !important;
+  border: 1px solid #333333;
+  color: #FFFFFF;
 }
 
 /* Notification Styling */
 :deep(.notification-glossy) {
-  backdrop-filter: blur(10px);
-  background: rgba(30, 30, 30, 0.95) !important;
-  border: 1px solid rgba(255, 255, 255, 0.1);
-}
-
-/* Smooth Transitions */
-* {
-  transition: background-color 0.3s ease, border-color 0.3s ease, color 0.3s ease;
-}
-
-/* Remove default active background */
-:deep(.q-item.q-item--active) {
-  background-color: transparent !important;
-}
-
-/* Safe Area Support - CRITICAL FOR NOTCH DEVICES */
-@supports (padding: max(0px)) {
-  .glass-header {
-    padding-top: max(0px, env(safe-area-inset-top));
-    padding-left: max(0px, env(safe-area-inset-left));
-    padding-right: max(0px, env(safe-area-inset-right));
-  }
-
-  .glass-footer {
-    padding-bottom: max(0px, env(safe-area-inset-bottom));
-    padding-left: max(0px, env(safe-area-inset-left));
-    padding-right: max(0px, env(safe-area-inset-right));
-  }
-
-  .glass-drawer {
-    padding-left: max(0px, env(safe-area-inset-left));
-    padding-bottom: max(0px, env(safe-area-inset-bottom));
-  }
+  background: #0A0A0A !important;
+  border: 1px solid #333333;
+  color: #FFFFFF;
 }
 
 /* Responsive Adjustments */
 @media (max-width: 575.98px) {
-  .nav-item :deep(.q-item__label) {
-    font-size: 0.9rem;
-  }
-
   .app-title {
-    font-size: 1rem !important;
+    font-size: 0.95rem !important;
   }
 
   .logo-wrapper {
-    width: 36px !important;
-    height: 36px !important;
+    width: 32px !important;
+    height: 32px !important;
   }
 
   .logo-wrapper-large {
@@ -619,45 +571,44 @@ onUnmounted(() => {
   }
 
   .nav-item {
-    min-height: 48px;
+    min-height: 44px;
   }
 
   .footer-content {
     flex-direction: column;
     align-items: flex-start !important;
-    gap: 8px;
+    gap: 6px;
   }
 
   .text-caption {
-    font-size: 0.7rem;
+    font-size: 0.65rem;
   }
 }
 
 @media (hover: none) and (pointer: coarse) {
   .nav-item {
-    min-height: 48px;
-    padding: 12px !important;
+    min-height: 44px;
+    padding: 10px !important;
   }
 
-  .q-btn.glass-btn {
+  .header-btn {
     min-width: 44px;
     min-height: 44px;
   }
 
-  .nav-item:hover,
-  .glass-btn:hover {
-    transform: none !important;
+  .nav-item:hover {
+    background: transparent;
   }
 }
 
 @media (max-width: 767.98px) {
-  .glass-drawer {
+  .app-drawer {
     width: 280px !important;
   }
 
   .logo-wrapper-large {
-    width: 45px !important;
-    height: 45px !important;
+    width: 42px !important;
+    height: 42px !important;
   }
 
   .connection-indicator .text-caption {
@@ -667,11 +618,11 @@ onUnmounted(() => {
 
 @media (max-width: 767.98px) and (orientation: landscape) {
   .q-pa-lg {
-    padding: 12px !important;
+    padding: 10px !important;
   }
 
   .drawer-header {
-    padding: 16px !important;
+    padding: 14px !important;
   }
 }
 </style>
