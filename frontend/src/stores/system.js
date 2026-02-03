@@ -95,9 +95,34 @@ export const useSystemStore = defineStore('system', {
     diskUsage: (state) => state.stats.disk?.percent || 0,
 
     /**
-     * Get GPU temperature
+     * Get GPU usage percentage
+     */
+    gpuUsage: (state) => {
+      if (state.stats.gpu?.usage) {
+        return state.stats.gpu.usage.usage_percent;
+      }
+      return null;
+    },
+
+    /**
+     * Get GPU name
+     */
+    gpuName: (state) => {
+      if (state.stats.gpu?.usage) {
+        return state.stats.gpu.usage.name;
+      }
+      return null;
+    },
+
+    /**
+     * Get GPU temperature (fallback)
      */
     gpuTemp: (state) => {
+      // Try new format first
+      if (state.stats.gpu?.temperature?.gpus && state.stats.gpu.temperature.gpus.length > 0) {
+        return state.stats.gpu.temperature.gpus[0].temperature_c;
+      }
+      // Try old format
       if (state.stats.gpu?.gpus && state.stats.gpu.gpus.length > 0) {
         return state.stats.gpu.gpus[0].temperature_c;
       }

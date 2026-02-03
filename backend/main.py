@@ -1015,6 +1015,57 @@ class SystemMonitor:
             return {"error": "Failed to get GPU stats"}
 
     @staticmethod
+    def get_gpu_usage() -> dict:
+        """
+        Get GPU utilization percentage and memory usage
+        Returns GPU stats in format expected by the frontend
+
+        Returns:
+            Dict with GPU utilization percentage, name, and memory info
+        """
+        try:
+            import pynvml
+
+            pynvml.nvmlInit()
+            device_count = pynvml.nvmlDeviceGetCount()
+
+            if device_count == 0:
+                return None
+
+            # Get first GPU data (for simplicity, returning primary GPU)
+            handle = pynvml.nvmlDeviceGetHandleByIndex(0)
+
+            # Get GPU name
+            name = pynvml.nvmlDeviceGetName(handle)
+            gpu_name = name.decode('utf-8') if isinstance(name, bytes) else name
+
+            # Get GPU utilization
+            utilization = pynvml.nvmlDeviceGetUtilizationRates(handle)
+            gpu_percent = utilization.gpu  # GPU core utilization percentage
+
+            # Get memory info
+            memory = pynvml.nvmlDeviceGetMemoryInfo(handle)
+            memory_percent = round((memory.used / memory.total) * 100, 2)
+
+            pynvml.nvmlShutdown()
+
+            return {
+                "name": gpu_name,
+                "usage_percent": gpu_percent,
+                "memory_total": memory.total,
+                "memory_used": memory.used,
+                "memory_free": memory.free,
+                "memory_percent": memory_percent
+            }
+
+        except ImportError:
+            logger.warning("pynvml not installed, GPU usage unavailable")
+            return None
+        except Exception as e:
+            logger.error(f"Error getting GPU usage: {type(e).__name__}: {str(e)}")
+            return None
+
+    @staticmethod
     def get_network_stats() -> dict:
         """
         Get network I/O statistics
@@ -1048,7 +1099,7 @@ class SystemMonitor:
             "cpu": SystemMonitor.get_cpu_usage(),
             "memory": SystemMonitor.get_memory_usage(),
             "disk": SystemMonitor.get_disk_usage(),
-            "gpu": SystemMonitor.get_gpu_temperature(),
+            "gpu": SystemMonitor.get_gpu_usage(),
             "network": SystemMonitor.get_network_stats(),
             "timestamp": time.time()
         }
@@ -1265,6 +1316,89 @@ class PowerManager:
         except Exception as e:
             logger.error(f"Restart error: {type(e).__name__}")
             return {"success": False, "message": "Restart failed"}
+
+    @staticmethod
+    def lock_screen() -> dict:
+        """
+        Lock the screen (session lock)
+
+        Returns:
+            Dict with success status and message
+        """
+        try:
+            if OS_TYPE == "Windows":
+                # Windows: rundll32.exe user32.dll,LockWorkStation
+                cmd = ["rundll32.exe", "user32.dll", "LockWorkStation"]
+                result = subprocess.run(
+                    cmd,
+                    shell=False,
+                    capture_output=True,
+                    timeout=10
+                )
+            elif OS_TYPE == "Linux":
+                # Linux: gnome-screensaver-command --lock or dbus
+                # Try gnome-screensaver first (GNOME)
+                try:
+                    cmd = ["gnome-screensaver-command", "--lock"]
+                    result = subprocess.run(
+                        cmd,
+                        shell=False,
+                        capture_output=True,
+                        timeout=10,
+                        check=True
+                    )
+                except (subprocess.CalledProcessError, FileNotFoundError):
+                    # Fallback: dbus for GNOME, KDE, etc.
+                    cmd = [
+                        "dbus-send",
+                        "--session",
+                        "--dest=org.gnome.ScreenSaver",
+                        "/org/gnome/ScreenSaver",
+                        "org.gnome.ScreenSaver.Lock"
+                    ]
+                    result = subprocess.run(
+                        cmd,
+                        shell=False,
+                        capture_output=True,
+                        timeout=10,
+                        check=False
+                    )
+                    # If dbus fails, try loginctl (systemd)
+                    if result.returncode != 0:
+                        cmd = ["loginctl", "lock-session"]
+                        result = subprocess.run(
+                            cmd,
+                            shell=False,
+                            capture_output=True,
+                            timeout=10,
+                            check=False
+                        )
+            elif OS_TYPE == "Darwin":  # macOS
+                # macOS: pmset displaysleepnow
+                cmd = ["pmset", "displaysleepnow"]
+                result = subprocess.run(
+                    cmd,
+                    shell=False,
+                    capture_output=True,
+                    timeout=10
+                )
+            else:
+                return {"success": False, "message": f"Unsupported OS: {OS_TYPE}"}
+
+            return {"success": True, "message": "Screen locked successfully"}
+
+        except subprocess.TimeoutExpired:
+            logger.error("Lock screen command timed out")
+            return {"success": False, "message": "Lock screen command timed out"}
+        except PermissionError:
+            logger.error("Permission denied for lock screen")
+            return {"success": False, "message": "Insufficient permissions"}
+        except FileNotFoundError:
+            logger.error("Lock screen command not found")
+            return {"success": False, "message": "Lock screen command not available"}
+        except Exception as e:
+            logger.error(f"Lock screen error: {type(e).__name__}")
+            return {"success": False, "message": "Lock screen failed"}
 
 
 # ============================================================
@@ -2504,8 +2638,11 @@ async def get_disk_stats_public():
 
 @app.get("/api/stats/gpu", tags=["System Stats (Public)"])
 async def get_gpu_stats_public():
-    """Get GPU temperature statistics (no auth required)"""
-    return SystemMonitor.get_gpu_temperature()
+    """Get GPU usage and temperature statistics (no auth required)"""
+    return {
+        "usage": SystemMonitor.get_gpu_usage(),
+        "temperature": SystemMonitor.get_gpu_temperature()
+    }
 
 
 @app.get("/api/stats/network", tags=["System Stats (Public)"])
@@ -2547,8 +2684,11 @@ async def get_disk_stats(current_user: dict = Depends(get_current_user)):
 
 @app.get("/api/v1/stats/gpu", tags=["System Stats (Protected)"])
 async def get_gpu_stats(current_user: dict = Depends(get_current_user)):
-    """Get GPU temperature statistics (authentication required)"""
-    return SystemMonitor.get_gpu_temperature()
+    """Get GPU usage and temperature statistics (authentication required)"""
+    return {
+        "usage": SystemMonitor.get_gpu_usage(),
+        "temperature": SystemMonitor.get_gpu_temperature()
+    }
 
 
 @app.get("/api/v1/stats/network", tags=["System Stats (Protected)"])
@@ -2605,6 +2745,20 @@ async def hibernate(current_user: dict = Depends(get_current_user)):
         Hibernate status
     """
     return PowerManager.hibernate()
+
+
+@app.post("/api/power/lock", tags=["Power Management"])
+async def lock_screen(current_user: dict = Depends(get_current_user)):
+    """
+    Lock the screen
+
+    Args:
+        current_user: Authenticated user
+
+    Returns:
+        Lock screen status
+    """
+    return PowerManager.lock_screen()
 
 
 @app.post("/api/power/restart", tags=["Power Management"])

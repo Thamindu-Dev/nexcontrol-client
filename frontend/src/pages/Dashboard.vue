@@ -11,53 +11,51 @@
 -->
 <template>
   <div class="dashboard-page">
-    <q-page padding class="relative-position">
-      <!-- Header -->
-      <div class="row q-mb-lg header-section">
-        <div class="col-12">
-          <div class="row items-center q-gutter-sm">
-            <div class="text-h4 text-weight-bold text-white">
-              Dashboard
-            </div>
-            <q-space />
-            <div class="status-badge q-px-sm q-py-xs rounded-borders">
-              <q-icon :name="serverStatusIcon" :color="serverStatusColor" size="16px" class="q-mr-xs" />
-              <span class="text-caption text-white">{{ serverStatusText }}</span>
-            </div>
-            <q-btn
-              flat
-              round
-              dense
-              icon="settings"
-              class="header-btn"
-              size="sm"
-              @click="openSettings"
-            />
-            <q-btn
-              flat
-              round
-              dense
-              icon="logout"
-              class="header-btn logout-btn"
-              size="sm"
-              @click="handleLogout"
-            />
-          </div>
+    <q-page padding class="q-px-md">
+      <!-- Header: Menu + Title -->
+      <div class="row items-center q-mb-lg header-section">
+        <q-btn
+          flat
+          round
+          dense
+          icon="menu"
+          class="header-menu-btn"
+          @click="toggleDrawer"
+        />
+        <div class="text-h4 text-weight-bold text-white q-ml-sm">
+          Dashboard
         </div>
+        <q-space />
+        <div class="status-badge q-px-sm q-py-xs rounded-borders">
+          <q-icon :name="serverStatusIcon" :color="serverStatusColor" size="16px" class="q-mr-xs" />
+          <span class="text-caption text-white">{{ serverStatusText }}</span>
+        </div>
+        <q-btn
+          flat
+          round
+          dense
+          icon="logout"
+          class="logout-btn q-ml-sm"
+          size="sm"
+          @click="handleLogout"
+        >
+          <q-tooltip>Logout</q-tooltip>
+        </q-btn>
       </div>
 
-      <!-- System Stats Cards -->
-      <!-- Row 1: CPU Card (Full Width) -->
-      <div class="row q-gutter-md q-mb-lg">
-        <div class="col-12">
-          <q-card class="stat-card" flat bordered>
-            <q-card-section class="q-pa-md">
-              <div class="row items-center">
-                <div class="col">
-                  <div class="row items-center q-mb-sm">
-                    <q-icon name="memory" size="24px" color="grey-5" class="q-mr-sm" />
-                    <div class="text-subtitle2 text-grey-6">CPU Usage</div>
-                  </div>
+      <!-- System Stats Cards - CENTERED -->
+      <div class="stats-container">
+        <!-- Row 1: CPU Card (Full Width) -->
+        <div class="row q-col-gutter-md q-mb-lg">
+          <div class="col-12">
+            <q-card class="stat-card" flat bordered>
+              <q-card-section class="q-pa-md">
+                <div class="row items-center">
+                  <div class="col">
+                    <div class="row items-center q-mb-sm">
+                      <q-icon name="memory" size="24px" color="grey-5" class="q-mr-sm" />
+                      <div class="text-subtitle2 text-grey-6">CPU Usage</div>
+                    </div>
                   <div class="text-h2 text-weight-bold text-white">
                     {{ stats.cpu?.cpu_percent?.toFixed(1) || 0 }}<span class="text-h5 text-grey-6">%</span>
                   </div>
@@ -206,9 +204,10 @@
           </q-card>
         </div>
       </div>
+      </div>
 
       <!-- All Storage Devices (USB, Partitions, etc.) -->
-      <div class="row q-gutter-md q-mb-lg">
+      <div class="row q-col-gutter-md q-mb-lg">
         <div class="col-12">
           <q-card class="storage-card" flat bordered>
             <q-card-section class="q-pa-md">
@@ -321,8 +320,8 @@
         </div>
       </div>
 
-      <!-- System Actions - 2x2 Grid -->
-      <div class="row q-gutter-md q-mb-lg">
+      <!-- System Actions - 2x2 Grid - CRITICAL: Ensure clickable -->
+      <div class="row q-col-gutter-md q-mb-lg">
         <div class="col-12">
           <q-card class="action-card" flat bordered>
             <q-card-section class="q-pa-md">
@@ -333,12 +332,12 @@
             </q-card-section>
 
             <q-card-section class="q-pt-none q-pb-md q-px-md">
-              <!-- 2x2 Grid - Equal Spacing -->
+              <!-- 4 Buttons - 2x2 Grid -->
               <div class="row q-col-gutter-sm">
-                <!-- Row 1, Col 1: Shutdown -->
+                <!-- Row 1: Shutdown, Restart -->
                 <div class="col-6">
                   <q-btn
-                    @click="confirmShutdown"
+                    @click.stop="confirmShutdown"
                     class="power-btn-outlined full-width"
                     size="md"
                     :loading="powerActionLoading"
@@ -353,10 +352,9 @@
                   </q-btn>
                 </div>
 
-                <!-- Row 1, Col 2: Restart -->
                 <div class="col-6">
                   <q-btn
-                    @click="confirmRestart"
+                    @click.stop="confirmRestart"
                     class="power-btn-outlined full-width"
                     size="md"
                     :loading="powerActionLoading"
@@ -371,10 +369,10 @@
                   </q-btn>
                 </div>
 
-                <!-- Row 2, Col 1: Hibernate -->
+                <!-- Row 2: Hibernate, Lock PC -->
                 <div class="col-6 q-mt-sm">
                   <q-btn
-                    @click="confirmHibernate"
+                    @click.stop="confirmHibernate"
                     class="power-btn-outlined full-width"
                     size="md"
                     :loading="powerActionLoading"
@@ -389,10 +387,9 @@
                   </q-btn>
                 </div>
 
-                <!-- Row 2, Col 2: Lock PC -->
                 <div class="col-6 q-mt-sm">
                   <q-btn
-                    @click="confirmLock"
+                    @click.stop="confirmLock"
                     class="power-btn-outlined full-width"
                     size="md"
                     :loading="powerActionLoading"
@@ -413,7 +410,7 @@
       </div>
 
       <!-- Historical Charts -->
-      <div class="row q-gutter-md q-mb-lg">
+      <div class="row q-col-gutter-md q-mb-lg">
         <div class="col-12">
           <q-card class="chart-card" flat bordered>
             <q-card-section class="q-pa-md">
@@ -422,12 +419,15 @@
                 Historical Usage
               </div>
               <div v-if="systemStore.history.timestamps.length > 0" class="q-pb-sm">
-                <LineChart :data="systemStore.combinedChartData" :height="180" />
+                <LineChart
+                  :data="chartData"
+                  :options="chartOptions"
+                  :height="200"
+                />
               </div>
-              <div v-else class="text-center text-grey-7 q-py-xl">
-                <q-icon name="show_chart" size="48px" color="grey-8" />
-                <div class="text-caption q-mt-sm">No historical data available</div>
-                <div class="text-caption text-grey-8">Enable auto-refresh or real-time mode to see charts</div>
+              <div v-else class="text-center q-pa-lg">
+                <q-spinner color="grey-6" size="24px" />
+                <div class="text-caption text-grey-7 q-mt-sm">Loading historical data...</div>
               </div>
             </q-card-section>
           </q-card>
@@ -435,109 +435,44 @@
       </div>
 
       <!-- Quick Actions -->
-      <div class="row q-gutter-md q-mb-lg">
+      <div class="row q-col-gutter-md q-mb-lg">
+        <!-- Docker Card -->
         <div class="col-6">
           <q-card
             clickable
             @click="goToDocker"
-            class="action-card cursor-pointer"
+            class="action-mini-card"
             flat
             bordered
           >
             <q-card-section class="q-pa-md">
-              <div class="row items-center">
-                <div class="col">
-                  <div class="text-subtitle2 text-weight-bold text-white q-mb-xs">
-                    <q-icon name="view_in_ar" color="grey-5" size="18px" class="q-mr-xs" />
-                    Docker
-                  </div>
-                  <div class="text-caption text-grey-6">
-                    {{ containers.length }} containers
-                  </div>
-                </div>
-                <div class="col-auto">
-                  <q-icon name="chevron_right" size="md" color="grey-7" class="arrow-icon" />
-                </div>
+              <div class="text-subtitle2 text-weight-bold text-white q-mb-xs">
+                <q-icon name="inventory_2" color="cyan" size="20px" class="q-mr-xs" />
+                Docker
+              </div>
+              <div class="text-caption text-grey-6">
+                Manage containers
               </div>
             </q-card-section>
           </q-card>
         </div>
 
+        <!-- Processes Card -->
         <div class="col-6">
           <q-card
             clickable
             @click="goToProcesses"
-            class="action-card cursor-pointer"
+            class="action-mini-card"
             flat
             bordered
           >
             <q-card-section class="q-pa-md">
-              <div class="row items-center">
-                <div class="col">
-                  <div class="text-subtitle2 text-weight-bold text-white q-mb-xs">
-                    <q-icon name="memory" color="grey-5" size="18px" class="q-mr-xs" />
-                    Processes
-                  </div>
-                  <div class="text-caption text-grey-6">
-                    {{ processes.length }} processes
-                  </div>
-                </div>
-                <div class="col-auto">
-                  <q-icon name="chevron_right" size="md" color="grey-7" class="arrow-icon" />
-                </div>
+              <div class="text-subtitle2 text-weight-bold text-white q-mb-xs">
+                <q-icon name="memory" color="cyan" size="20px" class="q-mr-xs" />
+                Processes
               </div>
-            </q-card-section>
-          </q-card>
-        </div>
-      </div>
-
-      <!-- Update Mode Toggle -->
-      <div class="row q-gutter-md">
-        <div class="col-12">
-          <q-card class="settings-card" flat bordered>
-            <q-card-section class="q-pa-md">
-              <div class="row items-center justify-between">
-                <div class="row items-center">
-                  <q-icon :name="systemStore.webSocketEnabled ? 'wifi' : 'autorenew'" size="20px" color="grey-5" class="q-mr-sm" />
-                  <div>
-                    <div class="text-subtitle2 text-weight-bold text-white">
-                      Update Mode
-                    </div>
-                    <div class="text-caption text-grey-6">
-                      <span v-if="systemStore.webSocketEnabled" class="text-cyan">
-                        <q-icon name="flash_on" size="12px" class="q-mr-xs" />
-                        Real-time (WebSocket)
-                      </span>
-                      <span v-else>
-                        {{ autoRefresh ? `Polling every ${refreshInterval/1000}s` : 'Manual refresh' }}
-                      </span>
-                    </div>
-                  </div>
-                </div>
-                <div class="col-auto">
-                  <div class="row q-gutter-sm">
-                    <q-btn
-                      :color="systemStore.webSocketEnabled ? 'cyan' : 'grey-7'"
-                      :label="systemStore.webSocketEnabled ? 'Real-time' : 'Real-time'"
-                      :outline="!systemStore.webSocketEnabled"
-                      size="sm"
-                      @click="toggleWebSocket"
-                      :loading="systemStore.webSocketState === 'connecting'"
-                      padding="xs sm"
-                    >
-                      <q-icon name="flash_on" class="q-mr-xs" size="14px" />
-                    </q-btn>
-
-                    <q-toggle
-                      v-model="autoRefresh"
-                      color="cyan"
-                      size="md"
-                      keep-color
-                      :disable="systemStore.webSocketEnabled"
-                      @update:model-value="toggleAutoRefresh"
-                    />
-                  </div>
-                </div>
+              <div class="text-caption text-grey-6">
+                View running processes
               </div>
             </q-card-section>
           </q-card>
@@ -548,7 +483,408 @@
 </template>
 
 <script setup>
-import { ref, computed, onMounted, onUnmounted } from 'vue';
+import { ref, computed, onMounted, onUnmounted, watch } from 'vue';
+import { useRouter } from 'vue-router';
+import { useQuasar } from 'quasar';
+import { useSystemStore } from '../stores/system';
+import { useAuthStore } from '../stores/auth';
+import LineChart from '../components/LineChart.vue';
+
+// Define component name for ESLint multi-word rule
+defineOptions({
+  name: 'DashboardPage'
+});
+
+const router = useRouter();
+const $q = useQuasar();
+const systemStore = useSystemStore();
+const authStore = useAuthStore();
+
+// State
+const stats = computed(() => systemStore.stats);
+const containers = computed(() => systemStore.containers);
+const processes = computed(() => systemStore.processes);
+const powerActionLoading = ref(false);
+const autoRefresh = ref(false);
+const refreshInterval = ref(5000);
+let refreshTimer = null;
+
+// Computed
+const serverStatusIcon = computed(() => {
+  return systemStore.isConnected ? 'check_circle' : 'error';
+});
+
+const serverStatusColor = computed(() => {
+  return systemStore.isConnected ? 'cyan' : 'grey-6';
+});
+
+const serverStatusText = computed(() => {
+  return systemStore.isConnected ? 'Connected' : 'Disconnected';
+});
+
+const loadingWithDisks = computed(() => ({
+  stats: systemStore.loading.stats,
+  disks: systemStore.loading.disks
+}));
+
+const loadingState = computed(() => systemStore.loading);
+
+const allDisks = computed(() => {
+  const disks = [];
+
+  // Add primary disk if available
+  if (stats.value.disk) {
+    disks.push({
+      device: stats.value.disk.device || 'C:',
+      mountpoint: stats.value.disk.mountpoint || '/',
+      fstype: stats.value.disk.fstype || 'Unknown',
+      opts: stats.value.disk.opts || '',
+      total: stats.value.disk.total,
+      used: stats.value.disk.used,
+      free: stats.value.disk.free,
+      percent: stats.value.disk.percent,
+      is_removable: false
+    });
+  }
+
+  // Add additional disks from systemStore
+  if (systemStore.disks && systemStore.disks.length > 0) {
+    for (const disk of systemStore.disks) {
+      // Skip if it's the primary disk (already added)
+      if (stats.value.disk && disk.device === stats.value.disk.device) {
+        continue;
+      }
+      disks.push(disk);
+    }
+  }
+
+  return disks;
+});
+
+// Chart data
+const chartData = computed(() => {
+  return {
+    labels: systemStore.history.timestamps.map(t => {
+      const date = new Date(t);
+      return date.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' });
+    }),
+    datasets: [
+      {
+        label: 'CPU %',
+        data: systemStore.history.cpu,
+        borderColor: 'rgb(34, 211, 238)',
+        backgroundColor: 'rgba(34, 211, 238, 0.1)',
+        tension: 0.4
+      },
+      {
+        label: 'Memory %',
+        data: systemStore.history.memory,
+        borderColor: 'rgb(168, 85, 247)',
+        backgroundColor: 'rgba(168, 85, 247, 0.1)',
+        tension: 0.4
+      }
+    ]
+  };
+});
+
+const chartOptions = computed(() => ({
+  responsive: true,
+  maintainAspectRatio: false,
+  plugins: {
+    legend: {
+      labels: {
+        color: '#9ca3af',
+        font: { size: 11 }
+      }
+    }
+  },
+  scales: {
+    y: {
+      beginAtZero: true,
+      max: 100,
+      ticks: { color: '#6b7280', font: { size: 10 } },
+      grid: { color: 'rgba(255,255,255,0.05)' }
+    },
+    x: {
+      ticks: { color: '#6b7280', font: { size: 10 } },
+      grid: { display: false }
+    }
+  }
+}));
+
+/**
+ * Toggle drawer (menu)
+ */
+function toggleDrawer() {
+  // Emit event to parent or use global event bus
+  const drawer = document.querySelector('.q-drawer');
+  if (drawer) {
+    drawer.classList.toggle('q-drawer--open');
+  }
+}
+
+/**
+ * Format bytes to human readable
+ */
+function formatBytes(bytes) {
+  if (!bytes) return '0 B';
+  const k = 1024;
+  const sizes = ['B', 'KB', 'MB', 'GB', 'TB'];
+  const i = Math.floor(Math.log(bytes) / Math.log(k));
+  return parseFloat((bytes / Math.pow(k, i)).toFixed(1)) + ' ' + sizes[i];
+}
+
+/**
+ * Get temperature icon based on value
+ */
+function getTemperatureIcon(temp) {
+  if (!temp) return 'thermostat';
+  if (temp >= 80) return 'warning';
+  if (temp >= 60) return 'whatshot';
+  return 'ac_unit';
+}
+
+/**
+ * Get temperature color based on value
+ */
+function getTemperatureColor(temp) {
+  if (!temp) return 'grey-5';
+  if (temp >= 80) return 'red';
+  if (temp >= 60) return 'orange';
+  if (temp >= 40) return 'yellow';
+  return 'cyan';
+}
+
+/**
+ * Get disk name
+ */
+function getDiskName(disk) {
+  if (disk.device) {
+    if (disk.device.includes('/')) {
+      return disk.device;
+    }
+    return `Drive ${disk.device[0]}`;
+  }
+  return 'Storage';
+}
+
+/**
+ * Fetch all stats
+ */
+async function refreshStats() {
+  try {
+    await systemStore.fetchStats();
+  } catch (error) {
+    console.error('[Dashboard] Error fetching stats:', error);
+  }
+}
+
+/**
+ * Refresh disks list
+ */
+async function refreshDisks() {
+  try {
+    await systemStore.fetchDisks();
+  } catch (error) {
+    console.error('[Dashboard] Error refreshing disks:', error);
+  }
+}
+
+/**
+ * Confirm shutdown
+ */
+function confirmShutdown() {
+  $q.dialog({
+    title: 'Shutdown PC',
+    message: 'Are you sure you want to shutdown the PC?',
+    cancel: true,
+    persistent: true,
+    class: 'glass-dialog'
+  }).onOk(async () => {
+    await executePowerAction('shutdown');
+  });
+}
+
+/**
+ * Confirm restart
+ */
+function confirmRestart() {
+  $q.dialog({
+    title: 'Restart PC',
+    message: 'Are you sure you want to restart the PC?',
+    cancel: true,
+    persistent: true,
+    class: 'glass-dialog'
+  }).onOk(async () => {
+    await executePowerAction('restart');
+  });
+}
+
+/**
+ * Confirm hibernate
+ */
+function confirmHibernate() {
+  $q.dialog({
+    title: 'Hibernate PC',
+    message: 'Are you sure you want to hibernate the PC?',
+    cancel: true,
+    persistent: true,
+    class: 'glass-dialog'
+  }).onOk(async () => {
+    await executePowerAction('hibernate');
+  });
+}
+
+
+/**
+ * Execute power action
+ */
+async function executePowerAction(action) {
+  powerActionLoading.value = true;
+
+  try {
+    let endpoint = '';
+    switch (action) {
+      case 'shutdown':
+        endpoint = '/api/power/shutdown';
+        break;
+      case 'hibernate':
+        endpoint = '/api/power/hibernate';
+        break;
+      case 'restart':
+        endpoint = '/api/power/restart';
+        break;
+      case 'lock':
+        endpoint = '/api/power/lock';
+        break;
+    }
+
+    const response = await fetch(endpoint, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${authStore.token}`
+      },
+      body: JSON.stringify({ action })
+    });
+
+    if (!response.ok) {
+      throw new Error(`HTTP ${response.status}`);
+    }
+
+    const result = await response.json();
+
+    $q.notify({
+      type: 'positive',
+      message: result.message || `${action} command sent successfully`,
+      position: 'bottom',
+      classes: 'notification-glossy'
+    });
+  } catch (error) {
+    console.error('[Dashboard] Power action error:', error);
+    $q.notify({
+      type: 'negative',
+      message: `Failed to execute ${action}: ${error.message}`,
+      position: 'bottom',
+      classes: 'notification-glossy'
+    });
+  } finally {
+    powerActionLoading.value = false;
+  }
+}
+
+/**
+ * Navigation
+ */
+function goToDocker() {
+  router.push('/docker');
+}
+
+function goToProcesses() {
+  router.push('/processes');
+}
+
+/**
+ * Start auto-refresh
+ */
+function startAutoRefresh() {
+  if (refreshTimer) clearInterval(refreshTimer);
+  refreshTimer = setInterval(() => {
+    if (!document.hidden) {
+      refreshStats();
+    }
+  }, refreshInterval.value);
+  autoRefresh.value = true;
+}
+
+/**
+ * Stop auto-refresh
+ */
+function stopAutoRefresh() {
+  if (refreshTimer) {
+    clearInterval(refreshTimer);
+    refreshTimer = null;
+  }
+  autoRefresh.value = false;
+}
+
+/**
+ * Lifecycle
+ */
+onMounted(async () => {
+  await refreshStats();
+
+  // Start auto-refresh
+  startAutoRefresh();
+
+  // Listen for visibility changes
+  document.addEventListener('visibilitychange', () => {
+    if (document.hidden) {
+      stopAutoRefresh();
+    } else {
+      startAutoRefresh();
+    }
+  });
+});
+
+onUnmounted(() => {
+  stopAutoRefresh();
+  document.removeEventListener('visibilitychange', () => {});
+});
+</script>
+
+<style scoped>
+.dashboard-page {
+  min-height: 100vh;
+  position: relative;
+  background: #000000;
+}
+
+.stats-container {
+  width: 100%;
+}
+
+.header-menu-btn {
+  color: #FFFFFF;
+  background: rgba(10, 10, 10, 0.8);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.header-menu-btn:hover {
+  background: rgba(30, 30, 30, 0.9);
+}
+
+.logout-btn {
+  color: #ef4444;
+  background: rgba(10, 10, 10, 0.8);
+  border: 1px solid rgba(239, 68, 68, 0.3);
+}
+
+.logout-btn:hover {
+  background: rgba(239, 68, 68, 0.1);
+}
+</style>
+
 import { useRouter } from 'vue-router';
 import { useQuasar } from 'quasar';
 import { useAuthStore } from '../stores/auth';
@@ -725,21 +1061,6 @@ function confirmHibernate() {
 }
 
 /**
- * Confirm restart
- */
-function confirmRestart() {
-  $q.dialog({
-    title: 'Restart PC',
-    message: 'Are you sure you want to restart the PC?',
-    cancel: true,
-    persistent: true,
-    class: 'glass-dialog'
-  }).onOk(async () => {
-    await executePowerAction('restart');
-  });
-}
-
-/**
  * Confirm lock screen
  */
 function confirmLock() {
@@ -755,6 +1076,22 @@ function confirmLock() {
 }
 
 /**
+ * Confirm restart
+ */
+function confirmRestart() {
+  $q.dialog({
+    title: 'Restart PC',
+    message: 'Are you sure you want to restart the PC?',
+    cancel: true,
+    persistent: true,
+    class: 'glass-dialog'
+  }).onOk(async () => {
+    await executePowerAction('restart');
+  });
+}
+
+
+/**
  * Execute power action
  */
 async function executePowerAction(action) {
@@ -762,22 +1099,28 @@ async function executePowerAction(action) {
 
   try {
     let endpoint = '';
+    let payload = {};
+
     switch (action) {
       case 'shutdown':
         endpoint = '/api/power/shutdown';
+        payload = { delay_seconds: 0 };
         break;
       case 'hibernate':
         endpoint = '/api/power/hibernate';
         break;
       case 'restart':
         endpoint = '/api/power/restart';
+        payload = { delay_seconds: 0 };
         break;
       case 'lock':
         endpoint = '/api/power/lock';
         break;
+      default:
+        throw new Error(`Unknown action: ${action}`);
     }
 
-    const result = await api.post(endpoint, {});
+    const result = await api.post(endpoint, payload);
 
     $q.notify({
       type: 'positive',
@@ -786,9 +1129,10 @@ async function executePowerAction(action) {
       classes: 'notification-glossy'
     });
   } catch (error) {
+    console.error('[Dashboard] Power action error:', error);
     $q.notify({
       type: 'negative',
-      message: error.message || `${action} failed`,
+      message: error.response?.data?.message || error.message || `${action} failed`,
       position: 'bottom',
       classes: 'notification-glossy'
     });

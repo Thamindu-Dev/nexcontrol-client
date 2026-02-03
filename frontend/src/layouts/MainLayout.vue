@@ -238,10 +238,10 @@ body,
 </style>
 
 <style scoped>
-/* Dynamic Island / Notch Spacer */
+/* Dynamic Island / Notch Spacer - REDUCED by 5px */
 .dynamic-island-spacer {
   width: 100%;
-  height: max(40px, env(safe-area-inset-top));
+  height: max(35px, calc(env(safe-area-inset-top) - 5px));
   position: fixed;
   top: 0;
   left: 0;
@@ -253,7 +253,7 @@ body,
 /* Floating Menu Button */
 .floating-menu-btn {
   position: fixed !important;
-  top: max(45px, calc(env(safe-area-inset-top) + 5px)) !important;
+  top: max(40px, calc(env(safe-area-inset-top))) !important;
   left: 12px !important;
   z-index: 10000 !important;
   background: rgba(10, 10, 10, 0.9) !important;
@@ -269,9 +269,28 @@ body,
   transform: scale(1.05);
 }
 
-/* Adjust page container to account for spacer */
+/* Adjust page container to account for reduced spacer */
 .q-page-container {
-  padding-top: max(45px, calc(env(safe-area-inset-top) + 5px)) !important;
+  padding-top: max(40px, calc(env(safe-area-inset-top))) !important;
+}
+
+/* CRITICAL: Fix z-index issues to prevent UI blocking */
+.q-page {
+  position: relative;
+  z-index: 1;
+}
+
+/* Ensure all interactive elements have proper z-index */
+.q-btn, .q-card, .stat-card, .action-card {
+  position: relative;
+  z-index: 1 !important;
+}
+
+/* System Actions buttons - CRITICAL FIX */
+.action-card .q-btn {
+  position: relative !important;
+  z-index: 10 !important;
+  pointer-events: auto !important;
 }
 
 /* CRITICAL: Fix z-index issues to prevent UI unresponsiveness */
