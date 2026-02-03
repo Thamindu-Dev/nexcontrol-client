@@ -2271,13 +2271,11 @@ async def test_echo(request: Request):
         }
     except json.JSONDecodeError:
         return {
-                "status": "success",
-                "message": "POST received (not valid JSON)",
-                "raw_body": body_str,
-                "timestamp": time.time()
-            },
-            status_code=200
-        )
+            "status": "success",
+            "message": "POST received (not valid JSON)",
+            "raw_body": body_str,
+            "timestamp": time.time()
+        }
 
 
 @app.get("/api/test/connection", tags=["General"])
