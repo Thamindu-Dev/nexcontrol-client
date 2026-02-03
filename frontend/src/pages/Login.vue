@@ -111,7 +111,7 @@
 <script setup>
 import { ref, reactive, onMounted } from 'vue';
 import { useRouter } from 'vue-router';
-import { useQuasar } from 'quasar';
+import { Notify } from 'quasar';
 import { useAuthStore } from '../stores/auth';
 import { useSettingsStore } from '../stores/settings';
 
@@ -121,7 +121,6 @@ defineOptions({
 });
 
 const router = useRouter();
-const $q = useQuasar();
 
 // Stores
 const authStore = useAuthStore();
@@ -197,7 +196,7 @@ async function handleLogin() {
   // SECURITY: Validate IP is private/local only (prevent SSRF)
   if (!isValidIP(serverConfig.host)) {
     loginError.value = 'Invalid IP address. Must be a local network IP'
-    $q.notify({
+    Notify.create({
       type: 'negative',
       message: 'Invalid IP address. Must be a local network IP (192.168.x.x, 10.x.x.x, 172.16-31.x.x, or localhost)',
       position: 'top'
@@ -208,7 +207,7 @@ async function handleLogin() {
   // Validate port
   if (!isValidPort(serverConfig.port)) {
     loginError.value = 'Invalid port. Must be between 1 and 65535'
-    $q.notify({
+    Notify.create({
       type: 'negative',
       message: 'Invalid port. Must be between 1 and 65535',
       position: 'top'
@@ -273,7 +272,7 @@ async function handleLogin() {
 
       // Show helpful message for iOS
       if (typeof window !== 'undefined' && window.Capacitor?.getPlatform() === 'ios') {
-        $q.notify({
+        Notify.create({
           type: 'warning',
           message: 'If you see a popup about Local Network access, tap OK to allow',
           position: 'top',
@@ -291,7 +290,7 @@ async function handleLogin() {
 
     if (result.success) {
       // Show success message
-      $q.notify({
+      Notify.create({
         type: 'positive',
         message: 'Connected successfully!',
         position: 'top'
@@ -310,7 +309,7 @@ async function handleLogin() {
   } catch (error) {
     console.error('[Login] Error:', error);
     loginError.value = error.message || 'Connection failed. Check server settings.';
-    $q.notify({
+    Notify.create({
       type: 'negative',
       message: loginError.value,
       position: 'top'
