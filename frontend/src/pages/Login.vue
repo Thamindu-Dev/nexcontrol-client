@@ -218,6 +218,7 @@ async function testNetworkOnly() {
       type: 'negative',
       message: 'Please enter server IP first',
       position: 'top',
+      timeout: 2500,
       classes: 'notification-glossy'
     });
     return;
@@ -252,6 +253,7 @@ async function testNetworkOnly() {
         type: 'warning',
         message: `Server responded: ${response.status}`,
         position: 'top',
+        timeout: 3000,
         classes: 'notification-glossy'
       });
     }
@@ -261,6 +263,7 @@ async function testNetworkOnly() {
       type: 'negative',
       message: 'Cannot reach server. Check IP and ensure server is running.',
       position: 'top',
+      timeout: 3000,
       classes: 'notification-glossy'
     });
   }
@@ -317,6 +320,7 @@ async function handleLogin() {
       type: 'negative',
       message: 'Invalid IP address. Must be a local network IP (192.168.x.x, 10.x.x.x, 172.16-31.x.x, or localhost)',
       position: 'top',
+      timeout: 4000,
       classes: 'notification-glossy'
     })
     return
@@ -329,6 +333,7 @@ async function handleLogin() {
       type: 'negative',
       message: 'Invalid port. Must be between 1 and 65535',
       position: 'top',
+      timeout: 2500,
       classes: 'notification-glossy'
     })
     return
@@ -385,10 +390,12 @@ async function handleLogin() {
     console.log('[Login] Login result:', result);
 
     if (result.success) {
+      // CRITICAL: Explicit timeout prevents infinite overlay blocking UI
       Notify.create({
         type: 'positive',
         message: 'Connected successfully!',
         position: 'top',
+        timeout: 2500, // Auto-dismiss after 2.5 seconds
         classes: 'notification-glossy'
       });
 
@@ -396,6 +403,7 @@ async function handleLogin() {
         // Credentials saved
       }
 
+      // Navigate immediately - don't wait for notification
       router.push('/dashboard');
     } else {
       loginError.value = result.error || 'Login failed';
@@ -407,6 +415,7 @@ async function handleLogin() {
       type: 'negative',
       message: loginError.value,
       position: 'top',
+      timeout: 3000,
       classes: 'notification-glossy'
     });
   } finally {

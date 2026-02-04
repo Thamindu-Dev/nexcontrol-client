@@ -861,6 +861,17 @@ function stopAutoRefresh() {
 }
 
 /**
+ * Handle visibility change - properly stored for cleanup
+ */
+function handleVisibilityChange() {
+  if (document.hidden) {
+    stopAutoRefresh();
+  } else {
+    startAutoRefresh();
+  }
+}
+
+/**
  * Lifecycle
  */
 onMounted(async () => {
@@ -870,19 +881,14 @@ onMounted(async () => {
   // Start auto-refresh
   startAutoRefresh();
 
-  // Listen for visibility changes
-  document.addEventListener('visibilitychange', () => {
-    if (document.hidden) {
-      stopAutoRefresh();
-    } else {
-      startAutoRefresh();
-    }
-  });
+  // Listen for visibility changes - using named function for proper cleanup
+  document.addEventListener('visibilitychange', handleVisibilityChange);
 });
 
 onUnmounted(() => {
   stopAutoRefresh();
-  document.removeEventListener('visibilitychange', () => {});
+  // CRITICAL: Use same function reference to properly remove event listener
+  document.removeEventListener('visibilitychange', handleVisibilityChange);
 });
 </script>
 

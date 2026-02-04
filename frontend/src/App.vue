@@ -14,8 +14,25 @@
 </template>
 
 <script setup>
-import { onMounted } from 'vue';
-import { Dark } from 'quasar';
+import { onMounted, onUnmounted } from 'vue';
+import { Dark, Notify } from 'quasar';
+
+/**
+ * CRITICAL: Configure global notification defaults
+ * This prevents the "Ghost Overlay" bug where notifications block UI interactions
+ */
+Notify.setDefaults({
+  timeout: 2500, // ALL notifications auto-dismiss after 2.5 seconds
+  position: 'top',
+  actions: [{ icon: 'close', color: 'white', round: true, dense: true }]
+});
+
+/**
+ * Handle system theme changes - stored for cleanup
+ */
+function handleThemeChange() {
+  Dark.set(true);
+}
 
 /**
  * App Initialization
@@ -30,13 +47,37 @@ onMounted(() => {
   localStorage.setItem('quasar-dark-mode', 'true');
 
   // Listen for system theme changes and always force dark mode
-  window.matchMedia('(prefers-color-scheme: light)').addEventListener('change', () => {
-    Dark.set(true);
-  });
+  const mediaQuery = window.matchMedia('(prefers-color-scheme: light)');
+  mediaQuery.addEventListener('change', handleThemeChange);
 
   // Double-check dark mode is set (defensive)
   if (!Dark.isActive) {
     Dark.set(true);
   }
 });
+
+/**
+ * Cleanup event listeners on unmount
+ * Note: App.vue typically never unmounts in SPA, but this follows Vue 3 best practices
+ */
+onUnmounted(() => {
+  const mediaQuery = window.matchMedia('(prefers-color-scheme: light)');
+  mediaQuery.removeEventListener('change', handleThemeChange);
+});
 </script>
+
+<style>
+/* CRITICAL: Safety fix for notification wrappers - Prevents Ghost Overlay */
+.q-notifications__list {
+  pointer-events: none !important;
+}
+
+.q-notification {
+  pointer-events: auto !important; /* Allow clicking the toast itself to dismiss */
+}
+
+/* Additional safety: ensure no invisible overlays block interactions */
+.q-notifications {
+  pointer-events: none !important;
+}
+</style>

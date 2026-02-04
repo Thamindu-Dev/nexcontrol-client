@@ -222,12 +222,22 @@ body,
   margin-right: 0 !important;
 }
 
-/* CRITICAL: Fix Notification Freeze Issue */
+/* CRITICAL: Fix Notification Freeze Issue - Ghost Overlay Prevention */
 .q-notifications {
+  pointer-events: none !important;
+  position: fixed !important;
+  z-index: 10000 !important;
+}
+
+.q-notifications__list {
   pointer-events: none !important;
 }
 
 .q-notifications > * {
+  pointer-events: auto !important;
+}
+
+.q-notification {
   pointer-events: auto !important;
 }
 
