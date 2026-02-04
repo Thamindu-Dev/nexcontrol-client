@@ -43,6 +43,44 @@ async function getToken() {
 }
 
 /**
+ * Check if AES encryption key is configured
+ * @returns {boolean} True if key exists and is valid (>= 32 characters)
+ */
+function hasEncryptionKey() {
+  const key = localStorage.getItem('nexcontrol_aes_key');
+  return !!(key && key.length >= 32);
+}
+
+/**
+ * Show security notification and redirect to settings
+ * This is a fallback when Quasar is not available
+ */
+function showSecurityAlert(message) {
+  console.error('[Security] ' + message);
+
+  // Try to use Quasar notify if available
+  if (window.Quasar && window.Quasar.Notify) {
+    window.Quasar.Notify.create({
+      type: 'warning',
+      message: message,
+      caption: 'Configure it in Settings',
+      position: 'top',
+      timeout: 5000
+    });
+  } else {
+    // Fallback to alert
+    alert(message + '\n\nPlease configure it in Settings.');
+  }
+
+  // Redirect to settings after a short delay
+  setTimeout(() => {
+    if (!window.location.hash.includes('settings')) {
+      window.location.href = '/#/settings';
+    }
+  }, 1500);
+}
+
+/**
  * Set JWT token in secure storage
  */
 async function setToken(token) {
@@ -96,14 +134,31 @@ export function setServerConfig(config) {
  * Handle API errors
  */
 function handleApiError(response, errorData) {
-  // Handle 401 Unauthorized - token expired or invalid
+  // Handle 401 Unauthorized - token expired or invalid encryption
   if (response.status === 401) {
-    clearToken();
-    // Redirect to login using hash mode safe approach
-    if (!window.location.hash.includes('login')) {
-      window.location.href = '/#/login';
+    console.error('[Security] Authentication failed:', {
+      status: response.status,
+      error: errorData
+    });
+
+    // Check if it's an encryption/decryption error
+    const isDecryptionError = errorData.detail?.toLowerCase().includes('decrypt') ||
+                             errorData.message?.toLowerCase().includes('decrypt') ||
+                             errorData.detail?.toLowerCase().includes('encryption') ||
+                             errorData.message?.toLowerCase().includes('encryption');
+
+    if (isDecryptionError) {
+      // Decryption error means the AES key is wrong
+      showSecurityAlert('🚫 Authentication Failed. Check your Encryption Key in Settings.');
+      throw new Error('Encryption key mismatch. Please verify your key matches the backend.');
+    } else {
+      // Regular 401 - token issue
+      clearToken();
+      if (!window.location.hash.includes('login')) {
+        window.location.href = '/#/login';
+      }
+      throw new Error('Authentication required. Please login again.');
     }
-    throw new Error('Authentication required. Please login again.');
   }
 
   // Handle 403 Forbidden
@@ -149,6 +204,24 @@ const api = {
     try {
       const url = `${this.baseURL}${endpoint}`;
       console.log('[API Request]', method, url);
+
+      // ============================================
+      // PRE-FLIGHT SECURITY CHECK
+      // ============================================
+      // Check for encryption key before making any request
+      // Skip check for login/register endpoints
+      const skipSecurityCheck = [
+        '/api/auth/login',
+        '/api/auth/register',
+        '/api/auth/refresh'
+      ].some(path => endpoint.includes(path));
+
+      if (!skipSecurityCheck && !hasEncryptionKey()) {
+        console.warn('[Security] Blocking request - No AES key configured:', endpoint);
+        showSecurityAlert('⚠️ Security Key Missing. Please configure it in Settings.');
+        throw new Error('Security key missing. Please configure encryption key in Settings.');
+      }
+      // ============================================
 
       // Get token without timeout - let it resolve naturally
       const token = await getToken().catch(() => null);
@@ -215,6 +288,18 @@ const api = {
       if (error.name === 'AbortError') {
         console.error('[API] Request timeout or aborted:', endpoint);
         throw new Error('Request timeout. Please check your connection and try again.');
+      }
+
+      // Handle decryption/encryption errors
+      const errorMessage = error.message || error.toString();
+      if (errorMessage.includes('decrypt') ||
+          errorMessage.includes('decrypt') ||
+          errorMessage.includes('encrypt') ||
+          errorMessage.includes('AES') ||
+          errorMessage.includes('base64')) {
+        console.error('[Security] Decryption error:', error);
+        showSecurityAlert('🚫 Authentication Failed. Check your Encryption Key in Settings.');
+        throw new Error('Decryption failed. Your encryption key may not match the server.');
       }
 
       // Re-throw API errors

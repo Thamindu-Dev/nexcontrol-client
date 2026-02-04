@@ -31,29 +31,35 @@ const PREFS_KEY = 'nexcontrol_preferences';
 const WOL_DEVICES_KEY = 'nexcontrol_wol_devices';
 
 export const useSettingsStore = defineStore('settings', {
-  state: () => ({
-    // Server configuration
-    server: {
-      protocol: 'http',
-      host: 'localhost',
-      port: 8000
-    },
+  state: () => {
+    // Check encryption key with proper length validation
+    const storedKey = localStorage.getItem(AES_KEY_KEY);
+    const hasKey = !!(storedKey && storedKey.length >= 32);
 
-    // Encryption key (will not expose actual key in state)
-    hasEncryptionKey: !!localStorage.getItem(AES_KEY_KEY),
+    return {
+      // Server configuration
+      server: {
+        protocol: 'http',
+        host: 'localhost',
+        port: 8000
+      },
 
-    // Preferences
-    preferences: {
-      autoConnect: false,
-      refreshInterval: 5000, // 5 seconds
-      theme: 'dark', // 'light' or 'dark'
-      notifications: true,
-      showToastMessages: true
-    },
+      // Encryption key (will not expose actual key in state)
+      hasEncryptionKey: hasKey,
 
-    // WoL devices
-    woLDevices: []
-  }),
+      // Preferences
+      preferences: {
+        autoConnect: false,
+        refreshInterval: 5000, // 5 seconds
+        theme: 'dark', // 'light' or 'dark'
+        notifications: true,
+        showToastMessages: true
+      },
+
+      // WoL devices
+      woLDevices: []
+    };
+  },
 
   getters: {
     /**
@@ -155,7 +161,13 @@ export const useSettingsStore = defineStore('settings', {
       }
 
       // Check encryption key
-      this.hasEncryptionKey = !!localStorage.getItem(AES_KEY_KEY);
+      const existingKey = localStorage.getItem(AES_KEY_KEY);
+      this.hasEncryptionKey = !!(existingKey && existingKey.length >= 32);
+      console.log('[SettingsStore] Encryption key check:', {
+        exists: !!existingKey,
+        length: existingKey?.length,
+        hasEncryptionKey: this.hasEncryptionKey
+      });
 
       // Load preferences
       const prefs = localStorage.getItem(PREFS_KEY);

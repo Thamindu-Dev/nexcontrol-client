@@ -80,17 +80,18 @@
 
             <q-input
               v-model="encryptionKey"
-              label="AES Encryption Key (32+ characters)"
+              :label="keyLabel"
               filled
               dense
-              :type="showKey ? 'text' : 'password'"
-              hint="Must be at least 32 characters"
+              type="password"
+              :hint="keyHint"
+              :readonly="settingsStore.hasKey"
+              @focus="clearExistingKey"
             >
-              <template v-slot:append>
+              <template v-slot:prepend>
                 <q-icon
-                  :name="showKey ? 'visibility_off' : 'visibility'"
-                  class="cursor-pointer"
-                  @click="showKey = !showKey"
+                  :name="settingsStore.hasKey ? 'lock' : 'lock_open'"
+                  :color="settingsStore.hasKey ? 'green' : 'grey-5'"
                 />
               </template>
             </q-input>
@@ -104,7 +105,7 @@
                   unelevated
                   class="full-width"
                   :loading="savingKey"
-                  label="Save Encryption Key"
+                  :label="saveKeyLabel"
                 />
               </div>
             </div>
@@ -365,9 +366,31 @@ const serverConfig = reactive({
 });
 
 const encryptionKey = ref('');
-const showKey = ref(false);
 const savingServer = ref(false);
 const savingKey = ref(false);
+
+// Watch encryption key state changes for debugging
+watch(() => settingsStore.hasEncryptionKey, (hasKey) => {
+  console.log('[SettingsPage] Encryption key state changed:', hasKey);
+}, { immediate: true });
+
+// Computed properties for encryption key field (using store state)
+const keyLabel = computed(() => {
+  return settingsStore.hasKey
+    ? 'AES Encryption Key (******** - Saved for security)'
+    : 'AES Encryption Key (32+ characters)';
+});
+
+const keyHint = computed(() => {
+  if (settingsStore.hasKey) {
+    return 'Click to enter new key (existing key hidden)';
+  }
+  return 'Must be at least 32 characters';
+});
+
+const saveKeyLabel = computed(() => {
+  return settingsStore.hasKey ? 'Update Encryption Key' : 'Save Encryption Key';
+});
 
 // Preferences
 const preferences = reactive({
@@ -618,22 +641,43 @@ async function saveServerConfig() {
 }
 
 /**
- * Save encryption key
+ * Save encryption key (Write-Only Security)
  */
 function saveEncryptionKey() {
   savingKey.value = true;
 
   try {
-    if (encryptionKey.value && encryptionKey.value.length >= 32) {
+    // If input is empty and we have an existing key, don't overwrite
+    if (!encryptionKey.value.trim()) {
+      if (settingsStore.hasKey) {
+        $q.notify({
+          type: 'info',
+          message: 'Key unchanged (empty input)',
+          caption: 'Enter a new key to update',
+          position: 'top'
+        });
+      } else {
+        $q.notify({
+          type: 'negative',
+          message: 'Please enter an encryption key (32+ characters)',
+          position: 'top'
+        });
+      }
+      savingKey.value = false;
+      return;
+    }
+
+    if (encryptionKey.value.length >= 32) {
       const success = settingsStore.setEncryptionKey(encryptionKey.value);
 
       if (success) {
         $q.notify({
           type: 'positive',
-          message: 'Encryption key saved',
+          message: settingsStore.hasKey ? 'Encryption key updated' : 'Encryption key saved',
           position: 'top'
         });
 
+        // Clear the input (store state is already updated by setEncryptionKey)
         encryptionKey.value = '';
       } else {
         $q.notify({
@@ -651,6 +695,17 @@ function saveEncryptionKey() {
     }
   } finally {
     savingKey.value = false;
+  }
+}
+
+/**
+ * Clear the existing key placeholder when user focuses on input
+ * This allows them to enter a new key
+ */
+function clearExistingKey() {
+  if (settingsStore.hasKey && !encryptionKey.value) {
+    // Clear the placeholder state to allow new input
+    encryptionKey.value = '';
   }
 }
 
@@ -705,6 +760,12 @@ function resetAllSettings() {
 onMounted(async () => {
   settingsStore.loadSettings();
 
+  // Debug: Verify encryption key state from store
+  console.log('[SettingsPage] Encryption key state after loadSettings:', {
+    hasKey: settingsStore.hasKey,
+    hasEncryptionKey: settingsStore.hasEncryptionKey
+  });
+
   // Load server config
   const savedConfig = settingsStore.server;
   if (savedConfig) {
@@ -743,6 +804,9 @@ onMounted(async () => {
 
   // Load threshold configuration
   await loadThresholdConfig();
+
+  // Note: Encryption key state is automatically loaded by settingsStore.loadSettings()
+  // The computed properties (keyLabel, keyHint) will react to store state
 });
 </script>
 

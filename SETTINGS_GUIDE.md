@@ -218,6 +218,128 @@ If you want to change the encryption key:
 
 > 💡 **Tip**: Both Frontend and Backend must be updated to use the new key, or communication will fail.
 
+### Write-Only Security Feature
+
+> 🔒 **Security Feature**: The Encryption Key input field is "write-only" for maximum protection against "shoulder surfing" (someone looking over your shoulder).
+
+**How It Works:**
+
+1. **Hidden Value**: Once you save a key, the input field will NOT display it
+   - Shows: `******** - Saved for security` or `(Key Saved - Hidden for Security)`
+   - Shows: 🔒 (green lock icon) when a key is configured
+
+2. **No Readback**: You can never view the saved key in the UI
+   - Prevents accidental exposure
+   - Protects against screen capture/recording
+   - Safe even if someone opens Settings while you're away
+
+3. **Update Key**: To change the key, just click the field and type a new one
+   - The old key is immediately replaced
+   - Empty input won't overwrite the existing key (prevents accidental deletion)
+
+> ⚠️ **Important**: If you forget your key, you must check the backend's `.env` file or clear all settings.
+
+---
+
+### Pre-Flight Security Validation
+
+> 🛡️ **Pre-Flight Check**: The Frontend validates the encryption key BEFORE sending any command to the backend.
+
+**Protected Actions:**
+- ❌ No Shutdown/Lock/Restart command without key
+- ❌ No Docker operations without key
+- ❌ No Process management without key
+- ❌ No Screenshot capture without key
+- ✅ Can view System Stats (read-only, no key needed initially)
+
+**Security Flow:**
+
+```
+User clicks "Shutdown"
+  ↓
+Frontend checks: Is AES Key configured?
+  ↓
+NO → Block immediately
+     → Show: "⚠️ Security Key Missing. Please configure it in Settings."
+     → Redirect to /settings
+  ↓
+YES → Encrypt command with AES Key
+  ↓
+Send to Backend
+  ↓
+Backend validates AES Key
+  ↓
+Keys Match? → Execute Command
+Keys Don't Match → Return 401 Unauthorized
+```
+
+**Error Messages:**
+
+| Error | Message | Action |
+|-------|---------|--------|
+| **No key** | "⚠️ Security Key Missing" | Go to Settings and configure key |
+| **Wrong key** | "🚫 Authentication Failed. Check your Encryption Key." | Verify key matches backend `.env` file |
+| **Decryption error** | "🚫 Authentication Failed. Check your Encryption Key." | Key mismatch detected |
+
+> 💡 **Why This Matters**: Even if someone gains access to your device, they cannot control your PC without knowing the encryption key.
+
+---
+
+### Backend Validation
+
+The NexControl backend performs strict validation on **every encrypted request**:
+
+#### 1. Decryption Guard
+
+The backend wraps all decryption attempts in a `try-except` block:
+
+```python
+# Backend decrypts the payload
+try:
+    decrypted_data = decrypt_data(encrypted_payload)
+    # Process command...
+except CryptoError:
+    # Wrong AES key detected!
+    logger.warning("DECRYPTION FAILED (Invalid AES Key)")
+    raise HTTPException(status_code=401, detail="Invalid Encryption Key")
+```
+
+#### 2. Verification Endpoint
+
+A special endpoint `/api/auth/verify-key` exists to test if keys match:
+
+**Request:**
+```json
+{
+  "data": "<base64-encrypted-test-string>"
+}
+```
+
+**Success (200):**
+```json
+{
+  "success": true,
+  "status": "valid",
+  "message": "Encryption key matched successfully"
+}
+```
+
+**Failure (401):**
+```json
+{
+  "success": false,
+  "status": "invalid",
+  "message": "Encryption key does not match"
+}
+```
+
+**When Verification Happens:**
+- When you click "Save Encryption Key" in Settings
+- Before allowing sensitive operations
+- During connection tests
+
+> 🔐 **Zero Trust**: The backend never trusts blindly. Every command must prove it has the correct key.
+
 ---
 
 ## Appearance Settings
@@ -432,6 +554,51 @@ Resets **all** settings to their default values:
 3. Refresh page
 4. Check browser console for errors
 
+### "⚠️ Security Key Missing" Error
+
+**Cause**: No encryption key configured in Settings
+
+**Solution**:
+
+1. Open Backend `.env` file
+2. Find the `AES_KEY` line (must be 32+ characters)
+3. Go to Settings → Encryption Key
+4. Paste the key
+5. Save
+
+> 📝 **Note**: All commands will be blocked until a valid key is configured
+
+### "🚫 Authentication Failed" (Wrong Key)
+
+**Cause**: Encryption key in Settings doesn't match backend's `AES_KEY`
+
+**Solution**:
+
+1. Verify backend `.env` file has the correct key
+2. Check for extra spaces or copy-paste errors
+3. Delete key from Settings and re-enter it manually
+4. Save and retry
+
+### "Key Saved but Still Shows as Missing"
+
+**Cause**: Browser localStorage has the key but Settings page can't detect it
+
+**Solution**:
+
+1. Refresh the page (Settings page uses store state that loads on mount)
+2. Check browser console for: `[SettingsPage] Encryption key state after loadSettings:`
+3. If still shows as missing, try clearing browser cache and reload
+
+### Verification Tests Passed But Commands Fail
+
+**Cause**: Key verification succeeded but actual decryption fails (unlikely)
+
+**Solution**:
+
+1. Check backend logs for: `[Key Verification] FAILED - Key mismatch`
+2. Check frontend console for decryption errors
+3. Restart backend to clear any cached encryption state
+
 ---
 
 ## Quick Reference
@@ -463,12 +630,99 @@ Resets **all** settings to their default values:
 ## Security Best Practices
 
 1. **Never expose your Backend to the public internet** without HTTPS and strong authentication
-2. **Use a strong AES key** (32+ random characters)
-3. **Change the default AES key** before deploying
-4. **Keep your Encryption key private** - don't share it
+2. **Use a strong AES key** (32+ random characters, use a password manager)
+3. **Change the default AES key** before deploying to production
+4. **Keep your Encryption key private** - never share it via email, chat, or unsecured channels
 5. **Use local network only** when possible (192.168.x.x range)
 6. **Disable auto-connect** on shared devices
 7. **Clear credentials** before selling/giving away your device
+
+### 🔐 New Security Features (v1.1)
+
+#### Write-Only Key Protection
+
+- **Benefit**: Your encryption key is never displayed in the UI, even when saved
+- **How it works**: The input field shows `********` when a key is configured
+- **Why it matters**: Prevents "shoulder surfing" - someone looking over your shoulder can't see your key
+- **Recovery**: If you forget the key, check the backend `.env` file directly
+
+#### Pre-Flight Validation
+
+- **Benefit**: No command is ever sent without a valid key
+- **How it works**: Frontend checks for key BEFORE making API requests
+- **Why it matters**: Even with your device, no one can control your PC without the key
+- **Protected actions**: Shutdown, Lock, Restart, Docker, Processes, Screenshots
+
+#### Backend Decryption Guard
+
+- **Benefit**: Backend rejects all commands with wrong keys immediately
+- **How it works**: Server uses 401 Unauthorized for decryption failures
+- **Why it matters**: Double-layer protection (frontend + backend validation)
+- **Error messages**: "Invalid Encryption Key" (logged with IP address)
+
+#### Automatic Key Verification
+
+- **Benefit**: Tests key match before allowing sensitive operations
+- **How it works**: `/api/auth/verify-key` endpoint validates key when you save it
+- **Why it matters**: You'll know immediately if the key is correct (200) or wrong (401)
+
+### Security Checklist
+
+- [ ] Key is 32+ characters (longer is better)
+- [ ] Key contains letters, numbers, and symbols
+- [ ] Key is stored in backend `.env` file
+- [ ] Frontend Settings shows green lock icon
+- [ ] Input field shows `******** - Saved for security`
+- [ ] Pre-flight check allows commands to execute
+- [ ] Backend logs show successful key matches
+- [ ] No yellow warnings in console about missing key
+
+---
+
+## Advanced Security Architecture
+
+### Defense in Depth
+
+NexControl uses multiple layers of security to protect your PC:
+
+```
+┌─────────────────────────────────────────────────────────────┐
+│ LAYER 1: Frontend Pre-Flight Check                          │
+│ - Blocks commands before network request                   │
+│ - Shows "Security Key Missing" if no key configured            │
+└─────────────────────────────────────────────────────────────┘
+                          ↓
+┌─────────────────────────────────────────────────────────────┐
+│ LAYER 2: AES-256-GCM Encryption                           │
+│ - All commands encrypted before sending                    │
+│ - Payload includes timestamp (replay attack prevention)      │
+│ - Nonce + Authenticated Encryption (AEAD)                   │
+└─────────────────────────────────────────────────────────────┘
+                          ↓
+┌─────────────────────────────────────────────────────────────┐
+│ LAYER 3: Backend Decryption Guard                          │
+│ - Try-except block catches decryption failures               │
+│ - Returns 401 Unauthorized immediately on wrong key           │
+│ - Logs all failures with IP address                         │
+└─────────────────────────────────────────────────────────────┘
+                          ↓
+┌─────────────────────────────────────────────────────────────┐
+│ LAYER 4: JWT Authentication (Optional Extra Layer)           │
+│ - Token-based auth for API access                          │
+│ - Token expiration (24 hours)                                │
+└─────────────────────────────────────────────────────────────┘
+```
+
+### Threat Model
+
+| Threat | Protection | Status |
+|--------|------------|--------|
+| **Shoulder Surfing** | Write-only input field (key never displayed) | ✅ Protected |
+| **Device Theft** | Pre-flight check blocks all commands | ✅ Protected |
+| **Network Sniffing** | AES-256-GCM encryption + HTTPS | ✅ Protected |
+| **Replay Attacks** | Timestamp validation on all requests | ✅ Protected |
+| **Wrong Key Error** | 401 Unauthorized with clear message | ✅ Protected |
+| **Missing Key** | Blocks commands before sending | ✅ Protected |
 
 ---
 

@@ -94,6 +94,8 @@ export function encryptPayload(data) {
  * @returns {Object} Decrypted data
  */
 export function decryptResponse(encryptedResponse) {
+  let jsonStr = '';
+
   try {
     // Handle both direct data and wrapped responses
     const encryptedData = encryptedResponse.data || encryptedResponse;
@@ -125,13 +127,21 @@ export function decryptResponse(encryptedResponse) {
     );
 
     // Convert to UTF-8 string
-    const jsonStr = decrypted.toString(CryptoJS.enc.Utf8);
+    jsonStr = decrypted.toString(CryptoJS.enc.Utf8);
 
     // Parse JSON
     return JSON.parse(jsonStr);
   } catch (error) {
-    console.error('Decryption error:', error);
-    throw new Error('Failed to decrypt response');
+    console.error('[EncryptionService] Decryption error:', error);
+
+    // Provide specific error messages
+    if (error.message?.includes('Malformed')) {
+      throw new Error('Decryption failed: Invalid encrypted data format');
+    } else if (jsonStr === '' || error.message?.includes('Unexpected')) {
+      throw new Error('Decryption failed: Encryption key mismatch or corrupted data');
+    }
+
+    throw new Error('Failed to decrypt response: ' + (error.message || 'Unknown error'));
   }
 }
 

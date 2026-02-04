@@ -85,7 +85,9 @@ except ImportError:
     from_env = None
     logger.warning("Docker SDK not installed")
 from cryptography.hazmat.primitives.ciphers.aead import AESGCM
+from cryptography.hazmat.primitives.ciphers.aead import AESGCM
 from cryptography.hazmat.backends import default_backend
+from cryptography.exceptions import InvalidTag
 import jose.exceptions
 from jose import jwt
 from passlib.context import CryptContext
@@ -532,7 +534,7 @@ class SecurityManager:
             Decrypted dictionary
 
         Raises:
-            HTTPException: If decryption fails
+            HTTPException: If decryption fails (401 for key mismatch, 400 for bad format)
         """
         try:
             import json
@@ -570,10 +572,17 @@ class SecurityManager:
                 status_code=status.HTTP_400_BAD_REQUEST,
                 detail="Invalid encrypted data format"
             )
+        except CryptoError as e:
+            # THIS IS THE CRITICAL PART: Decryption failure = Wrong Key
+            logger.warning(f"DECRYPTION FAILED (Invalid AES Key): {str(e)}")
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail="Invalid Encryption Key"
+            )
         except Exception as e:
             logger.error(f"Decryption error: {str(e)[:100]}")
             raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST,
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
                 detail="Decryption failed"
             )
 
@@ -2530,8 +2539,17 @@ async def encryption_middleware(request: Request, call_next):
                                 content={"detail": "Invalid timestamp"}
                             )
 
-                        # Decrypt the payload
-                        decrypted_data = SecurityManager.decrypt_data(data["data"])
+                        # Decrypt the payload (CRITICAL: Catch decryption failures)
+                        try:
+                            decrypted_data = SecurityManager.decrypt_data(data["data"])
+                        except HTTPException as http_ex:
+                            # If decrypt_data raised HTTPException, pass it through
+                            # This includes 401 for invalid key, 400 for bad format
+                            logger.warning(f"Decryption blocked: {http_ex.detail}")
+                            return JSONResponse(
+                                status_code=http_ex.status_code,
+                                content={"detail": http_ex.detail}
+                            )
 
                         # Store decrypted data in request state for route handlers
                         request.state.decrypted_data = decrypted_data
@@ -2540,6 +2558,13 @@ async def encryption_middleware(request: Request, call_next):
                     # Not valid JSON, let route handler deal with it
                     pass
 
+        except HTTPException as http_ex:
+            # Catch HTTPException from decrypt_data and return immediately
+            logger.warning(f"Encryption middleware HTTP exception: {http_ex.detail}")
+            return JSONResponse(
+                status_code=http_ex.status_code,
+                content={"detail": http_ex.detail}
+            )
         except Exception as e:
             logger.error(f"Encryption middleware error: {type(e).__name__}: {e}")
             # Don't return error here - let route handler deal with it
@@ -2664,6 +2689,85 @@ async def verify_token(current_user: dict = Depends(get_current_user)):
         Token validation status
     """
     return {"valid": True, "user": current_user.get("sub")}
+
+
+@app.post("/api/auth/verify-key", tags=["Authentication"])
+async def verify_encryption_key(request: Request):
+    """
+    Verify if the client's AES encryption key matches the server's key.
+
+    This endpoint is used by the Settings page to validate that the
+    encryption key is correctly configured before allowing sensitive operations.
+
+    Request Body:
+    {
+        "data": "<base64-encoded encrypted test string>"
+    }
+
+    Returns:
+        {"status": "valid", "message": "Key matched"} (200) if key matches
+        {"status": "invalid", "message": "Key mismatch"} (401) if key doesn't match
+        {"status": "error", "message": "..."} (400) if request format is invalid
+    """
+    try:
+        # Read request body
+        body = await request.body()
+        if not body:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Request body is required"
+            )
+
+        import json
+        data = json.loads(body)
+
+        # Check if this is an encrypted payload
+        if not isinstance(data, dict) or "data" not in data:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Invalid request format. Expected {\"data\": \"<encrypted_string>\"}"
+            )
+
+        # Get client IP for logging
+        client_ip = get_remote_address(request)
+
+        # Try to decrypt using the server's AES key
+        try:
+            decrypted_data = SecurityManager.decrypt_data(data["data"])
+
+            logger.info(f"[Key Verification] SUCCESS - Key matched from {client_ip}")
+
+            return {
+                "success": True,
+                "status": "valid",
+                "message": "Encryption key matched successfully"
+            }
+
+        except HTTPException as http_ex:
+            # decrypt_data raised HTTPException (likely 401 for wrong key)
+            logger.warning(f"[Key Verification] FAILED - Key mismatch from {client_ip}: {http_ex.detail}")
+
+            return JSONResponse(
+                status_code=http_ex.status_code,
+                content={
+                    "success": False,
+                    "status": "invalid",
+                    "message": "Encryption key does not match"
+                }
+            )
+
+    except json.JSONDecodeError:
+        logger.warning("[Key Verification] FAILED - Invalid JSON from request")
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Invalid JSON format"
+        )
+    except Exception as e:
+        logger.error(f"[Key Verification] ERROR - Unexpected error: {type(e).__name__}: {e}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Verification failed"
+        )
 
 
 # ============================================================
