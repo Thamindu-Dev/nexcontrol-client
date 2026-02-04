@@ -78,7 +78,6 @@
                     size="80px"
                     color="cyan"
                     track-color="rgba(34, 211, 238, 0.1)"
-                    :indeterminate="loadingWithDisks.stats"
                     class="circular-progress"
                   />
                 </div>
@@ -106,7 +105,6 @@
                 :thickness="4"
                 color="white"
                 track-color="rgba(255,255,255,0.1)"
-                :indeterminate="loading.stats"
                 rounded
                 class="custom-progress q-mb-sm"
               />
@@ -139,7 +137,6 @@
                 :thickness="4"
                 color="cyan"
                 track-color="rgba(34, 211, 238, 0.1)"
-                :indeterminate="loading.stats"
                 rounded
                 class="custom-progress q-mb-sm"
               />
@@ -175,7 +172,6 @@
                 :thickness="4"
                 color="white"
                 track-color="rgba(255,255,255,0.1)"
-                :indeterminate="loading.stats"
                 rounded
                 class="custom-progress q-mb-sm"
               />
@@ -491,7 +487,7 @@
 </template>
 
 <script setup>
-import { ref, computed, onMounted, onUnmounted, watch } from 'vue';
+import { ref, computed, onMounted, onUnmounted } from 'vue';
 import { useRouter } from 'vue-router';
 import { useQuasar } from 'quasar';
 import { useSystemStore } from '../stores/system';
@@ -508,12 +504,7 @@ const $q = useQuasar();
 const systemStore = useSystemStore();
 
 // State
-const stats = computed(() => {
-  console.log('[Dashboard Computed] stats accessed');
-  console.log('[Dashboard Computed] systemStore.stats.cpu:', systemStore.stats.cpu);
-  console.log('[Dashboard Computed] systemStore.stats.cpu?.cpu_percent:', systemStore.stats.cpu?.cpu_percent);
-  return systemStore.stats;
-});
+const stats = computed(() => systemStore.stats);
 const powerActionLoading = ref(false);
 const autoRefresh = ref(false);
 const refreshInterval = ref(2000);
@@ -524,23 +515,6 @@ const allDisks = ref([]);
 const diskLoading = ref(false);
 
 // Computed
-const loading = computed(() => systemStore.loading);
-
-// Watch for stats changes to log exactly what's displayed
-watch(() => systemStore.stats.cpu?.cpu_percent, (newVal, oldVal) => {
-  console.log('[Dashboard Watch] CPU Usage changed:', { oldVal, newVal });
-  console.log('[Dashboard Watch] Current display value:', stats.value.cpu?.cpu_percent);
-}, { deep: true });
-
-watch(() => systemStore.stats, (newVal) => {
-  console.log('[Dashboard Watch] Full stats object changed:', newVal);
-}, { deep: true });
-
-const loadingWithDisks = computed(() => ({
-  stats: systemStore.loading.stats,
-  disks: diskLoading.value
-}));
-
 const loadingState = computed(() => ({
   stats: systemStore.loading.stats,
   disks: diskLoading.value
@@ -721,8 +695,6 @@ function getDiskName(disk) {
 async function refreshStats() {
   try {
     await systemStore.fetchStats();
-    console.log('[Dashboard] Stats loaded:', systemStore.stats);
-    console.log('[Dashboard] CPU percent:', systemStore.stats.cpu?.cpu_percent);
   } catch (error) {
     console.error('[Dashboard] Error fetching stats:', error);
   }

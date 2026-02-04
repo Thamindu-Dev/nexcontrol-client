@@ -759,6 +759,8 @@ class SystemMonitor:
         Returns:
             Dict with CPU usage percentage and core counts
         """
+        cpu_percent = 0  # Initialize with default value
+
         try:
             cpu_count = psutil.cpu_count()
             cpu_freq = psutil.cpu_freq()
@@ -771,36 +773,30 @@ class SystemMonitor:
                     valid_values = [p for p in per_cpu_percent if 0 <= p <= 100]
                     if valid_values:
                         cpu_percent = sum(valid_values) / len(valid_values)
-                    else:
-                        cpu_percent = 0
-                else:
-                    cpu_percent = 0
-            except Exception:
-                # Method 2: Fallback to simple CPU percent without interval
+            except Exception as e1:
+                logger.debug(f"Method 1 failed: {e1}")
+                # Method 2: Fallback to simple CPU percent
                 try:
-                    # First call with interval=None to get cached value
-                    psutil.cpu_percent(interval=None)
-                    # Small delay
-                    import time
-                    time.sleep(0.1)
-                    # Second call to get actual value
-                    cpu_percent = psutil.cpu_percent(interval=None)
-                except Exception:
-                    # Method 3: Calculate from CPU times (most reliable)
-                    cpu_times1 = psutil.cpu_times()
-                    import time
-                    time.sleep(0.1)
-                    cpu_times2 = psutil.cpu_times()
+                    cpu_percent = psutil.cpu_percent(interval=1.0)
+                except Exception as e2:
+                    logger.debug(f"Method 2 failed: {e2}")
+                    # Method 3: Calculate from CPU times
+                    try:
+                        cpu_times1 = psutil.cpu_times()
+                        import time
+                        time.sleep(0.2)
+                        cpu_times2 = psutil.cpu_times()
 
-                    # Calculate usage from CPU times
-                    user_diff = cpu_times2.user - cpu_times1.user
-                    system_diff = cpu_times2.system - cpu_times1.system
-                    idle_diff = cpu_times2.idle - cpu_times1.idle
-                    total_diff = user_diff + system_diff + idle_diff
+                        # Calculate usage from CPU times
+                        user_diff = cpu_times2.user - cpu_times1.user
+                        system_diff = cpu_times2.system - cpu_times1.system
+                        idle_diff = cpu_times2.idle - cpu_times1.idle
+                        total_diff = user_diff + system_diff + idle_diff
 
-                    if total_diff > 0:
-                        cpu_percent = ((user_diff + system_diff) / total_diff) * 100
-                    else:
+                        if total_diff > 0:
+                            cpu_percent = ((user_diff + system_diff) / total_diff) * 100
+                    except Exception as e3:
+                        logger.debug(f"Method 3 failed: {e3}")
                         cpu_percent = 0
 
             return {
@@ -810,7 +806,7 @@ class SystemMonitor:
             }
         except Exception as e:
             logger.error(f"Error getting CPU stats: {type(e).__name__}: {str(e)}")
-            return {"cpu_percent": 0, "error": "Failed to get CPU stats"}
+            return {"cpu_percent": 0, "cpu_count": 0, "cpu_freq_mhz": 0, "error": "Failed to get CPU stats"}
 
     @staticmethod
     def get_memory_usage() -> dict:
