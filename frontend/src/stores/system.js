@@ -418,7 +418,7 @@ export const useSystemStore = defineStore('system', {
     /**
      * Fetch processes
      */
-    async fetchProcesses(limit = 20, sortBy = 'cpu') {
+    async fetchProcesses(limit = 50, sortBy = 'cpu') {
       this.loading.processes = true;
       this.errors.processes = null;
 
@@ -439,7 +439,7 @@ export const useSystemStore = defineStore('system', {
     async killProcess(pid) {
       try {
         const result = await api.delete(`/api/processes/${pid}`);
-        await this.fetchProcesses(); // Refresh list
+        await this.fetchProcesses(50); // Refresh list with default limit
         return result;
       } catch (error) {
         console.error('Failed to kill process:', error);

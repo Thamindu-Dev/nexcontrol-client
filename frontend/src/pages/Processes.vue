@@ -38,7 +38,8 @@
             <div class="text-subtitle2">Sort by:</div>
             <q-btn-toggle
               v-model="sortBy"
-              toggle-color="white"
+              toggle-color="cyan"
+              rounded
               :options="[
                 { label: 'CPU', value: 'cpu' },
                 { label: 'Memory', value: 'memory' }
@@ -177,7 +178,7 @@ function handleSortChange() {
  */
 async function refreshProcesses() {
   try {
-    await systemStore.fetchProcesses(20, sortBy.value);
+    await systemStore.fetchProcesses(50, sortBy.value);
   } catch {
     $q.notify({
       type: 'negative',

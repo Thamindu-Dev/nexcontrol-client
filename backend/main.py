@@ -2153,7 +2153,7 @@ class ProcessManager:
     }
 
     @staticmethod
-    def list_processes(limit: int = 20, sort_by: str = "cpu") -> list:
+    def list_processes(limit: int = 50, sort_by: str = "cpu") -> list:
         """
         List top resource-consuming processes
 
@@ -2172,28 +2172,37 @@ class ProcessManager:
                 sort_by = "cpu"
 
             processes = []
-            for proc in psutil.process_iter(['pid', 'name', 'username', 'cpu_percent', 'memory_percent']):
+            for proc in psutil.process_iter(['pid', 'name', 'username']):
                 try:
-                    proc_info = proc.info
-                    proc_info['cpu_percent'] = proc.cpu_percent()
+                    # Use oneshot() for more efficient and accurate readings
+                    with proc.oneshot():
+                        proc_info = {
+                            'pid': proc.info['pid'],
+                            'name': proc.info['name'],
+                            'username': proc.info['username'],
+                            # Use interval=0.1 for accurate CPU reading
+                            'cpu_percent': proc.cpu_percent(interval=0.1),
+                            # Get accurate memory percentage
+                            'memory_percent': proc.memory_percent()
+                        }
 
-                    # Sanitize process data
-                    if proc_info.get('name'):
-                        proc_info['name'] = SecurityManager.sanitize_input(
-                            str(proc_info['name']), max_length=128
-                        )
-                    if proc_info.get('username'):
-                        proc_info['username'] = SecurityManager.sanitize_input(
-                            str(proc_info['username']), max_length=128
-                        )
+                        # Sanitize process data
+                        if proc_info.get('name'):
+                            proc_info['name'] = SecurityManager.sanitize_input(
+                                str(proc_info['name']), max_length=128
+                            )
+                        if proc_info.get('username'):
+                            proc_info['username'] = SecurityManager.sanitize_input(
+                                str(proc_info['username']), max_length=128
+                            )
 
-                    processes.append(proc_info)
+                        processes.append(proc_info)
                 except (psutil.NoSuchProcess, psutil.AccessDenied, psutil.ZombieProcess):
                     continue
                 except Exception:
                     continue
 
-            # Sort by specified metric
+            # Sort by specified metric (descending - highest first)
             if sort_by == "cpu":
                 processes.sort(key=lambda x: x.get('cpu_percent', 0), reverse=True)
             elif sort_by == "memory":
@@ -3243,7 +3252,7 @@ async def get_container_logs(
 
 @app.get("/api/processes", tags=["Processes"])
 async def list_processes(
-    limit: int = 20,
+    limit: int = 50,
     sort_by: str = "cpu",
     current_user: dict = Depends(get_current_user)
 ):
