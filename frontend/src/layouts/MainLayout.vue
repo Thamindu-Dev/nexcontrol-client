@@ -43,6 +43,7 @@
         <template v-if="isDashboard">
           <!-- Polling/Realtime Toggle (Dashboard only) -->
           <div class="row items-center q-gutter-sm">
+            <q-icon name="timer" size="16px" color="grey-6" />
             <span class="text-caption text-grey-6">Polling</span>
             <q-toggle
               :model-value="systemStore.webSocketEnabled"
@@ -50,8 +51,11 @@
               color="cyan"
               keep-emphasis
               size="md"
+              checked-icon="bolt"
+              unchecked-icon="timer"
             />
             <span class="text-caption text-cyan">Real-time</span>
+            <q-icon name="bolt" size="16px" color="cyan" />
           </div>
         </template>
       </q-toolbar>

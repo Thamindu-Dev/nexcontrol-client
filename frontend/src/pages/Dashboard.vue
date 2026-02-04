@@ -22,13 +22,13 @@
                 <div class="row items-center">
                   <div class="col">
                     <div class="row items-center q-mb-sm">
-                      <q-icon name="memory" size="24px" color="grey-5" class="q-mr-sm" />
+                      <q-icon name="developer_board" size="24px" color="grey-5" class="q-mr-sm" />
                       <div class="text-subtitle2 text-grey-6">CPU Usage</div>
                     </div>
                   <div class="text-h2 text-weight-bold text-white">
                     {{ stats.cpu?.cpu_percent?.toFixed(1) || 0 }}<span class="text-h5 text-grey-6">%</span>
                   </div>
-                  <div class="text-caption text-grey-7 q-mt-xs">
+                  <div class="text-caption text-grey-7 q-mt-sm">
                     {{ stats.cpu?.cpu_count || 0 }} cores @ {{ stats.cpu?.cpu_freq_mhz?.toFixed(0) || 0 }} MHz
                   </div>
                 </div>
@@ -55,19 +55,20 @@
           <q-card class="stat-card stat-card-equal" flat bordered>
             <q-card-section class="q-pa-md">
               <div class="row items-center q-mb-sm">
-                <q-icon name="storage" size="20px" color="grey-5" class="q-mr-xs" />
+                <q-icon name="dns" size="20px" color="grey-5" class="q-mr-xs" />
                 <div class="text-caption text-grey-6 text-weight-bold">MEMORY</div>
               </div>
               <div class="text-h4 text-weight-bold text-white q-mb-sm">
                 {{ stats.memory?.percent?.toFixed(1) || 0 }}<span class="text-caption text-grey-6">%</span>
               </div>
               <q-linear-progress
-                :value="stats.memory?.percent || 0"
-                :thickness="4"
-                color="white"
-                track-color="rgba(255,255,255,0.1)"
+                :value="stats.memory?.percent / 100 || 0"
+                :thickness="6"
+                color="cyan"
+                track-color="grey-8"
                 rounded
-                class="custom-progress q-mb-sm"
+                animation-speed="500"
+                class="q-mb-sm"
               />
               <div class="text-caption text-grey-7">
                 {{ formatBytes(stats.memory?.used) }} / {{ formatBytes(stats.memory?.total) }}
@@ -94,24 +95,28 @@
               </div>
               <q-linear-progress
                 v-if="stats.gpu"
-                :value="stats.gpu?.usage_percent || 0"
-                :thickness="4"
+                :value="stats.gpu?.usage_percent / 100 || 0"
+                :thickness="6"
                 color="cyan"
-                track-color="rgba(34, 211, 238, 0.1)"
+                track-color="grey-8"
                 rounded
-                class="custom-progress q-mb-sm"
+                animation-speed="500"
+                class="q-mb-sm"
               />
               <q-linear-progress
                 v-else
                 :value="0"
-                :thickness="4"
+                :thickness="6"
                 color="grey-7"
-                track-color="rgba(255, 255, 255, 0.05)"
+                track-color="grey-8"
                 rounded
-                class="custom-progress q-mb-sm"
+                class="q-mb-sm"
               />
               <div class="text-caption text-grey-7">
                 {{ stats.gpu?.name || 'N/A' }}
+                <template v-if="stats.gpu?.temperature">
+                  <span class="text-grey-6 q-ml-xs">· {{ stats.gpu.temperature.toFixed(0) }}°C</span>
+                </template>
               </div>
             </q-card-section>
           </q-card>
@@ -122,19 +127,20 @@
           <q-card class="stat-card stat-card-equal" flat bordered>
             <q-card-section class="q-pa-md">
               <div class="row items-center q-mb-sm">
-                <q-icon name="folder_open" size="20px" color="grey-5" class="q-mr-xs" />
+                <q-icon name="storage" size="20px" color="grey-5" class="q-mr-xs" />
                 <div class="text-caption text-grey-6 text-weight-bold">PRIMARY DISK</div>
               </div>
               <div class="text-h4 text-weight-bold text-white q-mb-sm">
                 {{ stats.disk?.percent?.toFixed(1) || 0 }}<span class="text-caption text-grey-6">%</span>
               </div>
               <q-linear-progress
-                :value="stats.disk?.percent || 0"
-                :thickness="4"
-                color="white"
-                track-color="rgba(255,255,255,0.1)"
+                :value="stats.disk?.percent / 100 || 0"
+                :thickness="6"
+                color="cyan"
+                track-color="grey-8"
                 rounded
-                class="custom-progress q-mb-sm"
+                animation-speed="500"
+                class="q-mb-sm"
               />
               <div class="text-caption text-grey-7">
                 {{ formatBytes(stats.disk?.used) }} / {{ formatBytes(stats.disk?.total) }}
@@ -177,7 +183,7 @@
           <q-card class="storage-card" flat bordered>
             <q-card-section class="q-pa-md">
               <div class="row items-center q-mb-md">
-                <q-icon name="sd_storage" size="20px" color="grey-5" class="q-mr-sm" />
+                <q-icon name="storage" size="20px" color="grey-5" class="q-mr-sm" />
                 <div class="text-subtitle2 text-white">All Storage Devices</div>
                 <q-space />
                 <q-btn
@@ -221,9 +227,10 @@
                     <div class="row items-center q-mb-xs">
                       <div class="col-auto q-mr-sm">
                         <q-icon
-                          :name="disk.is_removable ? 'usb' : 'hard_disk'"
-                          size="20px"
-                          :color="disk.is_removable ? 'cyan' : 'grey-5'"
+                          :name="disk.drive_type === 'External' || disk.is_removable ? 'usb' : 'folder_open'"
+                          size="24px"
+                          :class="disk.drive_type === 'External' || disk.is_removable ? 'text-cyan' : 'text-grey-5'"
+                          style="display: flex; opacity: 1; visibility: visible;"
                         />
                       </div>
                       <div class="col">
@@ -232,7 +239,7 @@
                             {{ getDiskName(disk) }}
                           </div>
                           <q-chip
-                            v-if="disk.is_removable"
+                            v-if="disk.drive_type === 'External' || disk.is_removable"
                             label="USB/External"
                             size="sm"
                             color="cyan"
@@ -258,12 +265,13 @@
                     <!-- Progress Bar (if usage data available) -->
                     <q-linear-progress
                       v-if="disk.percent !== null"
-                      :value="disk.percent"
-                      :thickness="3"
-                      :color="disk.is_removable ? 'cyan' : 'white'"
-                      track-color="rgba(255,255,255,0.1)"
+                      :value="disk.percent / 100"
+                      :thickness="6"
+                      color="cyan"
+                      track-color="grey-8"
                       rounded
-                      class="q-mt-xs"
+                      animation-speed="500"
+                      class="q-mt-sm"
                     />
 
                     <!-- Additional Info -->
@@ -328,7 +336,7 @@
                     outline
                   >
                     <div class="row items-center justify-center no-wrap">
-                      <q-icon name="refresh" size="18px" class="q-mr-xs" />
+                      <q-icon name="restart_alt" size="18px" class="q-mr-xs" />
                       <span class="text-caption text-weight-bold">Restart</span>
                     </div>
                   </q-btn>
@@ -543,11 +551,11 @@ const chartOptions = computed(() => ({
 
 /**
  * Format bytes to human readable
- * Uses base-1000 (GB) instead of base-1024 (GiB) for consistency with user expectations
+ * Uses base-1024 (GiB) to match Windows File Explorer
  */
 function formatBytes(bytes) {
   if (!bytes || bytes < 0 || isNaN(bytes)) return '0 B';
-  const k = 1000;  // Use base-1000 for GB (decimal) instead of base-1024 (GiB binary)
+  const k = 1024;  // Use base-1024 (GiB binary) to match Windows
   const sizes = ['B', 'KB', 'MB', 'GB', 'TB'];
   const i = Math.floor(Math.log(bytes) / Math.log(k));
   return parseFloat((bytes / Math.pow(k, i)).toFixed(1)) + ' ' + sizes[i];
@@ -882,6 +890,13 @@ onUnmounted(() => {
 .disk-item {
   background: #0A0A0A;
   border: 1px solid #333333;
+}
+
+/* Ensure disk icons are visible */
+.disk-item .q-icon {
+  display: flex !important;
+  opacity: 1 !important;
+  visibility: visible !important;
 }
 
 .removable-disk {
