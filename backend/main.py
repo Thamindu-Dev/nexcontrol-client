@@ -933,6 +933,16 @@ class SystemMonitor:
                         "opts": partition.opts
                     }
 
+                    # Determine drive type from mount options
+                    drive_type = "Unknown"
+                    if partition.opts:
+                        opts_lower = partition.opts.lower()
+                        if 'fixed' in opts_lower:
+                            drive_type = "Internal"
+                        elif any(indicator in opts_lower for indicator in ['removable', 'usb', 'cdrom']):
+                            drive_type = "External"
+                    disk_info["drive_type"] = drive_type
+
                     # Add usage info if available
                     if usage:
                         disk_info.update({

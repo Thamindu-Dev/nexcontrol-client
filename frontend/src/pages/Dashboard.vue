@@ -273,7 +273,7 @@
                           {{ formatBytes(disk.used) }} / {{ formatBytes(disk.total) }} used
                         </div>
                         <div class="text-caption text-grey-8">
-                          {{ disk.fstype }} {{ disk.opts ? `(${disk.opts})` : '' }}
+                          {{ disk.fstype }}{{ disk.drive_type ? ` (${disk.drive_type})` : '' }}
                         </div>
                       </div>
                     </div>
