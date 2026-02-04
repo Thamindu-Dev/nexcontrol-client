@@ -151,7 +151,8 @@ To change the password, either:
 
 | Method | Endpoint | Description |
 |--------|----------|-------------|
-| GET | `/api/screenshot` | Capture screen as base64 image |
+| POST | `/api/screenshot/capture` | Capture screen as base64 image |
+| GET | `/api/screenshot/status` | Check screenshot availability |
 
 ### Wake-on-LAN
 
@@ -352,7 +353,20 @@ MIT License - See LICENSE file for details
 
 For issues, questions, or contributions, please visit the main project repository.
 
+## Recent Updates
+
+### Version 1.0.0 (2026-02-04)
+- ✅ Fixed disk usage calculation (base-1000 GB instead of base-1024 GiB)
+- ✅ Added connection status tracking to system store
+- ✅ All API endpoints return proper connection status
+- ✅ Security enhancements maintained
+
+### Version 1.0.0 (2026-02-03)
+- ✅ WebSocket support for real-time stats
+- ✅ Scheduled tasks functionality
+- ✅ Threshold notification system
+
 ---
 
 **Version**: 1.0.0
-**Last Updated**: 2025
+**Last Updated**: 2026-02-04

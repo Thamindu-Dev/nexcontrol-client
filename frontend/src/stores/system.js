@@ -24,6 +24,9 @@ import { wsService, WebSocketState } from '../services/WebSocketService';
 
 export const useSystemStore = defineStore('system', {
   state: () => ({
+    // Connection status
+    isConnected: true,
+
     // System statistics
     stats: {
       cpu: { cpu_percent: 0, cpu_count: 0, cpu_freq_mhz: 0 },
@@ -267,10 +270,12 @@ export const useSystemStore = defineStore('system', {
       try {
         const data = await api.get('/api/stats/all');
         this.stats = data;
+        this.isConnected = true;
         this.updateHistory(data);
       } catch (error) {
         console.error('Failed to fetch stats:', error);
         this.errors.stats = error.message || 'Failed to fetch stats';
+        this.isConnected = false;
       } finally {
         this.loading.stats = false;
       }
@@ -283,8 +288,10 @@ export const useSystemStore = defineStore('system', {
       try {
         const data = await api.get('/api/stats/cpu');
         this.stats.cpu = data;
+        this.isConnected = true;
       } catch (error) {
         console.error('Failed to fetch CPU stats:', error);
+        this.isConnected = false;
       }
     },
 
@@ -295,8 +302,10 @@ export const useSystemStore = defineStore('system', {
       try {
         const data = await api.get('/api/stats/memory');
         this.stats.memory = data;
+        this.isConnected = true;
       } catch (error) {
         console.error('Failed to fetch memory stats:', error);
+        this.isConnected = false;
       }
     },
 
@@ -307,8 +316,10 @@ export const useSystemStore = defineStore('system', {
       try {
         const data = await api.get('/api/stats/disk');
         this.stats.disk = data;
+        this.isConnected = true;
       } catch (error) {
         console.error('Failed to fetch disk stats:', error);
+        this.isConnected = false;
       }
     },
 
@@ -319,8 +330,10 @@ export const useSystemStore = defineStore('system', {
       try {
         const data = await api.get('/api/stats/gpu');
         this.stats.gpu = data;
+        this.isConnected = true;
       } catch (error) {
         console.error('Failed to fetch GPU stats:', error);
+        this.isConnected = false;
       }
     },
 

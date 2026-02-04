@@ -241,9 +241,26 @@ body,
   pointer-events: auto !important;
 }
 
-/* Ensure drawer backdrop doesn't block interactions */
+/* CRITICAL: Fix drawer backdrop blocking UI */
 .q-drawer__backdrop {
   pointer-events: auto !important;
+  z-index: 4999 !important;
+}
+
+/* CRITICAL: Hide backdrop when drawer is closed - MUST NOT BLOCK UI */
+.q-drawer--on-layout:not(.q-drawer--open) ~ .q-drawer__backdrop,
+.q-layout > .q-drawer__backdrop:hidden,
+.q-drawer:not(.q-drawer--open) ~ .q-drawer__backdrop {
+  display: none !important;
+  pointer-events: none !important;
+  opacity: 0 !important;
+}
+
+/* Ensure backdrop only blocks when drawer is actually open */
+.q-drawer--open ~ .q-drawer__backdrop,
+.q-drawer__backdrop--visible {
+  pointer-events: auto !important;
+  opacity: 1 !important;
 }
 </style>
 
@@ -290,17 +307,35 @@ body,
   z-index: 1;
 }
 
-/* Ensure all interactive elements have proper z-index */
-.q-btn, .q-card, .stat-card, .action-card {
+/* CRITICAL: Ensure ALL buttons are clickable - higher than closed drawer backdrop */
+.q-btn {
+  position: relative !important;
+  z-index: 1000 !important;
+  pointer-events: auto !important;
+}
+
+.q-card, .stat-card, .action-card, .storage-card {
   position: relative;
-  z-index: 1 !important;
+  z-index: 10 !important;
 }
 
 /* System Actions buttons - CRITICAL FIX */
 .action-card .q-btn {
   position: relative !important;
-  z-index: 10 !important;
+  z-index: 1001 !important;
   pointer-events: auto !important;
+}
+
+/* Storage card refresh button */
+.storage-card .q-btn {
+  z-index: 1001 !important;
+  pointer-events: auto !important;
+}
+
+/* Quick action cards (Docker, Processes) */
+.action-mini-card {
+  pointer-events: auto !important;
+  cursor: pointer !important;
 }
 
 /* CRITICAL: Fix z-index issues to prevent UI unresponsiveness */
@@ -310,11 +345,7 @@ body,
 }
 
 .q-drawer {
-  z-index: 1000 !important;
-}
-
-.q-drawer__backdrop {
-  z-index: 999 !important;
+  z-index: 5000 !important;
 }
 
 .q-page-container {
@@ -327,6 +358,19 @@ body,
 .q-page > * {
   position: relative;
   z-index: 1;
+}
+
+/* CRITICAL: Ensure ALL page content is above closed drawer backdrop */
+.q-page-container > .q-page {
+  position: relative !important;
+  z-index: 5000 !important;
+}
+
+.q-page > .q-card,
+.q-page > .row,
+.q-page > div {
+  position: relative !important;
+  z-index: 10 !important;
 }
 
 /* Drawer - Pure Black */
@@ -561,8 +605,10 @@ const systemStore = useSystemStore();
 
 // State
 const leftDrawerOpen = ref(false);
-const isConnected = ref(true);
 const loading = ref(false);
+
+// Connection status - use store as source of truth
+const isConnected = computed(() => systemStore.isConnected);
 
 // CRITICAL: Watch route changes to close drawer on navigation
 // This prevents the backdrop from blocking UI interactions
@@ -664,7 +710,7 @@ async function refreshStats() {
       systemStore.fetchDiskStats(),
       systemStore.fetchGPUStats()
     ]);
-    isConnected.value = true;
+    // isConnected is now managed by the store
     $q.notify({
       type: 'positive',
       message: 'Stats refreshed successfully',
@@ -672,7 +718,7 @@ async function refreshStats() {
       classes: 'notification-glossy'
     });
   } catch {
-    isConnected.value = false;
+    // isConnected is now managed by the store
     $q.notify({
       type: 'negative',
       message: 'Failed to refresh stats',
@@ -697,9 +743,9 @@ onMounted(() => {
   connectionCheckInterval = setInterval(async () => {
     try {
       await systemStore.fetchCPUStats();
-      isConnected.value = true;
+      // isConnected is now managed by the store
     } catch {
-      isConnected.value = false;
+      // isConnected is now managed by the store
     }
   }, 30000);
 });

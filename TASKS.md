@@ -18,7 +18,8 @@
 | **Android App** | ✅ Complete | 100% |
 | **UI Modernization** | ✅ Complete | 100% |
 | **GitHub Actions** | ✅ Fixed | 100% |
-| **Documentation** | 🟡 Partial | 80% |
+| **Bug Fixes** | ✅ Complete | 100% |
+| **Documentation** | 🟡 Partial | 85% |
 
 ---
 
@@ -503,7 +504,60 @@ npm run cap:build android # Opens Android Studio
 
 ---
 
-## Recent Updates (2026-02)
+## Recent Updates (2026-02-04)
+
+### Bug Fixes ✅
+
+#### Dashboard Layout Fixes ✅
+- [x] **Header Layout Asymmetry:** Reduced left padding (`q-pl-none q-pr-md`) to move Menu button closer to screen edge
+- [x] **Equal Height Cards:** Applied flexbox stretch to all stat cards (Memory, GPU, Disk, Temp) for perfect bottom alignment
+- [x] **Action Cards:** Fixed Docker/Processes cards to have equal heights using `full-height` class
+- [x] **Text Shortening:** Changed "GPU data not available" to "N/A" for cleaner layout
+- [x] **Grid System:** Added `.stats-row` and `.actions-row` CSS with `align-items: stretch`
+
+#### Connection Status Fixes ✅
+- [x] **Unified Status Source:** Both header badge and footer now use `systemStore.isConnected` as single source of truth
+- [x] **Store Integration:** Added `isConnected: true` state to system store (`stores/system.js`)
+- [x] **Real-time Updates:** Connection status updates automatically on API success/failure
+- [x] **MainLayout Fix:** Changed local `isConnected` ref to computed property using store
+- [x] **API Handlers:** Updated `fetchStats()`, `fetchCPUStats()`, `fetchMemoryStats()`, `fetchDiskStats()`, `fetchGPUStats()` to set connection status
+
+#### Data Updates ✅
+- [x] **2-Second Polling:** Changed `refreshInterval` from 5000ms to 2000ms for more responsive real-time updates
+- [x] **Auto-Refresh:** Proper cleanup with `onUnmounted` to prevent memory leaks
+- [x] **Visibility Handling:** Auto-refresh pauses when tab is hidden, resumes when visible
+
+#### Disk Usage Calculation ✅
+- [x] **Base-1000 Conversion:** Changed `formatBytes()` from base-1024 (GiB) to base-1000 (GB) to match OS display standards
+- [x] **Safety Checks:** Added validation for negative/NaN values
+- [x] **Formula Update:** Changed `const k = 1024` to `const k = 1000`
+
+#### Ghost Overlay Prevention ✅
+- [x] **Z-Index Protection:** Added comprehensive z-index management to all cards and interactive elements
+- [x] **Drawer Backdrop:** Fixed backdrop blocking UI when drawer is closed (multiple selectors)
+- [x] **Pointer Events:** Made progress bars and decorative elements non-blocking (`pointer-events: none`)
+- [x] **Page Content:** Elevated page content above closed drawer backdrop (z-index: 5000)
+- [x] **Status Badge:** Made status badge non-interactive
+- [x] **Cards:** All stat cards, action cards, storage cards have `z-index: 10` and `pointer-events: auto`
+
+### File Changes Summary
+
+**Dashboard.vue:**
+- Line 14: Changed padding class
+- Lines 87, 114, 156, 183: Added `full-height` class to stat cards
+- Lines 441, 465: Added `full-height` class to action cards
+- Line 148: Changed GPU text to "N/A"
+- Lines 1089-1105: Added CSS for equal height rows
+
+**MainLayout.vue:**
+- Line 607: Changed `isConnected` from ref to computed property
+- Lines 224-260: Consolidated drawer backdrop rules
+
+**stores/system.js:**
+- Line 24: Added `isConnected: true` state
+- Lines 270-276, 283-325: Updated fetch functions to set connection status
+
+## Recent Updates (2026-02-03)
 
 ### UI Modernization ✅
 - **Login.vue:** Glassmorphism design, animated background, gradient buttons
@@ -547,19 +601,30 @@ npm run cap:build android # Opens Android Studio
 - 3 stores
 - 1 modernized layout
 - All ESLint errors fixed
+- All layout issues resolved
+- All connection status issues fixed
+- Ghost overlay issues prevented
 
 **Mobile:** ✅ Complete
 - iOS: Configured, GitHub Actions working
 - Android: Configured with permissions
 - Native features: Frameworks ready
 
+**Recent Bug Fixes (2026-02-04):**
+- ✅ Header layout asymmetry fixed
+- ✅ Equal height cards implemented
+- ✅ Connection status unified
+- ✅ 2-second polling enabled
+- ✅ Disk usage calculation corrected (GB vs GiB)
+- ✅ Ghost overlay issues prevented
+
 **Next Steps:**
-1. ⏳ Complete documentation (iOS_Config_Note.md, troubleshooting)
+1. ⏳ Complete documentation (troubleshooting guide, user manual)
 2. ⏳ Security testing (network disconnect, invalid inputs)
 3. ⏳ Performance testing (heavy load scenarios)
-4. 📋 Optional enhancements (WebSocket client, multi-PC support)
+4. 📋 Optional enhancements (multi-PC support, file manager)
 
 ---
 
-**Last Updated:** 2026-02-03
-**Project Completion:** ~95% (Core features complete, documentation in progress)
+**Last Updated:** 2026-02-04
+**Project Completion:** ~97% (Core features complete, bug fixes done, documentation in progress)

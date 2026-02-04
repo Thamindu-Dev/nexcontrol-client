@@ -11,7 +11,7 @@
 -->
 <template>
   <div class="dashboard-page">
-    <q-page padding class="q-px-md">
+    <q-page padding class="q-pl-none q-pr-md">
       <!-- Header: Menu + Title -->
       <div class="row items-center q-mb-lg header-section">
         <q-btn
@@ -81,10 +81,10 @@
       </div>
 
       <!-- Row 2: 2x2 Grid Stats (Memory, GPU, Disk, Temperature) -->
-      <div class="row q-col-gutter-md q-mb-lg">
+      <div class="row q-col-gutter-md q-mb-lg stats-row">
         <!-- Memory Card -->
         <div class="col-6">
-          <q-card class="stat-card" flat bordered>
+          <q-card class="stat-card full-height" flat bordered>
             <q-card-section class="q-pa-md">
               <div class="row items-center q-mb-sm">
                 <q-icon name="storage" size="20px" color="grey-5" class="q-mr-xs" />
@@ -111,7 +111,7 @@
 
         <!-- GPU Usage Card -->
         <div class="col-6">
-          <q-card class="stat-card" flat bordered>
+          <q-card class="stat-card full-height" flat bordered>
             <q-card-section class="q-pa-md">
               <div class="row items-center q-mb-sm">
                 <q-icon name="videogame_asset" size="20px" color="grey-5" class="q-mr-xs" />
@@ -145,7 +145,7 @@
                 class="custom-progress q-mb-sm"
               />
               <div class="text-caption text-grey-7">
-                {{ stats.gpu?.name || 'GPU data not available' }}
+                {{ stats.gpu?.name || 'N/A' }}
               </div>
             </q-card-section>
           </q-card>
@@ -153,7 +153,7 @@
 
         <!-- Primary Disk Card -->
         <div class="col-6">
-          <q-card class="stat-card" flat bordered>
+          <q-card class="stat-card full-height" flat bordered>
             <q-card-section class="q-pa-md">
               <div class="row items-center q-mb-sm">
                 <q-icon name="folder_open" size="20px" color="grey-5" class="q-mr-xs" />
@@ -180,7 +180,7 @@
 
         <!-- Temperature Card -->
         <div class="col-6">
-          <q-card class="stat-card" flat bordered>
+          <q-card class="stat-card full-height" flat bordered>
             <q-card-section class="q-pa-md">
               <div class="row items-center q-mb-sm">
                 <q-icon name="thermostat" size="20px" color="grey-5" class="q-mr-xs" />
@@ -435,13 +435,13 @@
       </div>
 
       <!-- Quick Actions -->
-      <div class="row q-col-gutter-md q-mb-lg">
+      <div class="row q-col-gutter-md q-mb-lg actions-row">
         <!-- Docker Card -->
         <div class="col-6">
           <q-card
             clickable
             @click="goToDocker"
-            class="action-mini-card"
+            class="action-mini-card full-height"
             flat
             bordered
           >
@@ -462,7 +462,7 @@
           <q-card
             clickable
             @click="goToProcesses"
-            class="action-mini-card"
+            class="action-mini-card full-height"
             flat
             bordered
           >
@@ -505,7 +505,7 @@ const authStore = useAuthStore();
 const stats = computed(() => systemStore.stats);
 const powerActionLoading = ref(false);
 const autoRefresh = ref(false);
-const refreshInterval = ref(5000);
+const refreshInterval = ref(2000);
 let refreshTimer = null;
 
 // Multi-disk state
@@ -601,10 +601,11 @@ function toggleDrawer() {
 
 /**
  * Format bytes to human readable
+ * Uses base-1000 (GB) instead of base-1024 (GiB) for consistency with user expectations
  */
 function formatBytes(bytes) {
-  if (!bytes) return '0 B';
-  const k = 1024;
+  if (!bytes || bytes < 0 || isNaN(bytes)) return '0 B';
+  const k = 1000;  // Use base-1000 for GB (decimal) instead of base-1024 (GiB binary)
   const sizes = ['B', 'KB', 'MB', 'GB', 'TB'];
   const i = Math.floor(Math.log(bytes) / Math.log(k));
   return parseFloat((bytes / Math.pow(k, i)).toFixed(1)) + ' ' + sizes[i];
@@ -897,10 +898,31 @@ onUnmounted(() => {
   min-height: 100vh;
   position: relative;
   background: #000000;
+  z-index: 1 !important;
 }
 
 .stats-container {
   width: 100%;
+  position: relative !important;
+  z-index: 10 !important;
+}
+
+/* CRITICAL: Ensure all cards and their children are clickable */
+.dashboard-page > *,
+.stats-container > *,
+.dashboard-page .q-card,
+.dashboard-page .q-btn,
+.dashboard-page .q-card-section {
+  position: relative !important;
+  z-index: 10 !important;
+}
+
+/* CRITICAL: Ensure all header buttons are clickable */
+.header-menu-btn,
+.logout-btn {
+  position: relative !important;
+  z-index: 1001 !important;
+  pointer-events: auto !important;
 }
 
 .header-menu-btn {
@@ -935,6 +957,9 @@ onUnmounted(() => {
   border: 1px solid #333333;
   border-radius: 12px;
   transition: all 0.2s ease;
+  position: relative !important;
+  z-index: 10 !important;
+  pointer-events: auto !important;
 }
 
 .stat-card:hover,
@@ -948,6 +973,14 @@ onUnmounted(() => {
 .disk-item {
   background: #0A0A0A;
   border: 1px solid #333333;
+  position: relative !important;
+  z-index: 10 !important;
+  pointer-events: auto !important;
+}
+
+.disk-item > * {
+  position: relative !important;
+  z-index: 10 !important;
 }
 
 .removable-disk {
@@ -975,6 +1008,11 @@ onUnmounted(() => {
 .status-badge {
   background: rgba(10, 10, 10, 0.8);
   border: 1px solid #333333;
+  pointer-events: none !important;
+}
+
+.status-badge > * {
+  pointer-events: none !important;
 }
 
 /* Header Buttons */
@@ -988,6 +1026,7 @@ onUnmounted(() => {
 /* Circular Progress */
 .circular-progress {
   transition: all 0.2s ease;
+  pointer-events: none !important;
 }
 
 .circular-progress:hover {
@@ -1003,6 +1042,10 @@ onUnmounted(() => {
   transition: all 0.3s ease;
 }
 
+.custom-progress {
+  pointer-events: none !important;
+}
+
 /* Power Buttons - Outlined Style */
 .power-btn-outlined {
   background: transparent !important;
@@ -1010,6 +1053,9 @@ onUnmounted(() => {
   border: 1px solid #FFFFFF !important;
   border-radius: 8px;
   transition: all 0.2s ease;
+  position: relative !important;
+  z-index: 1001 !important;
+  pointer-events: auto !important;
 }
 
 .power-btn-outlined:hover {
@@ -1029,6 +1075,32 @@ onUnmounted(() => {
   background: transparent !important;
 }
 
+/* CRITICAL: Ensure action card buttons are clickable */
+.action-card .q-btn {
+  position: relative !important;
+  z-index: 1001 !important;
+  pointer-events: auto !important;
+}
+
+/* CRITICAL: Storage refresh button */
+.storage-card .q-btn {
+  position: relative !important;
+  z-index: 1001 !important;
+  pointer-events: auto !important;
+}
+
+/* CRITICAL: Quick action cards (Docker, Processes) */
+.action-mini-card {
+  position: relative !important;
+  z-index: 1000 !important;
+  pointer-events: auto !important;
+  cursor: pointer !important;
+}
+
+.action-mini-card > * {
+  pointer-events: none !important;
+}
+
 /* Notification Styling */
 :deep(.notification-glossy) {
   background: #0A0A0A !important;
@@ -1046,6 +1118,24 @@ onUnmounted(() => {
 /* Cyan Accent Color Helper */
 .text-cyan {
   color: #22d3ee;
+}
+
+/* Stats Row - Equal height cards */
+.stats-row {
+  align-items: stretch;
+}
+
+.stats-row .col-6 {
+  display: flex;
+}
+
+/* Actions Row - Equal height cards */
+.actions-row {
+  align-items: stretch;
+}
+
+.actions-row .col-6 {
+  display: flex;
 }
 
 /* Responsive adjustments */
@@ -1081,5 +1171,19 @@ onUnmounted(() => {
   .dashboard-page {
     min-height: 100vh;
   }
+}
+
+/* CRITICAL: Prevent any ghost overlays from blocking clicks */
+.dashboard-page .q-card > * {
+  pointer-events: auto !important;
+}
+
+/* Ensure all child elements are clickable */
+.dashboard-page .row,
+.dashboard-page .col,
+.dashboard-page .col-6,
+.dashboard-page .col-12 {
+  position: relative !important;
+  z-index: 10 !important;
 }
 </style>

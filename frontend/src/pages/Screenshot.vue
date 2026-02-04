@@ -154,8 +154,8 @@ async function captureScreenshot() {
   try {
     const result = await api.post('/api/screenshot/capture', {});
 
-    if (result.success && result.screenshot) {
-      screenshotData.value = result.screenshot;
+    if (result.success && result.image) {
+      screenshotData.value = result.image;
 
       $q.notify({
         type: 'positive',
@@ -170,6 +170,7 @@ async function captureScreenshot() {
       });
     }
   } catch (error) {
+    console.error('[Screenshot] Capture error:', error);
     $q.notify({
       type: 'negative',
       message: error.message || 'Failed to capture screenshot',
@@ -236,15 +237,38 @@ onMounted(async () => {
 
 <style scoped>
 /* OLED Theme Styles */
+.q-page {
+  position: relative !important;
+  z-index: 10 !important;
+}
+
 .q-card {
   background: #000000;
   border: 1px solid #333333;
   border-radius: 12px;
+  position: relative !important;
+  z-index: 10 !important;
+}
+
+/* CRITICAL: Ensure all buttons are clickable */
+.q-btn {
+  position: relative !important;
+  z-index: 1001 !important;
+  pointer-events: auto !important;
 }
 
 .screenshot-image {
   border: 1px solid #333333;
   border-radius: 8px;
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.5);
+}
+
+/* CRITICAL: Ensure all interactive elements are clickable */
+.q-page > *,
+.q-page .row,
+.q-page .col,
+.q-page .col-12 {
+  position: relative !important;
+  z-index: 10 !important;
 }
 </style>
