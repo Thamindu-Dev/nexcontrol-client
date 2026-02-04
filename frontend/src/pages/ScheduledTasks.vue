@@ -11,15 +11,6 @@
 -->
 <template>
   <q-page padding>
-    <div class="row q-mb-md">
-      <div class="col-12">
-        <div class="text-h5">Scheduled Tasks</div>
-        <div class="text-caption text-grey">
-          Schedule power management tasks for specific times
-        </div>
-      </div>
-    </div>
-
     <!-- Create New Task Button -->
     <div class="row q-mb-md">
       <div class="col-12">

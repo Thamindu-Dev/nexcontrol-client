@@ -11,19 +11,14 @@
 -->
 <template>
   <q-page padding>
+    <!-- Screenshot Status Bar -->
     <div class="row q-mb-md">
-      <div class="col-12">
-        <div class="row items-center q-gutter-sm">
-          <div class="text-h5">Screenshot</div>
-          <q-space />
-          <q-badge
-            :color="screenshotAvailable ? 'positive' : 'negative'"
-            rounded
-          >
-            {{ screenshotAvailable ? 'Available' : 'Unavailable' }}
-          </q-badge>
-        </div>
-      </div>
+      <q-badge
+        :color="screenshotAvailable ? 'positive' : 'negative'"
+        rounded
+      >
+        {{ screenshotAvailable ? 'Available' : 'Unavailable' }}
+      </q-badge>
     </div>
 
     <!-- Screenshot Unavailable Message -->

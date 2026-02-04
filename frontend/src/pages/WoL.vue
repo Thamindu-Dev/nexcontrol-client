@@ -11,15 +11,6 @@
 -->
 <template>
   <q-page padding>
-    <div class="row q-mb-md">
-      <div class="col-12">
-        <div class="text-h5">Wake on LAN</div>
-        <div class="text-caption text-grey q-mt-sm">
-          Send Wake-on-LAN magic packets to remotely power on PCs on your local network.
-        </div>
-      </div>
-    </div>
-
     <!-- Add Target Device -->
     <div class="row q-mb-md">
       <div class="col-12 col-md-6">

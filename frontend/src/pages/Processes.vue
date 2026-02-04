@@ -11,25 +11,6 @@
 -->
 <template>
   <q-page padding>
-    <div class="row q-mb-md">
-      <div class="col-12">
-        <div class="row items-center q-gutter-sm">
-          <div class="text-h5">Process Manager</div>
-          <q-space />
-          <q-btn
-            flat
-            round
-            dense
-            icon="refresh"
-            :loading="loading.processes"
-            @click="refreshProcesses"
-          >
-            Refresh
-          </q-btn>
-        </div>
-      </div>
-    </div>
-
     <!-- Sort Controls -->
     <div class="row q-mb-md">
       <div class="col-12">

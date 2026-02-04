@@ -12,34 +12,6 @@
 <template>
   <div class="dashboard-page">
     <q-page padding class="q-pl-none q-pr-md">
-      <!-- Header: Menu + Title -->
-      <div class="row items-center q-mb-lg header-section" style="padding-left: 20px;">
-        <q-btn
-          flat
-          round
-          dense
-          icon="menu"
-          class="header-menu-btn"
-          @click="toggleDrawer"
-        />
-        <div class="text-h4 text-weight-bold text-white q-ml-sm">
-          Dashboard
-        </div>
-        <q-space />
-        <!-- Polling/Realtime Toggle Switch -->
-        <div class="row items-center q-gutter-sm">
-          <span class="text-caption text-grey-6">Polling</span>
-          <q-toggle
-            :model-value="systemStore.webSocketEnabled"
-            @update:model-value="toggleWebSocket"
-            color="cyan"
-            keep-emphasis
-            size="md"
-          />
-          <span class="text-caption text-cyan">Real-time</span>
-        </div>
-      </div>
-
       <!-- System Stats Cards - CENTERED -->
       <div class="stats-container">
         <!-- Row 1: CPU Card (Full Width) -->
@@ -570,14 +542,6 @@ const chartOptions = computed(() => ({
 }));
 
 /**
- * Toggle drawer (menu)
- */
-function toggleDrawer() {
-  // Dispatch custom event that MainLayout can listen to
-  window.dispatchEvent(new CustomEvent('toggle-drawer'));
-}
-
-/**
  * Format bytes to human readable
  * Uses base-1000 (GB) instead of base-1024 (GiB) for consistency with user expectations
  */
@@ -797,17 +761,6 @@ function goToDocker() {
 
 function goToProcesses() {
   router.push('/processes');
-}
-
-/**
- * Toggle WebSocket real-time mode
- */
-function toggleWebSocket() {
-  if (systemStore.webSocketEnabled) {
-    systemStore.disableWebSocket();
-  } else {
-    systemStore.enableWebSocket();
-  }
 }
 
 /**

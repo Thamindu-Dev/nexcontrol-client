@@ -11,12 +11,6 @@
 -->
 <template>
   <q-page padding>
-    <div class="row q-mb-md">
-      <div class="col-12">
-        <div class="text-h5">Settings</div>
-      </div>
-    </div>
-
     <!-- Server Configuration -->
     <div class="row q-mb-md">
       <div class="col-12 col-md-6">

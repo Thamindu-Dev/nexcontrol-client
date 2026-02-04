@@ -10,9 +10,52 @@
   ==============================================================================
 -->
 <template>
-  <q-layout view="lHh Lpr lFf">
-    <!-- Dynamic Island / Notch Spacer - CRITICAL for iOS 
-    <div class="dynamic-island-spacer"></div> -->
+  <q-layout view="hHh lpR fFf">
+    <!-- Static Global Header -->
+    <q-header elevated class="bg-black text-white global-header" style="padding-top: env(safe-area-inset-top) !important; padding-top: constant(safe-area-inset-top) !important;">
+      <q-toolbar style="min-height: 60px;">
+        <!-- Left Side: Navigation Control -->
+        <q-btn
+          v-if="isDashboard"
+          flat
+          round
+          dense
+          icon="menu"
+          @click="toggleDrawer"
+          class="header-btn"
+        />
+        <q-btn
+          v-else
+          flat
+          round
+          dense
+          icon="arrow_back"
+          @click="goBack"
+          class="header-btn"
+        />
+
+        <!-- Center: Page Title -->
+        <q-toolbar-title class="app-title">
+          {{ currentPageTitle }}
+        </q-toolbar-title>
+
+        <!-- Right Side: Actions -->
+        <template v-if="isDashboard">
+          <!-- Polling/Realtime Toggle (Dashboard only) -->
+          <div class="row items-center q-gutter-sm">
+            <span class="text-caption text-grey-6">Polling</span>
+            <q-toggle
+              :model-value="systemStore.webSocketEnabled"
+              @update:model-value="toggleWebSocket"
+              color="cyan"
+              keep-emphasis
+              size="md"
+            />
+            <span class="text-caption text-cyan">Real-time</span>
+          </div>
+        </template>
+      </q-toolbar>
+    </q-header>
 
     <!-- Drawer -->
     <q-drawer
@@ -146,7 +189,7 @@
     </q-drawer>
 
     <!-- Page Container -->
-    <q-page-container class="bg-black">
+    <q-page-container class="bg-black" style="padding-top: 20px !important; padding-bottom: 20px !important;">
       <router-view />
     </q-page-container>
 
@@ -177,8 +220,13 @@
 
 <!-- Global styles for iOS Safe Area and Overflow (not scoped) -->
 <style>
-/* iOS Safe Area Support */
-.q-layout > .q-header {
+/* iOS Safe Area Support - CRITICAL FIX */
+.q-header.global-header {
+  padding-top: constant(safe-area-inset-top) !important;
+  padding-top: env(safe-area-inset-top) !important;
+}
+
+.q-header.global-header .q-toolbar {
   padding-top: constant(safe-area-inset-top) !important;
   padding-top: env(safe-area-inset-top) !important;
 }
@@ -272,8 +320,7 @@ a,
 .q-card.clickable,
 [role="button"],
 [onclick],
-[class*="btn"],
-.q-icon {
+[class*="btn"] {
   position: relative !important;
   z-index: 999999 !important;
   pointer-events: auto !important;
@@ -345,63 +392,27 @@ body, #q-app, .q-layout, .q-page, .q-page > * {
 </style>
 
 <style scoped>
-/* Dynamic Island / Notch Spacer - REDUCED by 5px */
-.dynamic-island-spacer {
-  width: 100%;
-  height: max(35px, calc(env(safe-area-inset-top) - 5px));
-  position: fixed;
-  top: 0;
-  left: 0;
-  z-index: 50; /* Reduced from 9999 - was blocking clicks! */
-  background: transparent;
-  pointer-events: none !important; /* CRITICAL: Don't block clicks */
+/* Global Header Styles */
+.global-header {
+  border-bottom: 1px solid #333333;
+  min-height: 60px;
 }
 
-/* Adjust page container to account for reduced spacer */
-.q-page-container {
-  padding-top: max(40px, calc(env(safe-area-inset-top))) !important;
-  position: relative;
-  z-index: 100;
+.global-header .q-toolbar {
+  min-height: 60px;
+  padding-top: env(safe-area-inset-top);
+  padding-top: constant(safe-area-inset-top);
 }
 
-/* CRITICAL: Simplified z-index hierarchy */
-.q-layout {
-  position: relative;
-  z-index: 1;
+.header-btn {
+  min-width: 44px;
+  min-height: 44px;
 }
 
-.q-drawer {
-  position: fixed !important;
-  z-index: 10001 !important;
-  pointer-events: auto !important;
-}
-
-.q-drawer * {
-  pointer-events: auto !important;
-}
-
-.q-page {
-  position: relative;
-  z-index: 200; /* Above spacer, below drawer */
-}
-
-/* CRITICAL: ALL page content must be clickable */
-.q-page .q-btn {
-  position: relative !important;
-  z-index: 1000 !important;
-  pointer-events: auto !important;
-}
-
-.q-page .q-card {
-  position: relative !important;
-  z-index: 10 !important;
-  pointer-events: auto !important;
-}
-
-.q-page .q-card .q-btn {
-  position: relative !important;
-  z-index: 1001 !important;
-  pointer-events: auto !important;
+.app-title {
+  font-size: 1.25rem;
+  font-weight: 600;
+  letter-spacing: 0.5px;
 }
 
 /* Drawer - Pure Black */
@@ -568,7 +579,7 @@ body, #q-app, .q-layout, .q-page, .q-page > * {
 /* Responsive Adjustments */
 @media (max-width: 575.98px) {
   .app-title {
-    font-size: 0.95rem !important;
+    font-size: 1rem !important;
   }
 
   .logo-wrapper {
@@ -662,6 +673,26 @@ const loading = ref(false);
 // Connection status - use store as source of truth
 const isConnected = computed(() => systemStore.isConnected);
 
+// Check if current route is dashboard
+const isDashboard = computed(() => $route.path === '/dashboard');
+
+// Page title mapping
+const pageTitleMap = {
+  '/dashboard': 'Dashboard',
+  '/docker': 'Docker Manager',
+  '/processes': 'Process Manager',
+  '/screenshot': 'Screenshot',
+  '/wol': 'Wake on LAN',
+  '/threshold-alerts': 'Threshold Alerts',
+  '/scheduled-tasks': 'Scheduled Tasks',
+  '/settings': 'Settings'
+};
+
+// Current page title
+const currentPageTitle = computed(() => {
+  return pageTitleMap[$route.path] || 'NexControl';
+});
+
 // CRITICAL: Watch route changes to close drawer on navigation
 // This prevents the backdrop from blocking UI interactions
 watch(() => $route.path, () => {
@@ -722,6 +753,31 @@ const serverInfo = computed(() => {
   }
   return 'Not configured';
 });
+
+/**
+ * Toggle drawer
+ */
+function toggleDrawer() {
+  leftDrawerOpen.value = !leftDrawerOpen.value;
+}
+
+/**
+ * Go back to previous page
+ */
+function goBack() {
+  router.back();
+}
+
+/**
+ * Toggle WebSocket real-time mode
+ */
+function toggleWebSocket() {
+  if (systemStore.webSocketEnabled) {
+    systemStore.disableWebSocket();
+  } else {
+    systemStore.enableWebSocket();
+  }
+}
 
 /**
  * Logout

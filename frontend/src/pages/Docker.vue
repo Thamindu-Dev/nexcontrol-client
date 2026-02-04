@@ -11,29 +11,22 @@
 -->
 <template>
   <q-page padding>
-    <div class="row q-mb-md">
-      <div class="col-12">
-        <div class="row items-center q-gutter-sm">
-          <div class="text-h5">Docker Manager</div>
-          <q-space />
-          <q-btn
-            flat
-            round
-            dense
-            icon="refresh"
-            :loading="loading.containers"
-            @click="refreshContainers"
-          >
-            Refresh
-          </q-btn>
-          <q-badge
-            :color="dockerAvailable ? 'positive' : 'negative'"
-            rounded
-          >
-            {{ dockerAvailable ? 'Docker Running' : 'Docker Unavailable' }}
-          </q-badge>
-        </div>
-      </div>
+    <!-- Docker Status Bar -->
+    <div class="row q-mb-md q-gutter-sm">
+      <q-btn
+        flat
+        round
+        dense
+        icon="refresh"
+        :loading="loading.containers"
+        @click="refreshContainers"
+      />
+      <q-badge
+        :color="dockerAvailable ? 'positive' : 'negative'"
+        rounded
+      >
+        {{ dockerAvailable ? 'Docker Running' : 'Docker Unavailable' }}
+      </q-badge>
     </div>
 
     <!-- No Docker Available Message -->
