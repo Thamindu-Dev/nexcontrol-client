@@ -434,7 +434,7 @@
           <q-card
             clickable
             @click="goToDocker"
-            class="action-mini-card full-height"
+            class="action-mini-card full-height full-width"
             flat
             bordered
           >
@@ -459,7 +459,7 @@
           <q-card
             clickable
             @click="goToProcesses"
-            class="action-mini-card full-height"
+            class="action-mini-card full-height full-width"
             flat
             bordered
           >
