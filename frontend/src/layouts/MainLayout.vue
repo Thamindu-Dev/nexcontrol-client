@@ -225,20 +225,20 @@
 <!-- Global styles for iOS Safe Area and Overflow (not scoped) -->
 <style>
 /* iOS Safe Area Support - CRITICAL FIX */
-.q-header.global-header {
+/* .q-header.global-header {
   padding-top: constant(safe-area-inset-top) !important;
   padding-top: env(safe-area-inset-top) !important;
-}
+} */
 
-.q-header.global-header .q-toolbar {
+/* .q-header.global-header .q-toolbar {
   padding-top: constant(safe-area-inset-top) !important;
   padding-top: env(safe-area-inset-top) !important;
-}
+} */
 
-.q-layout > .q-footer {
+/* .q-layout > .q-footer {
   padding-bottom: constant(safe-area-inset-bottom) !important;
   padding-bottom: env(safe-area-inset-bottom) !important;
-}
+} */
 
 .q-layout > .q-page-container {
   padding-left: constant(safe-area-inset-left) !important;

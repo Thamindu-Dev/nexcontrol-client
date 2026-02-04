@@ -36,7 +36,7 @@
                 filled
                 dense
                 hint="e.g., 192.168.1.100 or localhost"
-                :rules="[val => !!val || 'Host is required']"
+                :rules="[validateHost]"
               />
 
               <q-input
@@ -45,7 +45,7 @@
                 type="number"
                 filled
                 dense
-                :rules="[val => val > 0 || 'Port is required']"
+                :rules="[validatePort]"
               />
 
               <div class="row q-mt-md">
@@ -83,16 +83,25 @@
               :label="keyLabel"
               filled
               dense
-              type="password"
+              :type="showKey ? 'text' : 'password'"
               :hint="keyHint"
-              :readonly="settingsStore.hasKey"
+              :rules="[validateEncryptionKey]"
               @focus="clearExistingKey"
             >
               <template v-slot:prepend>
                 <q-icon
-                  :name="settingsStore.hasKey ? 'lock' : 'lock_open'"
-                  :color="settingsStore.hasKey ? 'green' : 'grey-5'"
+                  :name="hasKey ? 'lock' : 'lock_open'"
+                  :color="hasKey ? 'green' : 'grey-5'"
                 />
+              </template>
+              <template v-slot:append>
+                <q-icon
+                  :name="showKey ? 'visibility_off' : 'visibility'"
+                  class="cursor-pointer"
+                  @click="showKey = !showKey"
+                >
+                  <q-tooltip>{{ showKey ? 'Hide key' : 'Show key' }}</q-tooltip>
+                </q-icon>
               </template>
             </q-input>
 
@@ -183,13 +192,13 @@
           <q-card-section class="q-pa-md">
             <div class="q-gutter-y-md">
               <q-toggle
-                v-model="preferences.autoConnect"
+                v-model="localPrefs.autoConnect"
                 label="Auto-connect on start"
                 color="white"
               />
 
               <q-select
-                v-model="preferences.refreshInterval"
+                v-model="localPrefs.refreshInterval"
                 :options="refreshOptions"
                 label="Polling Interval"
                 filled
@@ -230,50 +239,68 @@
               class="q-mb-md"
             />
 
-            <q-slider
-              v-model="thresholdConfig.cpu_threshold"
-              :min="0"
-              :max="100"
-              :step="5"
-              label
-              label-always
-              color="grey-7"
-              class="q-mb-md"
-            >
-              <template v-slot:label>
-                CPU Alert: {{ thresholdConfig.cpu_threshold }}%
-              </template>
-            </q-slider>
+            <!-- CPU Threshold Slider -->
+            <div class="q-mb-md">
+              <div class="text-subtitle2 text-white q-mb-sm">
+                <q-icon name="memory" size="16px" class="q-mr-xs" />
+                CPU Usage Alert (%)
+              </div>
+              <q-slider
+                v-model="thresholdConfig.cpu_threshold"
+                :min="0"
+                :max="100"
+                :step="5"
+                label
+                label-always
+                color="grey-7"
+              >
+                <template v-slot:label>
+                  {{ thresholdConfig.cpu_threshold }}%
+                </template>
+              </q-slider>
+            </div>
 
-            <q-slider
-              v-model="thresholdConfig.memory_threshold"
-              :min="0"
-              :max="100"
-              :step="5"
-              label
-              label-always
-              color="grey-7"
-              class="q-mb-md"
-            >
-              <template v-slot:label>
-                Memory Alert: {{ thresholdConfig.memory_threshold }}%
-              </template>
-            </q-slider>
+            <!-- RAM/Memory Threshold Slider -->
+            <div class="q-mb-md">
+              <div class="text-subtitle2 text-white q-mb-sm">
+                <q-icon name="storage" size="16px" class="q-mr-xs" />
+                RAM Usage Alert (%)
+              </div>
+              <q-slider
+                v-model="thresholdConfig.memory_threshold"
+                :min="0"
+                :max="100"
+                :step="5"
+                label
+                label-always
+                color="grey-7"
+              >
+                <template v-slot:label>
+                  {{ thresholdConfig.memory_threshold }}%
+                </template>
+              </q-slider>
+            </div>
 
-            <q-slider
-              v-model="thresholdConfig.disk_threshold"
-              :min="0"
-              :max="100"
-              :step="5"
-              label
-              label-always
-              color="grey-8"
-              class="q-mb-md"
-            >
-              <template v-slot:label>
-                Disk Alert: {{ thresholdConfig.disk_threshold }}%
-              </template>
-            </q-slider>
+            <!-- Disk Threshold Slider -->
+            <div class="q-mb-md">
+              <div class="text-subtitle2 text-white q-mb-sm">
+                <q-icon name="folder" size="16px" class="q-mr-xs" />
+                Disk Usage Alert (%)
+              </div>
+              <q-slider
+                v-model="thresholdConfig.disk_threshold"
+                :min="0"
+                :max="100"
+                :step="5"
+                label
+                label-always
+                color="grey-8"
+              >
+                <template v-slot:label>
+                  {{ thresholdConfig.disk_threshold }}%
+                </template>
+              </q-slider>
+            </div>
 
             <q-btn
               @click="saveThresholdConfig"
@@ -336,14 +363,16 @@
 </template>
 
 <script setup>
-import { ref, reactive, computed, onMounted, watch } from 'vue';
+import { ref, reactive, computed, onMounted, watch, nextTick } from 'vue';
 import { useRouter } from 'vue-router';
 import { useQuasar } from 'quasar';
+import { storeToRefs } from 'pinia';
 import { useAuthStore } from '../stores/auth';
 import { useSettingsStore } from '../stores/settings';
 import { useSystemStore } from '../stores/system';
 import { getItem, setItem } from '../services/SecureStorage';
 import apiService from '../services/ApiService';
+import { secureNotify } from '../services/NotifyService';
 
 // Define component name for ESLint multi-word rule
 defineOptions({
@@ -358,6 +387,16 @@ const authStore = useAuthStore();
 const settingsStore = useSettingsStore();
 const systemStore = useSystemStore();
 
+// Use storeToRefs to preserve reactivity when destructuring
+// Only destructure state and getters, NOT actions
+const { hasKey, hasEncryptionKey, server, preferences } = storeToRefs(settingsStore);
+
+// Keep actions as direct references (not from storeToRefs)
+const { updateServer, setEncryptionKey: setStoreEncryptionKey, updatePreferences, loadSettings, resetSettings } = settingsStore;
+
+// Constants for write-only security
+const KEY_PLACEHOLDER = '**********'; // 10 asterisks as placeholder
+
 // State
 const serverConfig = reactive({
   protocol: 'http',
@@ -368,32 +407,33 @@ const serverConfig = reactive({
 const encryptionKey = ref('');
 const savingServer = ref(false);
 const savingKey = ref(false);
+const showKey = ref(false); // Controls password visibility toggle
 
 // Watch encryption key state changes for debugging
-watch(() => settingsStore.hasEncryptionKey, (hasKey) => {
+watch(hasEncryptionKey, (hasKey) => {
   console.log('[SettingsPage] Encryption key state changed:', hasKey);
 }, { immediate: true });
 
-// Computed properties for encryption key field (using store state)
+// Computed properties for encryption key field (using reactive refs from storeToRefs)
 const keyLabel = computed(() => {
-  return settingsStore.hasKey
-    ? 'AES Encryption Key (******** - Saved for security)'
+  return hasKey.value
+    ? 'AES Encryption Key (Key Saved - Hidden for Security)'
     : 'AES Encryption Key (32+ characters)';
 });
 
 const keyHint = computed(() => {
-  if (settingsStore.hasKey) {
-    return 'Click to enter new key (existing key hidden)';
+  if (hasKey.value) {
+    return 'Current key hidden. Clear field to enter a new one';
   }
   return 'Must be at least 32 characters';
 });
 
 const saveKeyLabel = computed(() => {
-  return settingsStore.hasKey ? 'Update Encryption Key' : 'Save Encryption Key';
+  return hasKey.value ? 'Update Encryption Key' : 'Save Encryption Key';
 });
 
-// Preferences
-const preferences = reactive({
+// Local preferences state (avoid shadowing store's preferences ref)
+const localPrefs = reactive({
   autoConnect: false,
   refreshInterval: 5000
 });
@@ -405,16 +445,71 @@ const refreshOptions = [
   { label: '30 seconds', value: 30000 }
 ];
 
-// Watch polling interval changes and update system store
-watch(() => preferences.refreshInterval, (newInterval) => {
-  console.log('[Settings] Polling interval changed to:', newInterval, 'ms');
+// ============================================================
+// VALIDATION RULES (Quasar form validation)
+// ============================================================
 
-  // Update system store's polling interval
-  systemStore.setRefreshInterval(newInterval);
+/**
+ * Validate host address (IP or hostname)
+ */
+const validateHost = (val) => {
+  if (!val) return 'Host is required';
 
-  // Save the new interval to settings
-  settingsStore.updatePreferences({ refreshInterval: newInterval });
-}, { immediate: false });
+  // Check for localhost
+  if (val === 'localhost') return true;
+
+  // Check for IPv4 pattern
+  const ipv4Pattern = /^(\d{1,3})\.(\d{1,3})\.(\d{1,3})\.(\d{1,3})$/;
+  if (ipv4Pattern.test(val)) {
+    const parts = val.split('.');
+    if (parts.every(part => parseInt(part) >= 0 && parseInt(part) <= 255)) {
+      return true;
+    }
+  }
+
+  // Check for hostname pattern (basic check)
+  const hostnamePattern = /^([a-zA-Z0-9]([a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?\.)*[a-zA-Z0-9]([a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?$/;
+  if (hostnamePattern.test(val)) return true;
+
+  return 'Invalid IP address or hostname';
+};
+
+/**
+ * Validate port number (1-65535)
+ */
+const validatePort = (val) => {
+  if (!val || val <= 0) return 'Port is required';
+  if (val < 1 || val > 65535) return 'Port must be between 1 and 65535';
+  return true;
+};
+
+/**
+ * Validate encryption key length
+ */
+const validateEncryptionKey = (val) => {
+  if (!val) return true; // Empty is allowed (means no change)
+  if (val === KEY_PLACEHOLDER) return true; // Placeholder is allowed
+  if (val.length < 32) return 'Key must be at least 32 characters';
+  return true;
+};
+
+// Watch polling interval changes and update system store (with proper async handling)
+watch(
+  () => localPrefs.refreshInterval,
+  async (newInterval, oldInterval) => {
+    console.log(`[Settings] Polling interval changing from ${oldInterval} to ${newInterval}ms`);
+
+    // Wait for next tick to ensure DOM updates
+    await nextTick();
+
+    // Update system store's polling interval
+    systemStore.setRefreshInterval(newInterval);
+
+    // Save the new interval to settings
+    updatePreferences({ refreshInterval: newInterval });
+  },
+  { flush: 'post' }
+);
 
 // Dark Mode
 const darkMode = ref($q.dark.isActive);
@@ -440,11 +535,7 @@ async function toggleDarkMode(value) {
   await setItem('nexcontrol_auto_dark_mode', 'false');
   autoDarkMode.value = false;
 
-  $q.notify({
-    type: 'info',
-    message: value ? 'Dark mode enabled' : 'Dark mode disabled',
-    position: 'top'
-  });
+  secureNotify.info($q, value ? 'Dark mode enabled' : 'Dark mode disabled');
 }
 
 /**
@@ -459,22 +550,14 @@ async function toggleAutoDarkMode(value) {
     await setItem('nexcontrol_auto_dark_mode', 'true');
     await setItem('nexcontrol_dark_mode', 'false');
 
-    $q.notify({
-      type: 'info',
-      message: 'Following system theme',
-      position: 'top'
-    });
+    secureNotify.info($q, 'Following system theme');
   } else {
     // Switch back to manual mode
     $q.dark.set(darkMode.value);
     await setItem('nexcontrol_auto_dark_mode', 'false');
     await setItem('nexcontrol_dark_mode', darkMode.value ? 'true' : 'false');
 
-    $q.notify({
-      type: 'info',
-      message: 'Manual theme mode',
-      position: 'top'
-    });
+    secureNotify.info($q, 'Manual theme mode');
   }
 }
 
@@ -504,18 +587,10 @@ async function saveThresholdConfig() {
     });
 
     if (response.success) {
-      $q.notify({
-        type: 'positive',
-        message: 'Threshold settings saved',
-        position: 'top'
-      });
+      secureNotify.success($q, 'Threshold settings saved');
     }
   } catch (error) {
-    $q.notify({
-      type: 'negative',
-      message: error.message || 'Failed to save threshold settings',
-      position: 'top'
-    });
+    secureNotify.error($q, error.message || 'Failed to save threshold settings');
   } finally {
     savingThreshold.value = false;
   }
@@ -585,56 +660,36 @@ function isValidPort(port) {
 async function saveServerConfig() {
   // Validate host/IP
   if (!serverConfig.host || !serverConfig.host.trim()) {
-    $q.notify({
-      type: 'negative',
-      message: 'Server IP address is required',
-      position: 'top'
-    })
+    secureNotify.error($q, 'Server IP address is required');
     return
   }
 
   // SECURITY: Validate IP is private/local only (prevent SSRF)
   if (!isValidIP(serverConfig.host)) {
-    $q.notify({
-      type: 'negative',
-      message: 'Invalid IP address. Must be a local network IP (192.168.x.x, 10.x.x.x, 172.16-31.x.x, or localhost)',
-      position: 'top'
-    })
+    secureNotify.error($q, 'Invalid IP address. Must be a local network IP (192.168.x.x, 10.x.x.x, 172.16-31.x.x, or localhost)');
     return
   }
 
   // Validate port
   if (!isValidPort(serverConfig.port)) {
-    $q.notify({
-      type: 'negative',
-      message: 'Invalid port. Must be between 1 and 65535',
-      position: 'top'
-    })
+    secureNotify.error($q, 'Invalid port. Must be between 1 and 65535');
     return
   }
 
   savingServer.value = true
 
   try {
-    // Update store
-    await settingsStore.updateServer(serverConfig)
+    // Update store using destructured action
+    await updateServer(serverConfig)
 
     // Update API service base URL
     settingsStore.$patch({
       server: { ...serverConfig }
     })
 
-    $q.notify({
-      type: 'positive',
-      message: 'Server configuration saved',
-      position: 'top'
-    })
+    secureNotify.success($q, 'Server configuration saved');
   } catch (error) {
-    $q.notify({
-      type: 'negative',
-      message: error.message || 'Failed to save server config',
-      position: 'top'
-    })
+    secureNotify.error($q, error.message || 'Failed to save server config');
   } finally {
     savingServer.value = false
   }
@@ -642,56 +697,50 @@ async function saveServerConfig() {
 
 /**
  * Save encryption key (Write-Only Security)
+ * Smart saving logic: Ignores placeholder value, only saves actual new keys
  */
 function saveEncryptionKey() {
   savingKey.value = true;
 
   try {
-    // If input is empty and we have an existing key, don't overwrite
-    if (!encryptionKey.value.trim()) {
-      if (settingsStore.hasKey) {
-        $q.notify({
-          type: 'info',
-          message: 'Key unchanged (empty input)',
-          caption: 'Enter a new key to update',
-          position: 'top'
-        });
+    const trimmedKey = encryptionKey.value.trim();
+
+    // Smart saving: Check if value is placeholder (means existing key, not changed)
+    if (trimmedKey === KEY_PLACEHOLDER) {
+      secureNotify.info($q, 'Settings Saved. (Encryption Key Unchanged)', 'Existing key preserved. Enter new key to update.');
+      savingKey.value = false;
+      return;
+    }
+
+    // If input is empty, treat as "no change" if key exists
+    if (!trimmedKey) {
+      if (hasKey.value) {
+        secureNotify.info($q, 'Settings Saved. (Encryption Key Unchanged)', 'Enter a new key to update the existing one.');
       } else {
-        $q.notify({
-          type: 'negative',
-          message: 'Please enter an encryption key (32+ characters)',
-          position: 'top'
-        });
+        secureNotify.error($q, 'Please enter an encryption key (32+ characters)');
       }
       savingKey.value = false;
       return;
     }
 
-    if (encryptionKey.value.length >= 32) {
-      const success = settingsStore.setEncryptionKey(encryptionKey.value);
+    // Validate key length
+    if (trimmedKey.length < 32) {
+      secureNotify.error($q, 'Key must be at least 32 characters');
+      savingKey.value = false;
+      return;
+    }
 
-      if (success) {
-        $q.notify({
-          type: 'positive',
-          message: settingsStore.hasKey ? 'Encryption key updated' : 'Encryption key saved',
-          position: 'top'
-        });
+    // Save the new key using the destructured action
+    const success = setStoreEncryptionKey(trimmedKey);
 
-        // Clear the input (store state is already updated by setEncryptionKey)
-        encryptionKey.value = '';
-      } else {
-        $q.notify({
-          type: 'negative',
-          message: 'Key must be at least 32 characters',
-          position: 'top'
-        });
-      }
+    if (success) {
+      secureNotify.success($q, 'Settings Saved. (Encryption Key Updated)', 'New encryption key saved to secure storage');
+
+      // Reset to placeholder and hide
+      encryptionKey.value = KEY_PLACEHOLDER;
+      showKey.value = false;
     } else {
-      $q.notify({
-        type: 'negative',
-        message: 'Please enter a valid encryption key (32+ characters)',
-        position: 'top'
-      });
+      secureNotify.error($q, 'Failed to save encryption key');
     }
   } finally {
     savingKey.value = false;
@@ -703,8 +752,8 @@ function saveEncryptionKey() {
  * This allows them to enter a new key
  */
 function clearExistingKey() {
-  if (settingsStore.hasKey && !encryptionKey.value) {
-    // Clear the placeholder state to allow new input
+  if (hasKey.value && encryptionKey.value === KEY_PLACEHOLDER) {
+    // Clear the placeholder to allow new input
     encryptionKey.value = '';
   }
 }
@@ -734,7 +783,7 @@ function resetAllSettings() {
     cancel: true,
     persistent: true
   }).onOk(() => {
-    settingsStore.resetSettings();
+    resetSettings();
 
     // Reset local state
     Object.assign(serverConfig, {
@@ -742,15 +791,12 @@ function resetAllSettings() {
       host: 'localhost',
       port: 8000
     });
-    encryptionKey.value = '';
-    preferences.autoConnect = false;
-    preferences.refreshInterval = 5000;
+    encryptionKey.value = ''; // Will be re-set to placeholder on next mount if key exists
+    showKey.value = false;
+    localPrefs.autoConnect = false;
+    localPrefs.refreshInterval = 5000;
 
-    $q.notify({
-      type: 'info',
-      message: 'All settings reset to default',
-      position: 'top'
-    });
+    secureNotify.info($q, 'All settings reset to default');
   });
 }
 
@@ -758,24 +804,24 @@ function resetAllSettings() {
  * Load settings on mount
  */
 onMounted(async () => {
-  settingsStore.loadSettings();
+  loadSettings();
 
   // Debug: Verify encryption key state from store
   console.log('[SettingsPage] Encryption key state after loadSettings:', {
-    hasKey: settingsStore.hasKey,
-    hasEncryptionKey: settingsStore.hasEncryptionKey
+    hasKey: hasKey.value,
+    hasEncryptionKey: hasEncryptionKey.value
   });
 
-  // Load server config
-  const savedConfig = settingsStore.server;
+  // Load server config using reactive ref
+  const savedConfig = server.value;
   if (savedConfig) {
     Object.assign(serverConfig, { ...savedConfig });
   }
 
-  // Load preferences
-  const savedPrefs = settingsStore.preferences;
+  // Load preferences using reactive ref
+  const savedPrefs = preferences.value;
   if (savedPrefs) {
-    Object.assign(preferences, { ...savedPrefs });
+    Object.assign(localPrefs, { ...savedPrefs });
 
     // Initialize system store with polling interval from settings
     if (systemStore.autoRefresh) {
@@ -805,8 +851,10 @@ onMounted(async () => {
   // Load threshold configuration
   await loadThresholdConfig();
 
-  // Note: Encryption key state is automatically loaded by settingsStore.loadSettings()
-  // The computed properties (keyLabel, keyHint) will react to store state
+  // Set encryption key placeholder if key exists (write-only security)
+  if (hasKey.value) {
+    encryptionKey.value = KEY_PLACEHOLDER;
+  }
 });
 </script>
 

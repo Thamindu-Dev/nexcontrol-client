@@ -391,7 +391,7 @@
                 <q-icon name="show_chart" color="grey-5" size="18px" class="q-mr-sm" />
                 Historical Usage
               </div>
-              <div v-if="systemStore.history.timestamps.length > 0" class="q-pb-sm">
+              <div v-if="hasHistoryData" class="q-pb-sm">
                 <LineChart
                   :data="chartData"
                   :options="chartOptions"
@@ -467,9 +467,11 @@
 import { ref, computed, onMounted, onUnmounted, watch } from 'vue';
 import { useRouter } from 'vue-router';
 import { useQuasar } from 'quasar';
+import { storeToRefs } from 'pinia';
 import { useSystemStore } from '../stores/system';
 import LineChart from '../components/LineChart.vue';
 import api from '../services/ApiService';
+import { secureNotify } from '../services/NotifyService';
 
 // Define component name for ESLint multi-word rule
 defineOptions({
@@ -480,8 +482,10 @@ const router = useRouter();
 const $q = useQuasar();
 const systemStore = useSystemStore();
 
+// Use storeToRefs for reactive store properties (best practice per Pinia docs)
+const { stats, history, loading } = storeToRefs(systemStore);
+
 // State
-const stats = computed(() => systemStore.stats);
 const powerActionLoading = ref(false);
 const autoRefresh = ref(false);
 const refreshInterval = ref(5000); // 5 seconds
@@ -493,29 +497,32 @@ const diskLoading = ref(false);
 
 // Computed
 const loadingState = computed(() => ({
-  stats: systemStore.loading.stats,
+  stats: loading.value.stats,
   disks: diskLoading.value
 }));
+
+// Computed for history timestamps check
+const hasHistoryData = computed(() => history.value.timestamps.length > 0);
 
 // Chart data
 const chartData = computed(() => {
   // CRITICAL: Use shallow copies to prevent infinite recursion with Chart.js
   return {
-    labels: [...systemStore.history.timestamps].map(t => {
+    labels: [...history.value.timestamps].map(t => {
       const date = new Date(t);
       return date.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' });
     }),
     datasets: [
       {
         label: 'CPU %',
-        data: [...systemStore.history.cpu], // Shallow copy prevents reactivity loop
+        data: [...history.value.cpu], // Shallow copy prevents reactivity loop
         borderColor: 'rgb(34, 211, 238)',
         backgroundColor: 'rgba(34, 211, 238, 0.1)',
         tension: 0.4
       },
       {
         label: 'Memory %',
-        data: [...systemStore.history.memory], // Shallow copy prevents reactivity loop
+        data: [...history.value.memory], // Shallow copy prevents reactivity loop
         borderColor: 'rgb(168, 85, 247)',
         backgroundColor: 'rgba(168, 85, 247, 0.1)',
         tension: 0.4
@@ -643,12 +650,7 @@ async function refreshDisks() {
     }
   } catch (error) {
     console.error('[Dashboard] Error refreshing disks:', error);
-    $q.notify({
-      type: 'negative',
-      message: error.message || 'Failed to scan for storage devices',
-      position: 'bottom',
-      classes: 'notification-glossy'
-    });
+    secureNotify.error($q, error.message || 'Failed to scan for storage devices');
   } finally {
     diskLoading.value = false;
   }
@@ -745,20 +747,10 @@ async function executePowerAction(action) {
 
     const result = await api.post(endpoint, payload);
 
-    $q.notify({
-      type: 'positive',
-      message: result.message || `${action} command sent successfully`,
-      position: 'bottom',
-      classes: 'notification-glossy'
-    });
+    secureNotify.success($q, result.message || `${action} command sent successfully`);
   } catch (error) {
     console.error('[Dashboard] Power action error:', error);
-    $q.notify({
-      type: 'negative',
-      message: error.response?.data?.message || error.message || `${action} failed`,
-      position: 'bottom',
-      classes: 'notification-glossy'
-    });
+    secureNotify.error($q, error.response?.data?.message || error.message || `${action} failed`);
   } finally {
     powerActionLoading.value = false;
   }
@@ -815,16 +807,11 @@ function handleVisibilityChange() {
  */
 watch(() => systemStore._lastAlert, (alert) => {
   if (alert && !document.hidden) {
-    $q.notify({
-      type: 'warning',
-      message: `${alert.metric} is at ${alert.value}% (Threshold: ${alert.threshold}%)`,
-      caption: `Threshold exceeded for ${alert.metric}`,
-      position: 'top',
-      timeout: 5000,
-      actions: [
-        { label: 'Dismiss', color: 'white', handler: () => { } }
-      ]
-    });
+    secureNotify.warning(
+      $q,
+      `${alert.metric} is at ${alert.value}% (Threshold: ${alert.threshold}%)`,
+      `Threshold exceeded for ${alert.metric}`
+    );
   }
 }, { deep: true });
 

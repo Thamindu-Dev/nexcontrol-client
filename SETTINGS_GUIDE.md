@@ -191,26 +191,110 @@ different-key-here-xyz
 
 ### How to Generate a Secure Key
 
-#### Option 1: Use Python (Backend)
+#### Option 1: Use the Automated Setup Script (Recommended)
+
+NexControl includes a convenient setup script that generates both the `AES_KEY` and `APP_PASSWORD_HASH` automatically.
+
+**Usage:**
+
+```bash
+# From the project root directory
+python setup_env.py
+```
+
+**What the script does:**
+
+1. ✅ Prompts you to enter a new admin password (with confirmation)
+2. ✅ Generates a secure 32-byte AES key using `secrets.token_urlsafe(32)`
+3. ✅ Hashes your admin password using bcrypt (12 rounds)
+4. ✅ Updates `backend/.env` with the new values
+5. ✅ Preserves all other existing settings in the `.env` file
+6. ✅ Displays the AES_KEY clearly for you to copy to the mobile app
+7. ✅ Offers to delete itself after use (prevents accidental resets)
+
+**Output Example:**
+
+```
+🔧 NexControl Environment Setup
+============================================================
+Target: /path/to/backend/.env
+
+------------------------------------------------------------
+Step 1/2: Admin Password
+------------------------------------------------------------
+This password will be used to login to the NexControl backend.
+Choose a strong password (12+ characters recommended).
+
+Enter new admin password: ********
+Confirm password: ********
+
+------------------------------------------------------------
+Step 2/2: Generate Credentials
+------------------------------------------------------------
+🔄 Generating secure AES_KEY...
+✅ Generated 32-byte AES key
+🔄 Hashing admin password...
+✅ Password hashed (bcrypt, 12 rounds)
+
+------------------------------------------------------------
+Step 3/3: Update .env File
+------------------------------------------------------------
+✅ Updated: /path/to/backend/.env
+
+============================================================
+📱 Copy This Key to Your Mobile App
+============================================================
+
+⚠️  IMPORTANT: Copy this key and enter it in the NexControl
+   mobile app Settings → Encryption Key
+
+   ┌─────────────────────────────────────────────────────┐
+   │ Xy9...generatedKey...3Ab │
+   └─────────────────────────────────────────────────────┘
+
+💡 Tip: You can also find this key in backend/.env file
+   under the 'AES_KEY' variable.
+```
+
+**After running the script:**
+
+1. **Backend**: Restart the backend to load the new credentials
+2. **Frontend**: Copy the displayed `AES_KEY` and paste it in Settings → Encryption Key
+3. **Login**: Use the admin password you just set to login
+
+> 🔒 **Security**: The script offers to delete itself after use to prevent accidental credential resets. You can always recreate it from the repository if needed.
+
+---
+
+#### Option 2: Use Python Manual (Backend)
 
 ```python
 import secrets
 print(secrets.token_urlsafe(32))
 ```
 
-#### Option 2: Use OpenSSL
+#### Option 3: Use OpenSSL
 
 ```bash
 openssl rand -base64 32
 ```
 
-#### Option 3: Use a Password Manager
+#### Option 4: Use a Password Manager
 
 Generate a random 32-character password.
 
 ### Changing the Encryption Key
 
 If you want to change the encryption key:
+
+**Option 1: Use the Setup Script (Recommended)**
+
+1. Run `python setup_env.py` from the project root
+2. Enter a new admin password when prompted
+3. Copy the displayed AES_KEY to your mobile app
+4. Restart the backend to load new credentials
+
+**Option 2: Manual Update**
 
 1. **Backend**: Edit `.env` file and change `AES_KEY`
 2. **Restart Backend**: Stop and restart `main.py`

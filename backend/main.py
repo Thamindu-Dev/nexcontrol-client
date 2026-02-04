@@ -10,6 +10,7 @@ process management, and screenshot capture.
 Architecture:
 - FastAPI for REST API
 - AES-256-GCM for payload encryption
+- Argon2id for password hashing (OWASP/NIST recommended)
 - JWT for authentication
 - Replay attack prevention via timestamps
 - Rate limiting for brute force protection
@@ -93,7 +94,17 @@ from jose import jwt
 from passlib.context import CryptContext
 
 # Password hashing context (must be defined before use)
-pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
+# Using Argon2id - OWASP recommended and NIST approved password hashing algorithm
+# Argon2id provides the best balance between resistance to GPU/ASIC attacks and side-channel attacks
+pwd_context = CryptContext(
+    schemes=["argon2"],
+    deprecated="auto",
+    argon2__time_cost=3,        # Number of iterations
+    argon2__memory_cost=65536,  # 64 MB memory cost (in KiB)
+    argon2__parallelism=4,      # Number of parallel threads
+    argon2__hash_len=32,        # Hash length in bytes
+    argon2__salt_len=16         # Salt length in bytes
+)
 
 # ============================================================
 # CONFIGURATION & CONSTANTS
@@ -101,14 +112,21 @@ pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 
 # Security Configuration - Load from environment with validation
 def get_secret_key() -> bytes:
-    """Get and validate SECRET_KEY from environment"""
+    """
+    Get and validate SECRET_KEY from environment.
+
+    The key is hashed using SHA-256 to ensure consistent length and security.
+    This prevents truncation issues while maintaining key entropy.
+    """
     key = os.getenv("SECRET_KEY")
     if not key:
         logger.warning("SECRET_KEY not set, using insecure default! CHANGE THIS IN PRODUCTION!")
         key = "NexControl-Secret-Key-Change-Me-12345678"
     if len(key) < 32:
         raise ValueError("SECRET_KEY must be at least 32 characters long")
-    return key.encode()[:32]
+    # Hash the key to ensure consistent 32-byte length for HMAC
+    import hashlib
+    return hashlib.sha256(key.encode()).digest()
 
 def get_aes_key() -> bytes:
     """Get and validate AES_KEY from environment"""
@@ -128,7 +146,10 @@ except ValueError as e:
     sys.exit(1)
 
 ALGORITHM = "HS256"
-ACCESS_TOKEN_EXPIRE_MINUTES = 1440  # 24 hours
+
+# JWT Configuration
+ACCESS_TOKEN_EXPIRE_MINUTES = 60  # 1 hour (reduced from 24h for better security)
+JWT_ISSUER = "nexcontrol-server"  # Issuer claim for token validation
 
 # AES Encryption Configuration
 AES_NONCE_LENGTH = 12  # 96-bit nonce for GCM
@@ -160,6 +181,8 @@ OS_TYPE = platform.system()  # 'Windows', 'Linux', 'Darwin'
 logger.info(f"Operating System detected: {OS_TYPE}")
 
 # CORS Configuration - Allow all origins for local network access
+# SECURITY: For production, set specific origins via environment variable
+# Example: ALLOWED_ORIGINS=http://localhost:8080,https://app.example.com
 # Note: When allow_credentials=False, we can use ["*"] to allow all origins
 # For a local network app with JWT auth, we don't need credentials
 ALLOWED_ORIGINS = os.getenv("ALLOWED_ORIGINS", "*").split(",")
@@ -218,15 +241,23 @@ app.state.limiter = limiter
 app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
 
 # CORS Middleware - Configure based on environment
-# IMPORTANT: When allow_origins=["*"], allow_credentials must be False
+# SECURITY: When allow_credentials=False, we can use ["*"] to allow all origins
+# However, for production use, it's recommended to set specific origins via ALLOWED_ORIGINS env var
 # Authentication is handled via JWT tokens in Authorization header, not cookies
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],  # Allow all origins for local network access
+    allow_origins=ALLOWED_ORIGINS if ALLOWED_ORIGINS != ["*"] else ["*"],
     allow_credentials=False,  # Must be False when using wildcard origins
-    allow_methods=["*"],  # Allow all HTTP methods
-    allow_headers=["*"],  # Allow all headers
+    allow_methods=["GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"],  # Explicitly allow common methods
+    allow_headers=[
+        "Authorization",
+        "Content-Type",
+        "X-Encrypted",
+        "X-Timestamp",
+        "X-Request-ID"
+    ],  # Explicitly allow required headers
     max_age=600,  # Cache preflight response for 10 minutes
+    expose_headers=["X-Request-ID"]  # Expose custom headers to browser
 )
 
 # Login attempt tracking (in production, use Redis)
@@ -404,7 +435,7 @@ class SecurityManager:
 
     @staticmethod
     def hash_password(password: str) -> str:
-        """Hash a password using bcrypt"""
+        """Hash a password using Argon2id (OWEF/NSA recommended)"""
         return pwd_context.hash(password)
 
     @staticmethod
@@ -434,11 +465,12 @@ class SecurityManager:
         else:
             expire = datetime.utcnow() + timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)
 
-        # Add unique token ID for revocation capability
+        # Add standard JWT claims for security
         to_encode.update({
             "exp": expire,
             "iat": datetime.utcnow(),
-            "jti": secrets.token_hex(16)  # JWT ID for potential revocation
+            "jti": secrets.token_hex(16),  # JWT ID for potential revocation
+            "iss": JWT_ISSUER             # Issuer claim for validation
         })
         encoded_jwt = jwt.encode(to_encode, SECRET_KEY, algorithm=ALGORITHM)
         return encoded_jwt
@@ -458,13 +490,24 @@ class SecurityManager:
             HTTPException: If token is invalid or expired
         """
         try:
-            payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
+            payload = jwt.decode(
+                token,
+                SECRET_KEY,
+                algorithms=[ALGORITHM],
+                issuer=JWT_ISSUER
+            )
             return payload
         except jose.exceptions.ExpiredSignatureError:
             logger.warning("Expired token attempt detected")
             raise HTTPException(
                 status_code=status.HTTP_401_UNAUTHORIZED,
                 detail="Token has expired"
+            )
+        except jose.exceptions.InvalidIssuerError:
+            logger.warning("Invalid token issuer detected")
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail="Invalid token issuer"
             )
         except jose.exceptions.JWTError as e:
             logger.warning(f"Invalid token attempt: {str(e)[:100]}")  # Don't log full error
