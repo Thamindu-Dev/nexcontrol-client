@@ -11,6 +11,7 @@
  * - caption for additional context
  * - progress bar for long operations
  * - position consistency
+ * - Prevents duplicate security error notifications
  *
  * Usage:
  *   import { secureNotify } from '@/services/NotifyService';
@@ -18,6 +19,10 @@
  *   secureNotify.error('Failed to save', 'Invalid input');
  * ============================================================
  */
+
+// Track last security notification time to prevent duplicates
+let lastSecurityNotificationTime = 0;
+const SECURITY_NOTIFICATION_DEBOUNCE = 3000; // 3 seconds
 
 /**
  * Default notification options
@@ -102,6 +107,21 @@ export const secureNotify = {
    * @param {string} caption - Optional caption with details
    */
   error: ($q, message, caption = null) => {
+    // Check if this is a security error and prevent duplicate notifications
+    const isSecurityError = message &&
+      (message.toLowerCase().includes('security key') ||
+       message.toLowerCase().includes('encryption key') ||
+       message.toLowerCase().includes('aes key'));
+
+    if (isSecurityError) {
+      const now = Date.now();
+      if (now - lastSecurityNotificationTime < SECURITY_NOTIFICATION_DEBOUNCE) {
+        console.log('[NotifyService] Skipping duplicate security notification');
+        return; // Skip duplicate security error
+      }
+      lastSecurityNotificationTime = now;
+    }
+
     createNotify($q, 'negative', message, caption ? { caption } : {});
   },
 

@@ -412,13 +412,17 @@ async function handleLogin() {
   } catch (error) {
     console.error('[Login] Error:', error);
     loginError.value = error.message || 'Connection failed. Check server settings.';
-    Notify.create({
-      type: 'negative',
-      message: loginError.value,
-      position: 'top',
-      timeout: 3000,
-      classes: 'notification-glossy'
-    });
+
+    // Skip notification for security errors (already shown by showSecurityAlert)
+    if (!error.isSecurityError) {
+      Notify.create({
+        type: 'negative',
+        message: loginError.value,
+        position: 'top',
+        timeout: 3000,
+        classes: 'notification-glossy'
+      });
+    }
   } finally {
     loading.value = false;
   }

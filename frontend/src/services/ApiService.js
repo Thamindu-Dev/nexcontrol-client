@@ -51,12 +51,24 @@ function hasEncryptionKey() {
   return !!(key && key.length >= 32);
 }
 
+// Track last security notification time to prevent duplicates
+let lastSecurityNotificationTime = 0;
+const SECURITY_NOTIFICATION_DEBOUNCE = 3000; // 3 seconds
+
 /**
  * Show security notification and redirect to settings
  * This is a fallback when Quasar is not available
  */
 function showSecurityAlert(message) {
   console.error('[Security] ' + message);
+
+  // Check if we recently showed a security notification to prevent duplicates
+  const now = Date.now();
+  if (now - lastSecurityNotificationTime < SECURITY_NOTIFICATION_DEBOUNCE) {
+    console.log('[Security] Skipping duplicate security notification');
+    return; // Skip duplicate
+  }
+  lastSecurityNotificationTime = now;
 
   // Try to use Quasar notify if available
   if (window.Quasar && window.Quasar.Notify) {
@@ -209,17 +221,22 @@ const api = {
       // PRE-FLIGHT SECURITY CHECK
       // ============================================
       // Check for encryption key before making any request
-      // Skip check for login/register endpoints
+      // Skip check for login/register/test endpoints (these don't require encryption)
       const skipSecurityCheck = [
         '/api/auth/login',
         '/api/auth/register',
-        '/api/auth/refresh'
+        '/api/auth/refresh',
+        '/api/test/connection',
+        '/api/test/echo'
       ].some(path => endpoint.includes(path));
 
       if (!skipSecurityCheck && !hasEncryptionKey()) {
         console.warn('[Security] Blocking request - No AES key configured:', endpoint);
         showSecurityAlert('⚠️ Security Key Missing. Please configure it in Settings.');
-        throw new Error('Security key missing. Please configure encryption key in Settings.');
+        // Throw a special error type that can be identified to prevent duplicate notifications
+        const error = new Error('Security key missing. Please configure encryption key in Settings.');
+        error.isSecurityError = true; // Mark as security error
+        throw error;
       }
       // ============================================
 
