@@ -254,7 +254,12 @@ export const useSystemStore = defineStore('system', {
           }
         ]
       };
-    }
+    },
+
+    /**
+     * Get WebSocket service instance
+     */
+    wsService: () => wsService
   },
 
   actions: {
@@ -539,6 +544,13 @@ export const useSystemStore = defineStore('system', {
           };
           // Pass data directly to updateHistory for immediate processing
           this.updateHistory(data);
+        },
+
+        onThresholdAlert: (data) => {
+          // Handle threshold alerts from WebSocket
+          console.log('[System] Threshold alert received:', data);
+          // Emit a Vue event that components can listen to
+          this.$patch?.({ _lastAlert: data });
         }
       };
 
@@ -547,6 +559,7 @@ export const useSystemStore = defineStore('system', {
       wsService.on('disconnected', this._wsEventHandlers.onDisconnected);
       wsService.on('error', this._wsEventHandlers.onError);
       wsService.on('stats', this._wsEventHandlers.onStats);
+      wsService.on('threshold_alert', this._wsEventHandlers.onThresholdAlert);
     },
 
     /**
@@ -558,6 +571,7 @@ export const useSystemStore = defineStore('system', {
         wsService.off('disconnected', this._wsEventHandlers.onDisconnected);
         wsService.off('error', this._wsEventHandlers.onError);
         wsService.off('stats', this._wsEventHandlers.onStats);
+        wsService.off('threshold_alert', this._wsEventHandlers.onThresholdAlert);
         this._wsEventHandlers = null;
       }
     },

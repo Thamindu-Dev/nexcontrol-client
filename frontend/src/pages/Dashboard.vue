@@ -26,7 +26,26 @@
           Dashboard
         </div>
         <q-space />
-        <div class="status-badge q-px-sm q-py-xs rounded-borders">
+        <!-- WebSocket Status & Toggle -->
+        <div class="row q-gutter-xs">
+          <div class="status-badge q-px-sm q-py-xs rounded-borders">
+            <q-icon :name="wsStatusIcon" :color="wsStatusColor" size="14px" class="q-mr-xs" />
+            <span class="text-caption text-white">{{ wsStatusText }}</span>
+          </div>
+          <q-btn
+            flat
+            round
+            dense
+            :icon="systemStore.webSocketEnabled ? 'wifi' : 'wifi_off'"
+            :color="systemStore.webSocketEnabled ? 'cyan' : 'grey-6'"
+            size="sm"
+            class="ws-toggle-btn"
+            @click="toggleWebSocket"
+          >
+            <q-tooltip>{{ systemStore.webSocketEnabled ? 'Disable real-time' : 'Enable real-time' }}</q-tooltip>
+          </q-btn>
+        </div>
+        <div class="status-badge q-px-sm q-py-xs rounded-borders q-ml-sm">
           <q-icon :name="serverStatusIcon" :color="serverStatusColor" size="16px" class="q-mr-xs" />
           <span class="text-caption text-white">{{ serverStatusText }}</span>
         </div>
@@ -81,10 +100,10 @@
       </div>
 
       <!-- Row 2: 2x2 Grid Stats (Memory, GPU, Disk, Temperature) -->
-      <div class="row q-col-gutter-md q-mb-lg stats-row">
+      <div class="row q-col-gutter-md q-mb-lg stats-row equal-height-row">
         <!-- Memory Card -->
         <div class="col-6">
-          <q-card class="stat-card full-height" flat bordered>
+          <q-card class="stat-card stat-card-equal" flat bordered>
             <q-card-section class="q-pa-md">
               <div class="row items-center q-mb-sm">
                 <q-icon name="storage" size="20px" color="grey-5" class="q-mr-xs" />
@@ -111,7 +130,7 @@
 
         <!-- GPU Usage Card -->
         <div class="col-6">
-          <q-card class="stat-card full-height" flat bordered>
+          <q-card class="stat-card stat-card-equal" flat bordered>
             <q-card-section class="q-pa-md">
               <div class="row items-center q-mb-sm">
                 <q-icon name="videogame_asset" size="20px" color="grey-5" class="q-mr-xs" />
@@ -153,7 +172,7 @@
 
         <!-- Primary Disk Card -->
         <div class="col-6">
-          <q-card class="stat-card full-height" flat bordered>
+          <q-card class="stat-card stat-card-equal" flat bordered>
             <q-card-section class="q-pa-md">
               <div class="row items-center q-mb-sm">
                 <q-icon name="folder_open" size="20px" color="grey-5" class="q-mr-xs" />
@@ -180,7 +199,7 @@
 
         <!-- Temperature Card -->
         <div class="col-6">
-          <q-card class="stat-card full-height" flat bordered>
+          <q-card class="stat-card stat-card-equal" flat bordered>
             <q-card-section class="q-pa-md">
               <div class="row items-center q-mb-sm">
                 <q-icon name="thermostat" size="20px" color="grey-5" class="q-mr-xs" />
@@ -207,7 +226,7 @@
       </div>
 
       <!-- All Storage Devices (USB, Partitions, etc.) -->
-      <div class="row q-col-gutter-md q-mb-lg">
+      <div class="row q-col-gutter-md q-mb-sm">
         <div class="col-12">
           <q-card class="storage-card" flat bordered>
             <q-card-section class="q-pa-md">
@@ -321,7 +340,7 @@
       </div>
 
       <!-- System Actions - 2x2 Grid - CRITICAL: Ensure clickable -->
-      <div class="row q-col-gutter-md q-mb-lg">
+      <div class="row q-col-gutter-md q-mb-sm">
         <div class="col-12">
           <q-card class="action-card" flat bordered>
             <q-card-section class="q-pa-md">
@@ -410,7 +429,7 @@
       </div>
 
       <!-- Historical Charts -->
-      <div class="row q-col-gutter-md q-mb-lg">
+      <div class="row q-col-gutter-md q-mb-sm">
         <div class="col-12">
           <q-card class="chart-card" flat bordered>
             <q-card-section class="q-pa-md">
@@ -535,6 +554,34 @@ const serverStatusColor = computed(() => {
 
 const serverStatusText = computed(() => {
   return systemStore.isConnected ? 'Connected' : 'Disconnected';
+});
+
+// WebSocket status
+const wsStatusIcon = computed(() => {
+  switch (systemStore.webSocketState) {
+    case 'connected': return 'signal_wifi_4_bar';
+    case 'connecting': return 'sync';
+    case 'error': return 'error';
+    default: return 'signal_wifi_off';
+  }
+});
+
+const wsStatusColor = computed(() => {
+  switch (systemStore.webSocketState) {
+    case 'connected': return 'cyan';
+    case 'connecting': return 'orange';
+    case 'error': return 'negative';
+    default: return 'grey-7';
+  }
+});
+
+const wsStatusText = computed(() => {
+  switch (systemStore.webSocketState) {
+    case 'connected': return 'Real-time';
+    case 'connecting': return 'Connecting...';
+    case 'error': return 'Error';
+    default: return 'Polling';
+  }
 });
 
 // Chart data
@@ -838,6 +885,27 @@ function goToProcesses() {
 }
 
 /**
+ * Toggle WebSocket real-time mode
+ */
+function toggleWebSocket() {
+  if (systemStore.webSocketEnabled) {
+    systemStore.disableWebSocket();
+    $q.notify({
+      type: 'info',
+      message: 'Switched to polling mode',
+      position: 'top'
+    });
+  } else {
+    systemStore.enableWebSocket();
+    $q.notify({
+      type: 'positive',
+      message: 'Real-time mode enabled',
+      position: 'top'
+    });
+  }
+}
+
+/**
  * Start auto-refresh
  */
 function startAutoRefresh() {
@@ -919,7 +987,8 @@ onUnmounted(() => {
 
 /* CRITICAL: Ensure all header buttons are clickable */
 .header-menu-btn,
-.logout-btn {
+.logout-btn,
+.ws-toggle-btn {
   position: relative !important;
   z-index: 1001 !important;
   pointer-events: auto !important;
@@ -943,6 +1012,16 @@ onUnmounted(() => {
 
 .logout-btn:hover {
   background: rgba(239, 68, 68, 0.1);
+}
+
+.ws-toggle-btn {
+  color: #22d3ee;
+  background: rgba(10, 10, 10, 0.8);
+  border: 1px solid rgba(34, 211, 238, 0.3);
+}
+
+.ws-toggle-btn:hover {
+  background: rgba(34, 211, 238, 0.1);
 }
 
 /* Cards - Pure Black with Subtle Border */
@@ -1123,6 +1202,32 @@ onUnmounted(() => {
 /* Stats Row - Equal height cards */
 .stats-row {
   align-items: stretch;
+}
+
+/* CRITICAL: Equal height grid - force all 4 cards to same height */
+.equal-height-row {
+  display: flex;
+  flex-wrap: wrap;
+}
+
+.equal-height-row .col-6 {
+  display: flex;
+  flex-direction: column;
+}
+
+.stat-card-equal {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  min-height: 140px;
+  justify-content: space-between;
+}
+
+.stat-card-equal .q-card-section {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  flex: 1;
 }
 
 .stats-row .col-6 {

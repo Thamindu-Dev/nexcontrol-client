@@ -56,6 +56,11 @@ const routes = [
         meta: { requiresAuth: true }
       },
       {
+        path: 'threshold-alerts',
+        component: () => import('pages/ThresholdAlerts.vue'),
+        meta: { requiresAuth: true }
+      },
+      {
         path: 'settings',
         component: () => import('pages/Settings.vue'),
         meta: { requiresAuth: true }

@@ -649,6 +649,12 @@ const navigationLinks = [
     link: '/wol'
   },
   {
+    title: 'Threshold Alerts',
+    caption: 'System Alerts',
+    icon: 'notifications',
+    link: '/threshold-alerts'
+  },
+  {
     title: 'Scheduled Tasks',
     caption: 'Schedule power actions',
     icon: 'schedule',

@@ -82,6 +82,9 @@ class WebSocketService {
           // Emit based on message type
           if (data.type === 'stats_update') {
             this._emit('stats', data.data);
+          } else if (data.type === 'threshold_alert') {
+            // Threshold alert notification
+            this._emit('threshold_alert', data.data);
           } else if (data.type === 'pong') {
             this._emit('pong');
           } else {

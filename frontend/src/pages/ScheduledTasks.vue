@@ -62,6 +62,16 @@
               <div class="col-auto">
                 <div class="row q-gutter-xs">
                   <q-btn
+                    color="grey-8"
+                    icon="edit"
+                    round
+                    flat
+                    size="sm"
+                    @click="openEditDialog(task)"
+                  >
+                    <q-tooltip>Edit task</q-tooltip>
+                  </q-btn>
+                  <q-btn
                     :color="task.enabled ? 'grey-7' : 'grey-6'"
                     :icon="task.enabled ? 'pause' : 'play_arrow'"
                     round
@@ -168,6 +178,69 @@
         </q-card-section>
       </q-card>
     </q-dialog>
+
+    <!-- Edit Task Dialog -->
+    <q-dialog v-model="showEditDialog">
+      <q-card style="min-width: 350px">
+        <q-card-section>
+          <div class="text-h6">Edit Scheduled Task</div>
+        </q-card-section>
+
+        <q-card-section>
+          <q-form @submit="updateTask" class="q-gutter-md">
+            <q-input
+              v-model="editingTask.name"
+              label="Task Name"
+              filled
+              dense
+              hint="e.g., Nightly Shutdown"
+              :rules="[val => !!val || 'Name is required']"
+            />
+
+            <q-select
+              v-model="editingTask.action"
+              :options="actionOptions"
+              label="Action"
+              filled
+              dense
+              emit-value
+              map-options
+              :rules="[val => !!val || 'Action is required']"
+            />
+
+            <q-input
+              v-model="editingTask.scheduled_time"
+              label="Scheduled Time"
+              type="datetime-local"
+              filled
+              dense
+              :rules="[val => !!val || 'Time is required']"
+            />
+
+            <div class="row q-mt-md">
+              <div class="col-6 q-pr-sm">
+                <q-btn
+                  flat
+                  label="Cancel"
+                  class="full-width"
+                  @click="closeEditDialog"
+                />
+              </div>
+              <div class="col-6 q-pl-sm">
+                <q-btn
+                  type="submit"
+                  outline
+                  color="white"
+                  label="Save"
+                  class="full-width"
+                  :loading="updating"
+                />
+              </div>
+            </div>
+          </q-form>
+        </q-card-section>
+      </q-card>
+    </q-dialog>
   </q-page>
 </template>
 
@@ -186,10 +259,20 @@ const $q = useQuasar();
 // State
 const tasks = ref([]);
 const showCreateDialog = ref(false);
+const showEditDialog = ref(false);
 const creating = ref(false);
+const updating = ref(false);
 
 // New task form
 const newTask = reactive({
+  name: '',
+  action: 'shutdown',
+  scheduled_time: ''
+});
+
+// Editing task form
+const editingTask = reactive({
+  id: null,
   name: '',
   action: 'shutdown',
   scheduled_time: ''
@@ -332,6 +415,94 @@ async function deleteTask(taskId) {
       position: 'top'
     });
   }
+}
+
+/**
+ * Open edit dialog with task data
+ */
+async function openEditDialog(task) {
+  try {
+    // Fetch full task details from backend
+    const response = await apiService.get(`/api/schedule/${task.id}`);
+
+    if (response.success && response.task) {
+      const taskData = response.task;
+
+      // Convert ISO datetime to datetime-local format for input
+      const date = new Date(taskData.scheduled_time);
+      // Adjust for timezone offset
+      const offset = date.getTimezoneOffset() * 60000;
+      const localISOTime = new Date(date.getTime() - offset).toISOString().slice(0, 16);
+
+      editingTask.id = taskData.id;
+      editingTask.name = taskData.name;
+      editingTask.action = taskData.action;
+      editingTask.scheduled_time = localISOTime;
+
+      showEditDialog.value = true;
+    }
+  } catch (error) {
+    $q.notify({
+      type: 'negative',
+      message: error.message || 'Failed to load task details',
+      position: 'top'
+    });
+  }
+}
+
+/**
+ * Close edit dialog and reset form
+ */
+function closeEditDialog() {
+  showEditDialog.value = false;
+  resetEditForm();
+}
+
+/**
+ * Update an existing task
+ */
+async function updateTask() {
+  updating.value = true;
+
+  try {
+    // Convert datetime-local to ISO format
+    const isoTime = new Date(editingTask.scheduled_time).toISOString();
+
+    const response = await apiService.put(`/api/schedule/${editingTask.id}`, {
+      name: editingTask.name,
+      action: editingTask.action,
+      scheduled_time: isoTime
+    });
+
+    if (response.success) {
+      $q.notify({
+        type: 'positive',
+        message: 'Task updated successfully',
+        position: 'top'
+      });
+
+      closeEditDialog();
+      await loadTasks();
+    }
+  } catch (error) {
+    $q.notify({
+      type: 'negative',
+      message: error.message || 'Failed to update task',
+      position: 'top'
+    });
+  } finally {
+    updating.value = false;
+  }
+}
+
+/**
+ * Reset the edit form
+ */
+function resetEditForm() {
+  editingTask.id = null;
+  editingTask.name = '';
+  editingTask.action = 'shutdown';
+  editingTask.scheduled_time = '';
 }
 
 /**
