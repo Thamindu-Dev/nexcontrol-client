@@ -203,16 +203,25 @@
         </q-card>
       </div>
 
-      <!-- Threshold Notifications -->
+      <!-- Threshold Configuration -->
       <div class="col-12 col-md-6">
         <q-card>
           <q-card-section>
-            <div class="text-h6">Threshold Alerts</div>
+            <div class="text-h6">Threshold Configuration</div>
           </q-card-section>
 
           <q-card-section>
             <div class="text-caption text-grey q-mb-md">
-              Configure alerts when system resources exceed thresholds.
+              Configure alert thresholds for system resources.
+              <q-btn
+                flat
+                dense
+                color="cyan"
+                icon="open_in_new"
+                label="View Alerts"
+                to="/threshold-alerts"
+                class="q-ml-sm"
+              />
             </div>
 
             <q-toggle
@@ -436,7 +445,7 @@ async function toggleAutoDarkMode(value) {
   }
 }
 
-// Threshold Notifications
+// Threshold Configuration
 const thresholdConfig = reactive({
   enabled: true,
   cpu_threshold: 80,
@@ -454,6 +463,8 @@ const thresholdMarkers = [
 
 /**
  * Save threshold configuration
+ * This saves the threshold LEVELS (when to trigger alerts)
+ * View actual alerts at /threshold-alerts
  */
 async function saveThresholdConfig() {
   savingThreshold.value = true;
