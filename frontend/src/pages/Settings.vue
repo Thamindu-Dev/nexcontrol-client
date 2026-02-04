@@ -19,8 +19,8 @@
             <div class="text-h6">Server Configuration</div>
           </q-card-section>
 
-          <q-card-section>
-            <q-form @submit="saveServerConfig" class="q-gutter-md">
+          <q-card-section class="q-pa-md">
+            <q-form @submit="saveServerConfig" class="q-gutter-y-md">
               <q-input
                 v-model="serverConfig.protocol"
                 label="Protocol"
@@ -52,7 +52,9 @@
                 <div class="col-12">
                   <q-btn
                     type="submit"
-                    color="white"
+                    color="cyan"
+                    text-color="black"
+                    unelevated
                     class="full-width"
                     label="Save Server Config"
                     :loading="savingServer"
@@ -71,7 +73,7 @@
             <div class="text-h6">Encryption Key</div>
           </q-card-section>
 
-          <q-card-section>
+          <q-card-section class="q-pa-md">
             <div class="text-caption text-grey q-mb-sm">
               This key must match the backend's AES_KEY for encryption/decryption to work.
             </div>
@@ -97,7 +99,9 @@
               <div class="col-12">
                 <q-btn
                   @click="saveEncryptionKey"
-                  color="grey-7"
+                  color="cyan"
+                  text-color="black"
+                  unelevated
                   class="full-width"
                   :loading="savingKey"
                   label="Save Encryption Key"
@@ -117,7 +121,7 @@
             <div class="text-h6">Appearance</div>
           </q-card-section>
 
-          <q-card-section>
+          <q-card-section class="q-pa-md">
             <div class="text-caption text-grey q-mb-md">
               Customize the app's appearance and theme.
             </div>
@@ -175,8 +179,8 @@
             <div class="text-h6">Preferences</div>
           </q-card-section>
 
-          <q-card-section>
-            <div class="q-gutter-md">
+          <q-card-section class="q-pa-md">
+            <div class="q-gutter-y-md">
               <q-toggle
                 v-model="preferences.autoConnect"
                 label="Auto-connect on start"
@@ -204,7 +208,7 @@
             <div class="text-h6">Threshold Configuration</div>
           </q-card-section>
 
-          <q-card-section>
+          <q-card-section class="q-pa-md">
             <div class="text-caption text-grey q-mb-md">
               Configure alert thresholds for system resources.
               <q-btn
@@ -275,7 +279,9 @@
 
             <q-btn
               @click="saveThresholdConfig"
-              color="white"
+              color="cyan"
+              text-color="black"
+              unelevated
               class="full-width q-mt-md"
               :loading="savingThreshold"
               label="Save Threshold Settings"
@@ -291,8 +297,8 @@
             <div class="text-h6 text-negative">Danger Zone</div>
           </q-card-section>
 
-          <q-card-section>
-            <div class="q-gutter-md">
+          <q-card-section class="q-pa-md">
+            <div class="q-gutter-y-md">
               <q-btn
                 @click="clearCredentials"
                 outline
