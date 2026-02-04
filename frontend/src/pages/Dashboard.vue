@@ -573,22 +573,23 @@ const wsStatusText = computed(() => {
 
 // Chart data
 const chartData = computed(() => {
+  // CRITICAL: Use shallow copies to prevent infinite recursion with Chart.js
   return {
-    labels: systemStore.history.timestamps.map(t => {
+    labels: [...systemStore.history.timestamps].map(t => {
       const date = new Date(t);
       return date.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' });
     }),
     datasets: [
       {
         label: 'CPU %',
-        data: systemStore.history.cpu,
+        data: [...systemStore.history.cpu], // Shallow copy prevents reactivity loop
         borderColor: 'rgb(34, 211, 238)',
         backgroundColor: 'rgba(34, 211, 238, 0.1)',
         tension: 0.4
       },
       {
         label: 'Memory %',
-        data: systemStore.history.memory,
+        data: [...systemStore.history.memory], // Shallow copy prevents reactivity loop
         borderColor: 'rgb(168, 85, 247)',
         backgroundColor: 'rgba(168, 85, 247, 0.1)',
         tension: 0.4

@@ -157,16 +157,17 @@ export const useSystemStore = defineStore('system', {
 
     /**
      * Get chart data for CPU usage
+     * CRITICAL: Returns shallow copies to prevent infinite recursion with Chart.js
      */
     cpuChartData: (state) => {
       return {
-        labels: state.history.timestamps.map(t => {
+        labels: [...state.history.timestamps].map(t => {
           const date = new Date(t);
           return date.toLocaleTimeString('en-US', { hour12: false, hour: '2-digit', minute: '2-digit', second: '2-digit' });
         }),
         datasets: [{
           label: 'CPU Usage (%)',
-          data: state.history.cpu,
+          data: [...state.history.cpu], // Shallow copy prevents reactivity loop
           borderColor: 'rgb(255, 99, 132)',
           backgroundColor: 'rgba(255, 99, 132, 0.2)',
           tension: 0.4,
@@ -179,16 +180,17 @@ export const useSystemStore = defineStore('system', {
 
     /**
      * Get chart data for Memory usage
+     * CRITICAL: Returns shallow copies to prevent infinite recursion with Chart.js
      */
     memoryChartData: (state) => {
       return {
-        labels: state.history.timestamps.map(t => {
+        labels: [...state.history.timestamps].map(t => {
           const date = new Date(t);
           return date.toLocaleTimeString('en-US', { hour12: false, hour: '2-digit', minute: '2-digit', second: '2-digit' });
         }),
         datasets: [{
           label: 'Memory Usage (%)',
-          data: state.history.memory,
+          data: [...state.history.memory], // Shallow copy prevents reactivity loop
           borderColor: 'rgb(153, 102, 255)',
           backgroundColor: 'rgba(153, 102, 255, 0.2)',
           tension: 0.4,
@@ -201,16 +203,17 @@ export const useSystemStore = defineStore('system', {
 
     /**
      * Get chart data for Disk usage
+     * CRITICAL: Returns shallow copies to prevent infinite recursion with Chart.js
      */
     diskChartData: (state) => {
       return {
-        labels: state.history.timestamps.map(t => {
+        labels: [...state.history.timestamps].map(t => {
           const date = new Date(t);
           return date.toLocaleTimeString('en-US', { hour12: false, hour: '2-digit', minute: '2-digit', second: '2-digit' });
         }),
         datasets: [{
           label: 'Disk Usage (%)',
-          data: state.history.disk,
+          data: [...state.history.disk], // Shallow copy prevents reactivity loop
           borderColor: 'rgb(75, 192, 192)',
           backgroundColor: 'rgba(75, 192, 192, 0.2)',
           tension: 0.4,
@@ -223,31 +226,32 @@ export const useSystemStore = defineStore('system', {
 
     /**
      * Get combined chart data for all metrics
+     * CRITICAL: Returns shallow copies to prevent infinite recursion with Chart.js
      */
     combinedChartData: (state) => {
       return {
-        labels: state.history.timestamps.map(t => {
+        labels: [...state.history.timestamps].map(t => {
           const date = new Date(t);
           return date.toLocaleTimeString('en-US', { hour12: false, hour: '2-digit', minute: '2-digit', second: '2-digit' });
         }),
         datasets: [
           {
             label: 'CPU',
-            data: state.history.cpu,
+            data: [...state.history.cpu], // Shallow copy prevents reactivity loop
             borderColor: 'rgb(255, 99, 132)',
             backgroundColor: 'rgba(255, 99, 132, 0.2)',
             tension: 0.4
           },
           {
             label: 'Memory',
-            data: state.history.memory,
+            data: [...state.history.memory], // Shallow copy prevents reactivity loop
             borderColor: 'rgb(153, 102, 255)',
             backgroundColor: 'rgba(153, 102, 255, 0.2)',
             tension: 0.4
           },
           {
             label: 'Disk',
-            data: state.history.disk,
+            data: [...state.history.disk], // Shallow copy prevents reactivity loop
             borderColor: 'rgb(75, 192, 192)',
             backgroundColor: 'rgba(75, 192, 192, 0.2)',
             tension: 0.4
