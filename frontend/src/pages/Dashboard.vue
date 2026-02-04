@@ -49,17 +49,6 @@
           <q-icon :name="serverStatusIcon" :color="serverStatusColor" size="16px" class="q-mr-xs" />
           <span class="text-caption text-white">{{ serverStatusText }}</span>
         </div>
-        <q-btn
-          flat
-          round
-          dense
-          icon="logout"
-          class="logout-btn q-ml-sm"
-          size="sm"
-          @click="handleLogout"
-        >
-          <q-tooltip>Logout</q-tooltip>
-        </q-btn>
       </div>
 
       <!-- System Stats Cards - CENTERED -->
@@ -506,7 +495,6 @@ import { ref, computed, onMounted, onUnmounted } from 'vue';
 import { useRouter } from 'vue-router';
 import { useQuasar } from 'quasar';
 import { useSystemStore } from '../stores/system';
-import { useAuthStore } from '../stores/auth';
 import LineChart from '../components/LineChart.vue';
 import api from '../services/ApiService';
 
@@ -518,7 +506,6 @@ defineOptions({
 const router = useRouter();
 const $q = useQuasar();
 const systemStore = useSystemStore();
-const authStore = useAuthStore();
 
 // State
 const stats = computed(() => systemStore.stats);
@@ -858,22 +845,6 @@ async function executePowerAction(action) {
 }
 
 /**
- * Handle logout
- */
-async function handleLogout() {
-  $q.dialog({
-    title: 'Logout',
-    message: 'Are you sure you want to logout?',
-    cancel: true,
-    persistent: true,
-    class: 'glass-dialog'
-  }).onOk(async () => {
-    await authStore.logout();
-    router.push('/login');
-  });
-}
-
-/**
  * Navigation
  */
 function goToDocker() {
@@ -962,32 +933,21 @@ onUnmounted(() => {
 </script>
 
 <style scoped>
+/* CRITICAL: Fix z-index hierarchy to prevent ghost overlays */
 .dashboard-page {
   min-height: 100vh;
   position: relative;
   background: #000000;
-  z-index: 1 !important;
+  z-index: 1;
 }
 
 .stats-container {
   width: 100%;
-  position: relative !important;
-  z-index: 10 !important;
+  position: relative;
 }
 
-/* CRITICAL: Ensure all cards and their children are clickable */
-.dashboard-page > *,
-.stats-container > *,
-.dashboard-page .q-card,
-.dashboard-page .q-btn,
-.dashboard-page .q-card-section {
-  position: relative !important;
-  z-index: 10 !important;
-}
-
-/* CRITICAL: Ensure all header buttons are clickable */
+/* Header buttons - CRITICAL: Must be clickable */
 .header-menu-btn,
-.logout-btn,
 .ws-toggle-btn {
   position: relative !important;
   z-index: 1001 !important;
@@ -1004,16 +964,6 @@ onUnmounted(() => {
   background: rgba(30, 30, 30, 0.9);
 }
 
-.logout-btn {
-  color: #ef4444;
-  background: rgba(10, 10, 10, 0.8);
-  border: 1px solid rgba(239, 68, 68, 0.3);
-}
-
-.logout-btn:hover {
-  background: rgba(239, 68, 68, 0.1);
-}
-
 .ws-toggle-btn {
   color: #22d3ee;
   background: rgba(10, 10, 10, 0.8);
@@ -1022,6 +972,17 @@ onUnmounted(() => {
 
 .ws-toggle-btn:hover {
   background: rgba(34, 211, 238, 0.1);
+}
+
+/* Status Badge - NOT clickable */
+.status-badge {
+  background: rgba(10, 10, 10, 0.8);
+  border: 1px solid #333333;
+  pointer-events: none !important;
+}
+
+.status-badge > * {
+  pointer-events: none !important;
 }
 
 /* Cards - Pure Black with Subtle Border */
@@ -1036,9 +997,6 @@ onUnmounted(() => {
   border: 1px solid #333333;
   border-radius: 12px;
   transition: all 0.2s ease;
-  position: relative !important;
-  z-index: 10 !important;
-  pointer-events: auto !important;
 }
 
 .stat-card:hover,
@@ -1052,14 +1010,6 @@ onUnmounted(() => {
 .disk-item {
   background: #0A0A0A;
   border: 1px solid #333333;
-  position: relative !important;
-  z-index: 10 !important;
-  pointer-events: auto !important;
-}
-
-.disk-item > * {
-  position: relative !important;
-  z-index: 10 !important;
 }
 
 .removable-disk {
@@ -1081,17 +1031,6 @@ onUnmounted(() => {
     opacity: 1;
     transform: translateY(0);
   }
-}
-
-/* Status Badge */
-.status-badge {
-  background: rgba(10, 10, 10, 0.8);
-  border: 1px solid #333333;
-  pointer-events: none !important;
-}
-
-.status-badge > * {
-  pointer-events: none !important;
 }
 
 /* Header Buttons */
@@ -1132,9 +1071,6 @@ onUnmounted(() => {
   border: 1px solid #FFFFFF !important;
   border-radius: 8px;
   transition: all 0.2s ease;
-  position: relative !important;
-  z-index: 1001 !important;
-  pointer-events: auto !important;
 }
 
 .power-btn-outlined:hover {
@@ -1152,32 +1088,6 @@ onUnmounted(() => {
   border-color: #333333 !important;
   color: #666666 !important;
   background: transparent !important;
-}
-
-/* CRITICAL: Ensure action card buttons are clickable */
-.action-card .q-btn {
-  position: relative !important;
-  z-index: 1001 !important;
-  pointer-events: auto !important;
-}
-
-/* CRITICAL: Storage refresh button */
-.storage-card .q-btn {
-  position: relative !important;
-  z-index: 1001 !important;
-  pointer-events: auto !important;
-}
-
-/* CRITICAL: Quick action cards (Docker, Processes) */
-.action-mini-card {
-  position: relative !important;
-  z-index: 1000 !important;
-  pointer-events: auto !important;
-  cursor: pointer !important;
-}
-
-.action-mini-card > * {
-  pointer-events: none !important;
 }
 
 /* Notification Styling */
@@ -1278,16 +1188,16 @@ onUnmounted(() => {
   }
 }
 
-/* CRITICAL: Prevent any ghost overlays from blocking clicks */
-.dashboard-page .q-card > * {
+/* CRITICAL: Fix ghost overlay issue - Simplified approach */
+/* All buttons and interactive elements MUST be clickable */
+.dashboard-page .q-btn {
+  position: relative !important;
+  z-index: 1001 !important;
   pointer-events: auto !important;
 }
 
-/* Ensure all child elements are clickable */
-.dashboard-page .row,
-.dashboard-page .col,
-.dashboard-page .col-6,
-.dashboard-page .col-12 {
+/* All cards need proper positioning */
+.dashboard-page .q-card {
   position: relative !important;
   z-index: 10 !important;
 }

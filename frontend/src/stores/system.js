@@ -595,10 +595,25 @@ export const useSystemStore = defineStore('system', {
     updateHistory(data = null) {
       const now = Date.now();
 
-      // Extract values from data if provided, otherwise use getters
-      const cpuValue = data?.cpu?.cpu_percent ?? this.cpuUsage;
-      const memoryValue = data?.memory?.percent ?? this.memoryUsage;
-      const diskValue = data?.disk?.percent ?? this.diskUsage;
+      // Extract values - CRITICAL: Use data directly to avoid getter recursion
+      let cpuValue, memoryValue, diskValue;
+
+      if (data) {
+        // Use provided data directly (no getters - prevents infinite recursion)
+        cpuValue = data.cpu?.cpu_percent ?? 0;
+        memoryValue = data.memory?.percent ?? 0;
+        diskValue = data.disk?.percent ?? 0;
+      } else {
+        // Fallback to current stats (access directly, not through getters)
+        cpuValue = this.stats.cpu?.cpu_percent ?? 0;
+        memoryValue = this.stats.memory?.percent ?? 0;
+        diskValue = this.stats.disk?.percent ?? 0;
+      }
+
+      // Validate values (prevent NaN/undefined)
+      cpuValue = typeof cpuValue === 'number' ? cpuValue : 0;
+      memoryValue = typeof memoryValue === 'number' ? memoryValue : 0;
+      diskValue = typeof diskValue === 'number' ? diskValue : 0;
 
       // Add current stats to history
       this.history.timestamps.push(now);

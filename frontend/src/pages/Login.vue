@@ -396,7 +396,8 @@ async function handleLogin() {
         message: 'Connected successfully!',
         position: 'top',
         timeout: 2500, // Auto-dismiss after 2.5 seconds
-        classes: 'notification-glossy'
+        classes: 'notification-glossy',
+        dismissible: true // Allow tap-to-dismiss
       });
 
       if (saveCredentials.value) {

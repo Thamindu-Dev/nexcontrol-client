@@ -14,18 +14,6 @@
     <!-- Dynamic Island / Notch Spacer - CRITICAL for iOS -->
     <div class="dynamic-island-spacer"></div>
 
-    <!-- Floating Menu Button - Below spacer -->
-    <q-btn
-      v-if="authStore.isAuthenticated"
-      flat
-      round
-      dense
-      icon="menu"
-      aria-label="Menu"
-      class="floating-menu-btn"
-      @click="toggleLeftDrawer"
-    />
-
     <!-- Drawer -->
     <q-drawer
       v-model="leftDrawerOpen"
@@ -277,25 +265,6 @@ body,
   pointer-events: none;
 }
 
-/* Floating Menu Button */
-.floating-menu-btn {
-  position: fixed !important;
-  top: max(40px, calc(env(safe-area-inset-top))) !important;
-  left: 12px !important;
-  z-index: 10000 !important;
-  background: rgba(10, 10, 10, 0.9) !important;
-  backdrop-filter: blur(10px);
-  border: 1px solid rgba(255, 255, 255, 0.1) !important;
-  color: #FFFFFF !important;
-  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.5) !important;
-  transition: all 0.2s ease;
-}
-
-.floating-menu-btn:hover {
-  background: rgba(30, 30, 30, 0.95) !important;
-  transform: scale(1.05);
-}
-
 /* Adjust page container to account for reduced spacer */
 .q-page-container {
   padding-top: max(40px, calc(env(safe-area-inset-top))) !important;
@@ -360,10 +329,10 @@ body,
   z-index: 1;
 }
 
-/* CRITICAL: Ensure ALL page content is above closed drawer backdrop */
+/* CRITICAL: Ensure ALL page content is clickable and above backdrop */
 .q-page-container > .q-page {
   position: relative !important;
-  z-index: 5000 !important;
+  z-index: 100 !important;
 }
 
 .q-page > .q-card,
@@ -371,6 +340,13 @@ body,
 .q-page > div {
   position: relative !important;
   z-index: 10 !important;
+}
+
+/* CRITICAL: ALL buttons must be clickable */
+.q-page .q-btn {
+  position: relative !important;
+  z-index: 1001 !important;
+  pointer-events: auto !important;
 }
 
 /* Drawer - Pure Black */
@@ -670,13 +646,6 @@ const serverInfo = computed(() => {
   }
   return 'Not configured';
 });
-
-/**
- * Toggle left drawer
- */
-function toggleLeftDrawer() {
-  leftDrawerOpen.value = !leftDrawerOpen.value;
-}
 
 /**
  * Navigate to route
