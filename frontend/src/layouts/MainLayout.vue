@@ -210,19 +210,21 @@ body,
   margin-right: 0 !important;
 }
 
-/* CRITICAL: Fix Notification Freeze Issue - Ghost Overlay Prevention */
+/* CRITICAL: Fix Notification Freeze - Ensure notifications don't block UI */
 .q-notifications {
   pointer-events: none !important;
   position: fixed !important;
-  z-index: 10000 !important;
+  top: 0 !important;
+  left: 0 !important;
+  right: 0 !important;
+  height: auto !important;
+  max-height: 200px !important;
+  z-index: 99999 !important;
+  overflow: visible !important;
 }
 
 .q-notifications__list {
   pointer-events: none !important;
-}
-
-.q-notifications > * {
-  pointer-events: auto !important;
 }
 
 .q-notification {
@@ -249,6 +251,65 @@ body,
 .q-drawer__backdrop--visible {
   pointer-events: auto !important;
   opacity: 1 !important;
+}
+
+/* CRITICAL: SUPER AGGRESSIVE FIX - Make entire app clickable */
+body,
+#q-app,
+.q-layout,
+.q-page,
+.q-page-container {
+  position: relative !important;
+}
+
+/* FORCE all interactive elements to be clickable */
+.q-btn,
+button,
+a,
+.q-item,
+.q-card[clickable],
+.q-card.clickable,
+[role="button"],
+[onclick],
+[class*="btn"],
+.q-icon {
+  position: relative !important;
+  z-index: 999999 !important;
+  pointer-events: auto !important;
+  cursor: pointer !important;
+}
+
+/* CRITICAL: SUPER FIX - Ensure entire page is interactive */
+#q-app > *,
+.q-layout > *,
+.q-page > *,
+.q-page-container > * {
+  position: relative !important;
+  pointer-events: auto !important;
+}
+
+/* ONLY disable pointer-events on specific non-interactive elements */
+.static-content,
+.non-interactive,
+[pointer-events="none"] {
+  pointer-events: none !important;
+}
+
+/* CRITICAL: SUPER FIX - Ensure entire page is interactive */
+body, #q-app, .q-layout, .q-page, .q-page > * {
+  position: relative !important;
+}
+
+#q-app > *,
+.q-layout > *,
+.q-page-container > *,
+.q-page > * {
+  pointer-events: auto !important;
+}
+
+/* ONLY disable pointer-events on specific non-interactive elements */
+.static-content, .non-interactive, [pointer-events="none"] {
+  pointer-events: none !important;
 }
 </style>
 

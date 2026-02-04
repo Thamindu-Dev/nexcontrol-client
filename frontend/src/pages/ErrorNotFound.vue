@@ -10,14 +10,14 @@
   ==============================================================================
 -->
 <template>
-  <div class="fullscreen bg-black text-white text-center q-pa-md flex flex-center">
-    <div>
+  <div class="fullscreen bg-black text-white text-center q-pa-md flex flex-center error-page">
+    <div class="error-content">
       <div style="font-size: 30vh">404</div>
 
       <div class="text-h2" style="opacity: 0.4">Oops. Nothing here...</div>
 
       <q-btn
-        class="q-mt-xl"
+        class="q-mt-xl go-home-btn"
         color="white"
         text-color="black"
         unelevated
@@ -32,3 +32,22 @@
 <script setup>
 //
 </script>
+
+<style scoped>
+/* CRITICAL: Ensure page and button are clickable */
+.error-page {
+  position: relative !important;
+  z-index: 1 !important;
+}
+
+.error-content {
+  position: relative !important;
+  z-index: 10 !important;
+}
+
+.go-home-btn {
+  position: relative !important;
+  z-index: 10000 !important;
+  pointer-events: auto !important;
+}
+</style>

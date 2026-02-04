@@ -760,10 +760,22 @@ class SystemMonitor:
             Dict with CPU usage percentage and core counts
         """
         try:
-            # Use interval=0.1 for faster response
-            cpu_percent = psutil.cpu_percent(interval=0.1)
             cpu_count = psutil.cpu_count()
             cpu_freq = psutil.cpu_freq()
+
+            # Get per-CPU percentages and average them for more accurate reading
+            # This is more reliable than cpu_percent() in virtualized environments
+            per_cpu_percent = psutil.cpu_percent(interval=0.1, percpu=True)
+
+            # Filter out any outliers (values > 100 or < 0) and calculate average
+            valid_percentages = [p for p in per_cpu_percent if 0 <= p <= 100]
+
+            if valid_percentages:
+                # Calculate average of all cores
+                cpu_percent = sum(valid_percentages) / len(valid_percentages)
+            else:
+                # Fallback to overall percentage if per-cpu data is invalid
+                cpu_percent = psutil.cpu_percent(interval=0)
 
             return {
                 "cpu_percent": round(cpu_percent, 2),

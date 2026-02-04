@@ -278,6 +278,10 @@ export const useSystemStore = defineStore('system', {
 
       try {
         const data = await api.get('/api/stats/all');
+        console.log('[SystemStore] API Response Source: HTTP Polling');
+        console.log('[SystemStore] Full API Response:', JSON.stringify(data, null, 2));
+        console.log('[SystemStore] CPU Percent from API:', data?.cpu?.cpu_percent);
+        console.log('[SystemStore] CPU Object:', data?.cpu);
         this.stats = data;
         this.isConnected = true;
         this.updateHistory(data);
@@ -541,11 +545,20 @@ export const useSystemStore = defineStore('system', {
 
         onStats: (data) => {
           // Update stats from WebSocket
+          console.log('[SystemStore] WebSocket Stats Update Received');
+          console.log('[SystemStore] WebSocket CPU Percent:', data?.cpu?.cpu_percent);
+          console.log('[SystemStore] WebSocket CPU Object:', data?.cpu);
+          console.log('[SystemStore] Full WebSocket Data:', JSON.stringify(data, null, 2));
+
           this.stats = {
             ...this.stats,
             ...data,
             timestamp: Math.floor(Date.now() / 1000)
           };
+
+          console.log('[SystemStore] After merge - this.stats.cpu:', this.stats.cpu);
+          console.log('[SystemStore] After merge - this.stats.cpu.cpu_percent:', this.stats.cpu?.cpu_percent);
+
           // Pass data directly to updateHistory for immediate processing
           this.updateHistory(data);
         },
@@ -602,16 +615,21 @@ export const useSystemStore = defineStore('system', {
       // Extract values - CRITICAL: Use data directly to avoid getter recursion
       let cpuValue, memoryValue, diskValue;
 
+      console.log('[updateHistory] Called with data:', data ? 'YES' : 'NO');
+      console.log('[updateHistory] Input data.cpu?.cpu_percent:', data?.cpu?.cpu_percent);
+
       if (data) {
         // Use provided data directly (no getters - prevents infinite recursion)
         cpuValue = data.cpu?.cpu_percent ?? 0;
         memoryValue = data.memory?.percent ?? 0;
         diskValue = data.disk?.percent ?? 0;
+        console.log('[updateHistory] Extracted from provided data - CPU:', cpuValue, 'Memory:', memoryValue, 'Disk:', diskValue);
       } else {
         // Fallback to current stats (access directly, not through getters)
         cpuValue = this.stats.cpu?.cpu_percent ?? 0;
         memoryValue = this.stats.memory?.percent ?? 0;
         diskValue = this.stats.disk?.percent ?? 0;
+        console.log('[updateHistory] Extracted from this.stats - CPU:', cpuValue, 'Memory:', memoryValue, 'Disk:', diskValue);
       }
 
       // Validate values (prevent NaN/undefined)
@@ -637,7 +655,8 @@ export const useSystemStore = defineStore('system', {
         cpu: cpuValue,
         memory: memoryValue,
         disk: diskValue,
-        dataPoints: this.history.timestamps.length
+        dataPoints: this.history.timestamps.length,
+        historyArray: this.history.cpu
       });
     },
 
