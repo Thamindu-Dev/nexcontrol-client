@@ -763,27 +763,53 @@ class SystemMonitor:
             cpu_count = psutil.cpu_count()
             cpu_freq = psutil.cpu_freq()
 
-            # Get per-CPU percentages and average them for more accurate reading
-            # This is more reliable than cpu_percent() in virtualized environments
-            per_cpu_percent = psutil.cpu_percent(interval=0.1, percpu=True)
+            # Method 1: Try per-CPU percentage first (more accurate)
+            try:
+                per_cpu_percent = psutil.cpu_percent(interval=0.5, percpu=True)
+                if per_cpu_percent and len(per_cpu_percent) > 0:
+                    # Calculate average, filtering any invalid values
+                    valid_values = [p for p in per_cpu_percent if 0 <= p <= 100]
+                    if valid_values:
+                        cpu_percent = sum(valid_values) / len(valid_values)
+                    else:
+                        cpu_percent = 0
+                else:
+                    cpu_percent = 0
+            except Exception:
+                # Method 2: Fallback to simple CPU percent without interval
+                try:
+                    # First call with interval=None to get cached value
+                    psutil.cpu_percent(interval=None)
+                    # Small delay
+                    import time
+                    time.sleep(0.1)
+                    # Second call to get actual value
+                    cpu_percent = psutil.cpu_percent(interval=None)
+                except Exception:
+                    # Method 3: Calculate from CPU times (most reliable)
+                    cpu_times1 = psutil.cpu_times()
+                    import time
+                    time.sleep(0.1)
+                    cpu_times2 = psutil.cpu_times()
 
-            # Filter out any outliers (values > 100 or < 0) and calculate average
-            valid_percentages = [p for p in per_cpu_percent if 0 <= p <= 100]
+                    # Calculate usage from CPU times
+                    user_diff = cpu_times2.user - cpu_times1.user
+                    system_diff = cpu_times2.system - cpu_times1.system
+                    idle_diff = cpu_times2.idle - cpu_times1.idle
+                    total_diff = user_diff + system_diff + idle_diff
 
-            if valid_percentages:
-                # Calculate average of all cores
-                cpu_percent = sum(valid_percentages) / len(valid_percentages)
-            else:
-                # Fallback to overall percentage if per-cpu data is invalid
-                cpu_percent = psutil.cpu_percent(interval=0)
+                    if total_diff > 0:
+                        cpu_percent = ((user_diff + system_diff) / total_diff) * 100
+                    else:
+                        cpu_percent = 0
 
             return {
-                "cpu_percent": round(cpu_percent, 2),
+                "cpu_percent": round(min(100, max(0, cpu_percent)), 2),
                 "cpu_count": cpu_count if cpu_count else 0,
                 "cpu_freq_mhz": round(cpu_freq.current, 2) if cpu_freq else 0
             }
         except Exception as e:
-            logger.error(f"Error getting CPU stats: {type(e).__name__}")
+            logger.error(f"Error getting CPU stats: {type(e).__name__}: {str(e)}")
             return {"cpu_percent": 0, "error": "Failed to get CPU stats"}
 
     @staticmethod
