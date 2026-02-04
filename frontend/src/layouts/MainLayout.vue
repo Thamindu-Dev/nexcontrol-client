@@ -260,54 +260,19 @@ body,
   position: fixed;
   top: 0;
   left: 0;
-  z-index: 9999;
+  z-index: 50; /* Reduced from 9999 - was blocking clicks! */
   background: transparent;
-  pointer-events: none;
+  pointer-events: none !important; /* CRITICAL: Don't block clicks */
 }
 
 /* Adjust page container to account for reduced spacer */
 .q-page-container {
   padding-top: max(40px, calc(env(safe-area-inset-top))) !important;
-}
-
-/* CRITICAL: Fix z-index issues to prevent UI blocking */
-.q-page {
   position: relative;
-  z-index: 1;
+  z-index: 100;
 }
 
-/* CRITICAL: Ensure ALL buttons are clickable - higher than closed drawer backdrop */
-.q-btn {
-  position: relative !important;
-  z-index: 1000 !important;
-  pointer-events: auto !important;
-}
-
-.q-card, .stat-card, .action-card, .storage-card {
-  position: relative;
-  z-index: 10 !important;
-}
-
-/* System Actions buttons - CRITICAL FIX */
-.action-card .q-btn {
-  position: relative !important;
-  z-index: 1001 !important;
-  pointer-events: auto !important;
-}
-
-/* Storage card refresh button */
-.storage-card .q-btn {
-  z-index: 1001 !important;
-  pointer-events: auto !important;
-}
-
-/* Quick action cards (Docker, Processes) */
-.action-mini-card {
-  pointer-events: auto !important;
-  cursor: pointer !important;
-}
-
-/* CRITICAL: Fix z-index issues to prevent UI unresponsiveness */
+/* CRITICAL: Simplified z-index hierarchy */
 .q-layout {
   position: relative;
   z-index: 1;
@@ -317,33 +282,25 @@ body,
   z-index: 5000 !important;
 }
 
-.q-page-container {
+.q-page {
   position: relative;
-  z-index: 1;
+  z-index: 200; /* Above spacer, below drawer */
 }
 
-/* Ensure no overlays block interaction */
-.q-page,
-.q-page > * {
-  position: relative;
-  z-index: 1;
-}
-
-/* CRITICAL: Ensure ALL page content is clickable and above backdrop */
-.q-page-container > .q-page {
+/* CRITICAL: ALL page content must be clickable */
+.q-page .q-btn {
   position: relative !important;
-  z-index: 100 !important;
+  z-index: 1000 !important;
+  pointer-events: auto !important;
 }
 
-.q-page > .q-card,
-.q-page > .row,
-.q-page > div {
+.q-page .q-card {
   position: relative !important;
   z-index: 10 !important;
+  pointer-events: auto !important;
 }
 
-/* CRITICAL: ALL buttons must be clickable */
-.q-page .q-btn {
+.q-page .q-card .q-btn {
   position: relative !important;
   z-index: 1001 !important;
   pointer-events: auto !important;

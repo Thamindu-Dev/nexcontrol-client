@@ -934,12 +934,11 @@ onUnmounted(() => {
 </script>
 
 <style scoped>
-/* CRITICAL: Fix z-index hierarchy to prevent ghost overlays */
+/* Simplified Dashboard - Fix Ghost Overlay Issue */
 .dashboard-page {
   min-height: 100vh;
   position: relative;
   background: #000000;
-  z-index: 1;
 }
 
 .stats-container {
@@ -1189,17 +1188,13 @@ onUnmounted(() => {
   }
 }
 
-/* CRITICAL: Fix ghost overlay issue - Simplified approach */
-/* All buttons and interactive elements MUST be clickable */
+/* CRITICAL: Simplified clickable elements */
 .dashboard-page .q-btn {
   position: relative !important;
-  z-index: 1001 !important;
   pointer-events: auto !important;
 }
 
-/* All cards need proper positioning */
 .dashboard-page .q-card {
   position: relative !important;
-  z-index: 10 !important;
 }
 </style>
