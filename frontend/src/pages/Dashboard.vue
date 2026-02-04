@@ -484,7 +484,7 @@ const systemStore = useSystemStore();
 const stats = computed(() => systemStore.stats);
 const powerActionLoading = ref(false);
 const autoRefresh = ref(false);
-const refreshInterval = ref(2000);
+const refreshInterval = ref(5000); // 5 seconds
 let refreshTimer = null;
 
 // Multi-disk state
@@ -531,7 +531,12 @@ const chartOptions = computed(() => ({
     legend: {
       labels: {
         color: '#9ca3af',
-        font: { size: 11 }
+        font: { size: 11 },
+        usePointStyle: true,
+        pointStyle: 'circle',
+        boxWidth: 12,
+        boxHeight: 12,
+        padding: 20
       }
     }
   },
@@ -543,8 +548,7 @@ const chartOptions = computed(() => ({
       grid: { color: 'rgba(255,255,255,0.05)' }
     },
     x: {
-      ticks: { color: '#6b7280', font: { size: 10 } },
-      grid: { display: false }
+      display: false
     }
   }
 }));
@@ -958,6 +962,8 @@ onUnmounted(() => {
   border: 1px solid #FFFFFF !important;
   border-radius: 8px;
   transition: all 0.2s ease;
+  position: relative;
+  z-index: 1;
 }
 
 .power-btn-outlined:hover {
@@ -988,7 +994,17 @@ onUnmounted(() => {
 :deep(.glass-dialog) {
   background: #0A0A0A !important;
   border: 1px solid #333333;
-  color: #FFFFFF;
+  color: #FFFFFF !important;
+  z-index: 7000 !important;
+}
+
+/* Dialog title and message - ensure white text */
+:deep(.glass-dialog .q-dialog__title) {
+  color: #FFFFFF !important;
+}
+
+:deep(.glass-dialog .q-dialog__message) {
+  color: #FFFFFF !important;
 }
 
 /* Cyan Accent Color Helper */

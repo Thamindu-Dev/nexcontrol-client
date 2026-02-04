@@ -71,7 +71,7 @@ export const useSystemStore = defineStore('system', {
     webSocketState: WebSocketState.DISCONNECTED,
     _wsEventHandlers: null,
 
-    // Historical data for charts (max 60 data points = 5 minutes at 5s interval)
+    // Historical data for charts (max 60 data points = 5 minutes at 5-second interval)
     history: {
       cpu: [],
       memory: [],
