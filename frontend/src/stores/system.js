@@ -78,7 +78,23 @@ export const useSystemStore = defineStore('system', {
       disk: [],
       timestamps: []
     },
-    maxHistoryLength: 60
+    maxHistoryLength: 60,
+
+    // Threshold configuration
+    thresholdConfig: {
+      enabled: false,
+      cpu_threshold: 80,
+      memory_threshold: 85,
+      disk_threshold: 90
+    },
+    // Track last alert timestamp to avoid spam
+    _lastAlertTime: {
+      cpu: 0,
+      memory: 0,
+      disk: 0
+    },
+    // Minimum time between alerts (in milliseconds) - 5 minutes
+    _alertCooldown: 5 * 60 * 1000
   }),
 
   getters: {
@@ -658,6 +674,100 @@ export const useSystemStore = defineStore('system', {
         dataPoints: this.history.timestamps.length,
         historyArray: this.history.cpu
       });
+
+      // Check thresholds after updating history
+      this.checkThresholds(cpuValue, memoryValue, diskValue);
+    },
+
+    /**
+     * Load threshold configuration from backend
+     */
+    async loadThresholdConfig() {
+      try {
+        const response = await api.get('/api/threshold/config');
+        if (response.success && response.data) {
+          this.thresholdConfig = {
+            enabled: response.data.enabled || false,
+            cpu_threshold: response.data.cpu_threshold || 80,
+            memory_threshold: response.data.memory_threshold || 85,
+            disk_threshold: response.data.disk_threshold || 90
+          };
+          console.log('[System] Threshold config loaded:', this.thresholdConfig);
+        }
+      } catch (error) {
+        console.error('[System] Failed to load threshold config:', error);
+        // Use defaults on error
+        this.thresholdConfig = {
+          enabled: false,
+          cpu_threshold: 80,
+          memory_threshold: 85,
+          disk_threshold: 90
+        };
+      }
+    },
+
+    /**
+     * Check if values exceed thresholds and trigger alerts
+     * @param {number} cpuValue - Current CPU usage percentage
+     * @param {number} memoryValue - Current Memory usage percentage
+     * @param {number} diskValue - Current Disk usage percentage
+     */
+    checkThresholds(cpuValue, memoryValue, diskValue) {
+      // Don't check if threshold monitoring is disabled
+      if (!this.thresholdConfig.enabled) {
+        return;
+      }
+
+      const now = Date.now();
+      const alerts = [];
+
+      // Check CPU threshold
+      if (cpuValue >= this.thresholdConfig.cpu_threshold) {
+        if (now - this._lastAlertTime.cpu > this._alertCooldown) {
+          alerts.push({
+            type: 'cpu',
+            metric: 'CPU Usage',
+            value: cpuValue,
+            threshold: this.thresholdConfig.cpu_threshold
+          });
+          this._lastAlertTime.cpu = now;
+        }
+      }
+
+      // Check Memory threshold
+      if (memoryValue >= this.thresholdConfig.memory_threshold) {
+        if (now - this._lastAlertTime.memory > this._alertCooldown) {
+          alerts.push({
+            type: 'memory',
+            metric: 'Memory Usage',
+            value: memoryValue,
+            threshold: this.thresholdConfig.memory_threshold
+          });
+          this._lastAlertTime.memory = now;
+        }
+      }
+
+      // Check Disk threshold
+      if (diskValue >= this.thresholdConfig.disk_threshold) {
+        if (now - this._lastAlertTime.disk > this._alertCooldown) {
+          alerts.push({
+            type: 'disk',
+            metric: 'Disk Usage',
+            value: diskValue,
+            threshold: this.thresholdConfig.disk_threshold
+          });
+          this._lastAlertTime.disk = now;
+        }
+      }
+
+      // Trigger alerts for any exceeded thresholds
+      if (alerts.length > 0) {
+        alerts.forEach(alert => {
+          console.warn('[System] Threshold Alert:', alert);
+          // Store the alert in state for components to react to
+          this.$patch?.({ _lastAlert: alert });
+        });
+      }
     },
 
     /**

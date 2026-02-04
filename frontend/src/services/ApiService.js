@@ -204,7 +204,8 @@ const api = {
       const responseData = await response.json();
 
       // Decrypt if response contains encrypted data
-      if (responseData.data) {
+      // Only decrypt if data is a string (encrypted), not an object (plain JSON)
+      if (responseData.data && typeof responseData.data === 'string') {
         return decryptResponse(responseData);
       }
 

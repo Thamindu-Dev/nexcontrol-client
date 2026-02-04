@@ -236,7 +236,6 @@
               :step="5"
               label
               label-always
-              :markers="thresholdMarkers"
               color="grey-7"
               class="q-mb-md"
             >
@@ -252,7 +251,6 @@
               :step="5"
               label
               label-always
-              :markers="thresholdMarkers"
               color="grey-7"
               class="q-mb-md"
             >
@@ -268,7 +266,6 @@
               :step="5"
               label
               label-always
-              :markers="thresholdMarkers"
               color="grey-8"
               class="q-mb-md"
             >
@@ -466,13 +463,6 @@ const thresholdConfig = reactive({
   disk_threshold: 90
 });
 const savingThreshold = ref(false);
-const thresholdMarkers = [
-  { value: 0, label: '0%' },
-  { value: 25, label: '25%' },
-  { value: 50, label: '50%' },
-  { value: 75, label: '75%' },
-  { value: 100, label: '100%' }
-];
 
 /**
  * Save threshold configuration

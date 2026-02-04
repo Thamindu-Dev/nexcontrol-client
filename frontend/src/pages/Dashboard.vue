@@ -464,7 +464,7 @@
 </template>
 
 <script setup>
-import { ref, computed, onMounted, onUnmounted } from 'vue';
+import { ref, computed, onMounted, onUnmounted, watch } from 'vue';
 import { useRouter } from 'vue-router';
 import { useQuasar } from 'quasar';
 import { useSystemStore } from '../stores/system';
@@ -811,11 +811,32 @@ function handleVisibilityChange() {
 }
 
 /**
+ * Watch for threshold alerts
+ */
+watch(() => systemStore._lastAlert, (alert) => {
+  if (alert && !document.hidden) {
+    $q.notify({
+      type: 'warning',
+      message: `${alert.metric} is at ${alert.value}% (Threshold: ${alert.threshold}%)`,
+      caption: `Threshold exceeded for ${alert.metric}`,
+      position: 'top',
+      timeout: 5000,
+      actions: [
+        { label: 'Dismiss', color: 'white', handler: () => { } }
+      ]
+    });
+  }
+}, { deep: true });
+
+/**
  * Lifecycle
  */
 onMounted(async () => {
   await refreshStats();
   await refreshDisks();
+
+  // Load threshold configuration
+  await systemStore.loadThresholdConfig();
 
   // Start auto-refresh
   startAutoRefresh();
