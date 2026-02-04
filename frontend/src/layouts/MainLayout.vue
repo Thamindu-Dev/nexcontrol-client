@@ -11,8 +11,8 @@
 -->
 <template>
   <q-layout view="lHh Lpr lFf">
-    <!-- Dynamic Island / Notch Spacer - CRITICAL for iOS -->
-    <div class="dynamic-island-spacer"></div>
+    <!-- Dynamic Island / Notch Spacer - CRITICAL for iOS 
+    <div class="dynamic-island-spacer"></div> -->
 
     <!-- Drawer -->
     <q-drawer
@@ -21,6 +21,7 @@
       bordered
       class="app-drawer"
       :width="280"
+      :content-style="{ zIndex: 10001 }"
     >
       <div class="drawer-header q-pa-lg">
         <div class="row items-center q-mb-md">
@@ -56,11 +57,11 @@
           v-for="link in navigationLinks"
           :key="link.title"
           clickable
-          :active="link.link === $route.path"
-          active-class="nav-item-active"
-          @click="navigateTo(link.link)"
-          class="nav-item"
           v-ripple
+          :to="link.link"
+          class="nav-item"
+          :class="{ 'nav-item-active': link.link === $route.path }"
+          exact
         >
           <q-item-section avatar>
             <div class="icon-wrapper" :class="{ 'icon-active': link.link === $route.path }">
@@ -86,11 +87,11 @@
         </q-item-label>
 
         <q-item
-          clickable
           @click="refreshStats"
           :disable="loading"
           class="nav-item"
           v-ripple
+          style="cursor: pointer !important;"
         >
           <q-item-section avatar>
             <div class="icon-wrapper">
@@ -109,9 +110,9 @@
 
         <q-item
           clickable
-          @click="navigateTo('/settings')"
-          class="nav-item"
           v-ripple
+          to="/settings"
+          class="nav-item"
         >
           <q-item-section avatar>
             <div class="icon-wrapper">
@@ -127,10 +128,10 @@
 
         <!-- Logout -->
         <q-item
-          clickable
           @click="logout"
           class="nav-item"
           v-ripple
+          style="cursor: pointer !important;"
         >
           <q-item-section avatar>
             <div class="icon-wrapper">
@@ -283,7 +284,10 @@ a,
 #q-app > *,
 .q-layout > *,
 .q-page > *,
-.q-page-container > * {
+.q-page-container > *,
+.q-drawer > *,
+.q-drawer .q-item,
+.q-drawer .q-btn {
   position: relative !important;
   pointer-events: auto !important;
 }
@@ -310,6 +314,33 @@ body, #q-app, .q-layout, .q-page, .q-page > * {
 /* ONLY disable pointer-events on specific non-interactive elements */
 .static-content, .non-interactive, [pointer-events="none"] {
   pointer-events: none !important;
+}
+
+/* CRITICAL: FIX DRAWER - Ensure drawer and all content is clickable */
+.q-drawer {
+  position: fixed !important;
+  z-index: 10001 !important;
+  pointer-events: auto !important;
+}
+
+.q-drawer > *,
+.q-drawer .q-list,
+.q-drawer .drawer-list,
+.q-drawer .q-item {
+  position: relative !important;
+  z-index: 10002 !important;
+  pointer-events: auto !important;
+  cursor: pointer !important;
+}
+
+/* CRITICAL: Backdrop should NOT block drawer */
+.q-drawer__backdrop {
+  z-index: 10000 !important;
+}
+
+/* Hide backdrop when drawer is closed */
+.q-drawer:not(.q-drawer--open) ~ .q-drawer__backdrop {
+  display: none !important;
 }
 </style>
 
@@ -340,7 +371,13 @@ body, #q-app, .q-layout, .q-page, .q-page > * {
 }
 
 .q-drawer {
-  z-index: 5000 !important;
+  position: fixed !important;
+  z-index: 10001 !important;
+  pointer-events: auto !important;
+}
+
+.q-drawer * {
+  pointer-events: auto !important;
 }
 
 .q-page {
@@ -398,6 +435,25 @@ body, #q-app, .q-layout, .q-page, .q-page > * {
   margin-bottom: 8px;
 }
 
+/* CRITICAL: Make all drawer items clickable */
+.drawer-list,
+.drawer-list .q-item,
+.drawer-list .nav-item {
+  position: relative !important;
+  z-index: 10002 !important;
+  pointer-events: auto !important;
+  cursor: pointer !important;
+}
+
+.drawer-list .q-item:hover {
+  pointer-events: auto !important;
+}
+
+/* Ensure all children allow parent to receive click */
+.drawer-list .q-item > * {
+  pointer-events: none !important;
+}
+
 /* Navigation Items */
 .nav-item {
   border-radius: 10px;
@@ -426,6 +482,8 @@ body, #q-app, .q-layout, .q-page, .q-page > * {
   align-items: center;
   justify-content: center;
   transition: all 0.2s ease;
+  position: relative !important;
+  pointer-events: none !important;
 }
 
 .icon-active {
@@ -666,16 +724,6 @@ const serverInfo = computed(() => {
 });
 
 /**
- * Navigate to route
- * CRITICAL: Close drawer after navigation to prevent backdrop blocking UI
- */
-function navigateTo(path) {
-  router.push(path);
-  // Close drawer on navigation (especially important for mobile/overlay mode)
-  leftDrawerOpen.value = false;
-}
-
-/**
  * Logout
  */
 function logout() {
@@ -729,6 +777,13 @@ async function refreshStats() {
 let connectionCheckInterval;
 
 /**
+ * Handle toggle drawer event
+ */
+function handleToggleDrawer() {
+  leftDrawerOpen.value = !leftDrawerOpen.value;
+}
+
+/**
  * Lifecycle
  */
 onMounted(() => {
@@ -741,11 +796,16 @@ onMounted(() => {
       // isConnected is now managed by the store
     }
   }, 30000);
+
+  // Listen for toggle-drawer event from child components
+  window.addEventListener('toggle-drawer', handleToggleDrawer);
 });
 
 onUnmounted(() => {
   if (connectionCheckInterval) {
     clearInterval(connectionCheckInterval);
   }
+  // Remove event listener
+  window.removeEventListener('toggle-drawer', handleToggleDrawer);
 });
 </script>

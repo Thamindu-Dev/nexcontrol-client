@@ -192,7 +192,7 @@
               <q-select
                 v-model="preferences.refreshInterval"
                 :options="refreshOptions"
-                label="Auto-refresh interval"
+                label="Polling Interval"
                 filled
                 dense
                 emit-value
@@ -338,11 +338,12 @@
 </template>
 
 <script setup>
-import { ref, reactive, computed, onMounted } from 'vue';
+import { ref, reactive, computed, onMounted, watch } from 'vue';
 import { useRouter } from 'vue-router';
 import { useQuasar } from 'quasar';
 import { useAuthStore } from '../stores/auth';
 import { useSettingsStore } from '../stores/settings';
+import { useSystemStore } from '../stores/system';
 import { getItem, setItem } from '../services/SecureStorage';
 import apiService from '../services/ApiService';
 
@@ -357,6 +358,7 @@ const $q = useQuasar();
 // Stores
 const authStore = useAuthStore();
 const settingsStore = useSettingsStore();
+const systemStore = useSystemStore();
 
 // State
 const serverConfig = reactive({
@@ -382,6 +384,17 @@ const refreshOptions = [
   { label: '10 seconds', value: 10000 },
   { label: '30 seconds', value: 30000 }
 ];
+
+// Watch polling interval changes and update system store
+watch(() => preferences.refreshInterval, (newInterval) => {
+  console.log('[Settings] Polling interval changed to:', newInterval, 'ms');
+
+  // Update system store's polling interval
+  systemStore.setRefreshInterval(newInterval);
+
+  // Save the new interval to settings
+  settingsStore.updatePreferences({ refreshInterval: newInterval });
+}, { immediate: false });
 
 // Dark Mode
 const darkMode = ref($q.dark.isActive);
@@ -712,6 +725,11 @@ onMounted(async () => {
   const savedPrefs = settingsStore.preferences;
   if (savedPrefs) {
     Object.assign(preferences, { ...savedPrefs });
+
+    // Initialize system store with polling interval from settings
+    if (systemStore.autoRefresh) {
+      systemStore.setRefreshInterval(savedPrefs.refreshInterval || 5000);
+    }
   }
 
   // Load dark mode settings

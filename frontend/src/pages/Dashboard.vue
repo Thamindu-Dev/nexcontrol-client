@@ -13,7 +13,7 @@
   <div class="dashboard-page">
     <q-page padding class="q-pl-none q-pr-md">
       <!-- Header: Menu + Title -->
-      <div class="row items-center q-mb-lg header-section">
+      <div class="row items-center q-mb-lg header-section" style="padding-left: 20px;">
         <q-btn
           flat
           round
@@ -26,28 +26,17 @@
           Dashboard
         </div>
         <q-space />
-        <!-- WebSocket Status & Toggle -->
-        <div class="row q-gutter-xs">
-          <div class="status-badge q-px-sm q-py-xs rounded-borders">
-            <q-icon :name="wsStatusIcon" :color="wsStatusColor" size="14px" class="q-mr-xs" />
-            <span class="text-caption text-white">{{ wsStatusText }}</span>
-          </div>
-          <q-btn
-            flat
-            round
-            dense
-            :icon="systemStore.webSocketEnabled ? 'wifi' : 'wifi_off'"
-            :color="systemStore.webSocketEnabled ? 'cyan' : 'grey-6'"
-            size="sm"
-            class="ws-toggle-btn"
-            @click="toggleWebSocket"
-          >
-            <q-tooltip>{{ systemStore.webSocketEnabled ? 'Disable real-time' : 'Enable real-time' }}</q-tooltip>
-          </q-btn>
-        </div>
-        <div class="status-badge q-px-sm q-py-xs rounded-borders q-ml-sm">
-          <q-icon :name="serverStatusIcon" :color="serverStatusColor" size="16px" class="q-mr-xs" />
-          <span class="text-caption text-white">{{ serverStatusText }}</span>
+        <!-- Polling/Realtime Toggle Switch -->
+        <div class="row items-center q-gutter-sm">
+          <span class="text-caption text-grey-6">Polling</span>
+          <q-toggle
+            :model-value="systemStore.webSocketEnabled"
+            @update:model-value="toggleWebSocket"
+            color="cyan"
+            keep-emphasis
+            size="md"
+          />
+          <span class="text-caption text-cyan">Real-time</span>
         </div>
       </div>
 
@@ -439,7 +428,7 @@
       </div>
 
       <!-- Quick Actions -->
-      <div class="row q-col-gutter-md q-mb-lg actions-row">
+      <div class="row q-col-gutter-md q-mb-lg actions-row items-stretch">
         <!-- Docker Card -->
         <div class="col-6">
           <q-card
@@ -450,12 +439,16 @@
             bordered
           >
             <q-card-section class="q-pa-md">
-              <div class="text-subtitle2 text-weight-bold text-white q-mb-xs">
-                <q-icon name="inventory_2" color="cyan" size="20px" class="q-mr-xs" />
+              <div class="text-subtitle2 text-weight-bold text-white q-mb-sm">
+                <q-icon name="inventory_2" color="cyan" size="24px" class="q-mr-xs" />
                 Docker
               </div>
-              <div class="text-caption text-grey-6">
+              <div class="text-caption text-grey-6 q-mb-sm">
                 Manage containers
+              </div>
+              <q-separator class="q-my-sm bg-grey-8" />
+              <div class="text-caption text-cyan">
+                View & Control →
               </div>
             </q-card-section>
           </q-card>
@@ -471,12 +464,16 @@
             bordered
           >
             <q-card-section class="q-pa-md">
-              <div class="text-subtitle2 text-weight-bold text-white q-mb-xs">
-                <q-icon name="memory" color="cyan" size="20px" class="q-mr-xs" />
+              <div class="text-subtitle2 text-weight-bold text-white q-mb-sm">
+                <q-icon name="memory" color="cyan" size="24px" class="q-mr-xs" />
                 Processes
               </div>
-              <div class="text-caption text-grey-6">
+              <div class="text-caption text-grey-6 q-mb-sm">
                 View running processes
+              </div>
+              <q-separator class="q-my-sm bg-grey-8" />
+              <div class="text-caption text-cyan">
+                Monitor & Manage →
               </div>
             </q-card-section>
           </q-card>
@@ -519,46 +516,6 @@ const loadingState = computed(() => ({
   stats: systemStore.loading.stats,
   disks: diskLoading.value
 }));
-
-const serverStatusIcon = computed(() => {
-  return systemStore.isConnected ? 'check_circle' : 'error';
-});
-
-const serverStatusColor = computed(() => {
-  return systemStore.isConnected ? 'cyan' : 'grey-6';
-});
-
-const serverStatusText = computed(() => {
-  return systemStore.isConnected ? 'Connected' : 'Disconnected';
-});
-
-// WebSocket status
-const wsStatusIcon = computed(() => {
-  switch (systemStore.webSocketState) {
-    case 'connected': return 'signal_wifi_4_bar';
-    case 'connecting': return 'sync';
-    case 'error': return 'error';
-    default: return 'signal_wifi_off';
-  }
-});
-
-const wsStatusColor = computed(() => {
-  switch (systemStore.webSocketState) {
-    case 'connected': return 'cyan';
-    case 'connecting': return 'orange';
-    case 'error': return 'negative';
-    default: return 'grey-7';
-  }
-});
-
-const wsStatusText = computed(() => {
-  switch (systemStore.webSocketState) {
-    case 'connected': return 'Real-time';
-    case 'connecting': return 'Connecting...';
-    case 'error': return 'Error';
-    default: return 'Polling';
-  }
-});
 
 // Chart data
 const chartData = computed(() => {
@@ -616,11 +573,8 @@ const chartOptions = computed(() => ({
  * Toggle drawer (menu)
  */
 function toggleDrawer() {
-  // Emit event to parent or use global event bus
-  const drawer = document.querySelector('.q-drawer');
-  if (drawer) {
-    drawer.classList.toggle('q-drawer--open');
-  }
+  // Dispatch custom event that MainLayout can listen to
+  window.dispatchEvent(new CustomEvent('toggle-drawer'));
 }
 
 /**
@@ -851,18 +805,8 @@ function goToProcesses() {
 function toggleWebSocket() {
   if (systemStore.webSocketEnabled) {
     systemStore.disableWebSocket();
-    $q.notify({
-      type: 'info',
-      message: 'Switched to polling mode',
-      position: 'top'
-    });
   } else {
     systemStore.enableWebSocket();
-    $q.notify({
-      type: 'positive',
-      message: 'Real-time mode enabled',
-      position: 'top'
-    });
   }
 }
 
@@ -936,14 +880,10 @@ onUnmounted(() => {
 }
 
 /* Header buttons - CRITICAL: Must be clickable */
-.header-menu-btn,
-.ws-toggle-btn {
+.header-menu-btn {
   position: relative !important;
   z-index: 1001 !important;
   pointer-events: auto !important;
-}
-
-.header-menu-btn {
   color: #FFFFFF;
   background: rgba(10, 10, 10, 0.8);
   border: 1px solid rgba(255, 255, 255, 0.1);
@@ -951,16 +891,6 @@ onUnmounted(() => {
 
 .header-menu-btn:hover {
   background: rgba(30, 30, 30, 0.9);
-}
-
-.ws-toggle-btn {
-  color: #22d3ee;
-  background: rgba(10, 10, 10, 0.8);
-  border: 1px solid rgba(34, 211, 238, 0.3);
-}
-
-.ws-toggle-btn:hover {
-  background: rgba(34, 211, 238, 0.1);
 }
 
 /* Status Badge - NOT clickable */
