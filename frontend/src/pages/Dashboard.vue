@@ -610,6 +610,7 @@ import { useSettingsStore } from '../stores/settings';
 import LineChart from '../components/LineChart.vue';
 import api from '../services/ApiService';
 import { secureNotify } from '../services/NotifyService';
+import { mediaWsService } from '../services/MediaWebSocketService';
 
 // Define component name for ESLint multi-word rule
 defineOptions({
@@ -940,6 +941,7 @@ async function refreshMediaApps() {
 
 /**
  * Send media command to selected app
+ * Uses WebSocket for low latency, falls back to HTTP if needed
  */
 async function sendMediaCommand(action) {
   if (mediaCommandLoading.value) {
@@ -956,14 +958,24 @@ async function sendMediaCommand(action) {
   mediaCommandLoading.value = true;
 
   try {
-    const payload = {
-      app: selectedMediaApp.value,
-      action: action
-    };
+    // Try to get auth token for WebSocket
+    const token = await api.getToken();
 
-    console.log('[Dashboard] Sending media control request:', payload);
-    const result = await api.post('/api/media/control', payload);
-    console.log('[Dashboard] Media control response:', result);
+    // Connect to WebSocket if not already connected
+    if (!mediaWsService.isConnected() && token) {
+      console.log('[Dashboard] Connecting to media WebSocket...');
+      try {
+        await mediaWsService.connect(token);
+        console.log('[Dashboard] Media WebSocket connected');
+      } catch (wsError) {
+        console.warn('[Dashboard] WebSocket connection failed, will use HTTP fallback:', wsError);
+      }
+    }
+
+    // Send command via WebSocket (will fall back to HTTP if not connected)
+    console.log('[Dashboard] Sending media command via WebSocket...');
+    const result = await mediaWsService.sendCommand(selectedMediaApp.value, action);
+    console.log('[Dashboard] Media command result:', result);
 
     if (result.success) {
       // Provide haptic feedback on mobile
@@ -977,7 +989,7 @@ async function sendMediaCommand(action) {
     }
   } catch (error) {
     console.error('[Dashboard] Media control error:', error);
-    secureNotify.error($q, error.response?.data?.message || error.message || 'Failed to send media command');
+    secureNotify.error($q, error.message || 'Failed to send media command');
   } finally {
     mediaCommandLoading.value = false;
   }
@@ -1023,9 +1035,14 @@ function stopAutoRefresh() {
  */
 function handleVisibilityChange() {
   if (document.hidden) {
+    // Page hidden - stop refresh and disconnect WebSocket to save resources
     stopAutoRefresh();
+    console.log('[Dashboard] Page hidden, disconnecting media WebSocket');
+    mediaWsService.disconnect();
   } else {
+    // Page visible - restart refresh (WebSocket will reconnect on first command)
     startAutoRefresh();
+    console.log('[Dashboard] Page visible, WebSocket will connect on next media command');
   }
 }
 
@@ -1055,6 +1072,15 @@ onMounted(async () => {
   // Load media apps
   await refreshMediaApps();
 
+  // Test media control endpoint connectivity (debug)
+  try {
+    console.log('[Dashboard] Testing media control connectivity...');
+    const statusResult = await api.get('/api/media/status');
+    console.log('[Dashboard] Media control status:', statusResult);
+  } catch (error) {
+    console.error('[Dashboard] Media control connectivity test failed:', error);
+  }
+
   // Start auto-refresh
   startAutoRefresh();
 
@@ -1066,6 +1092,10 @@ onUnmounted(() => {
   stopAutoRefresh();
   // CRITICAL: Use same function reference to properly remove event listener
   document.removeEventListener('visibilitychange', handleVisibilityChange);
+
+  // Cleanup WebSocket connection to prevent memory leaks
+  console.log('[Dashboard] Cleaning up media WebSocket connection');
+  mediaWsService.disconnect();
 });
 </script>
 

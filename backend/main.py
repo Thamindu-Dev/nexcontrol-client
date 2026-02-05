@@ -3239,6 +3239,14 @@ class MediaController:
             Execution result
         """
         try:
+            # Check if pyautogui is available
+            if not PYAUTOGUI_AVAILABLE:
+                logger.error("pyautogui is not available - cannot send media keys")
+                return {
+                    "success": False,
+                    "message": "Media control not available (pyautogui not installed or headless system)"
+                }
+
             key_map = {
                 "playpause": "playpause",
                 "next": "nexttrack",
@@ -3257,10 +3265,19 @@ class MediaController:
                     "message": f"Unknown action: {action}"
                 }
 
-            # Simulate key press
-            logger.info(f"Calling pyautogui.press('{key_map[action]}')")
-            pyautogui.press(key_map[action])
-            logger.info(f"pyautogui.press() completed successfully")
+            # Disable pyautogui failsafe temporarily to prevent blocking
+            # Store original failsafe state
+            original_failsafe = pyautogui.FAILSAFE
+            pyautogui.FAILSAFE = False
+
+            try:
+                # Simulate key press with short delay between press and release
+                logger.info(f"Calling pyautogui.press('{key_map[action]}')")
+                pyautogui.press(key_map[action], presses=1, interval=0.1)
+                logger.info(f"pyautogui.press() completed successfully")
+            finally:
+                # Restore original failsafe setting
+                pyautogui.FAILSAFE = original_failsafe
 
             logger.info(f"Sent global media command: {action}")
             return {
@@ -3269,7 +3286,9 @@ class MediaController:
             }
 
         except Exception as e:
-            logger.error(f"Global command error: {e}")
+            logger.error(f"Global command error: {type(e).__name__}: {e}")
+            import traceback
+            logger.error(f"Traceback: {traceback.format_exc()}")
             return {
                 "success": False,
                 "message": f"Failed to send global command: {str(e)}"
@@ -3388,6 +3407,21 @@ async def get_media_apps(current_user: dict = Depends(get_current_user)):
     return {
         "success": True,
         "apps": apps
+    }
+
+
+@app.get("/api/media/status", tags=["Media Control"])
+async def get_media_status(current_user: dict = Depends(get_current_user)):
+    """
+    Get media control status and availability
+
+    Returns:
+        Status of media control functionality
+    """
+    return {
+        "success": True,
+        "pyautogui_available": PYAUTOGUI_AVAILABLE,
+        "message": "Media control endpoint is accessible" if PYAUTOGUI_AVAILABLE else "pyautogui not available"
     }
 
 
@@ -4380,6 +4414,130 @@ async def websocket_stats(websocket: WebSocket):
         except Exception as e:
             logger.error(f"[WebSocket] Connection error: {e}")
             websocket_manager.disconnect(websocket)
+
+
+@app.websocket("/ws/media")
+async def websocket_media_control(websocket: WebSocket, token: str = None):
+    """
+    WebSocket endpoint for media control commands.
+
+    Provides low-latency media key commands without HTTP overhead.
+    Supports play/pause, next/previous track, and volume control.
+
+    Authentication:
+    - Optional token parameter for JWT authentication
+    - If not provided, connection is accepted but commands may be rejected
+
+    Message Format (Client -> Server):
+    {
+        "type": "media_command",
+        "app": "Default (Global)",
+        "action": "playpause"  // playpause, next, prev, volumeup, volumedown, volumemute
+    }
+
+    Message Format (Server -> Client):
+    {
+        "type": "media_response",
+        "success": true,
+        "message": "Command executed",
+        "timestamp": 1234567890.123
+    }
+
+    Example:
+        const ws = new WebSocket("ws://localhost:8000/ws/media?token=YOUR_JWT_TOKEN")
+        ws.onopen = () => {
+            ws.send(JSON.stringify({
+                type: "media_command",
+                app: "Default (Global)",
+                action: "volumeup"
+            }))
+        }
+        ws.onmessage = (event) => {
+            const response = JSON.parse(event.data)
+            console.log(response.success, response.message)
+        }
+    """
+    await websocket.accept()
+
+    # Verify authentication if token provided
+    user = None
+    if token:
+        try:
+            from jose import jwt
+            payload = jwt.decode(token, get_secret_key(), algorithms=["HS256"])
+            user = {"sub": payload.get("sub")}
+            logger.info(f"[WebSocket Media] Authenticated user: {user.get('sub')}")
+        except Exception as e:
+            logger.warning(f"[WebSocket Media] Auth failed: {e}")
+            await websocket.send_json({
+                "type": "error",
+                "message": "Authentication failed"
+            })
+            await websocket.close()
+            return
+
+    logger.info(f"[WebSocket Media] Client connected")
+
+    try:
+        while True:
+            # Receive message from client
+            data = await websocket.receive_text()
+
+            try:
+                message = json.loads(data)
+
+                # Handle media command
+                if message.get("type") == "media_command":
+                    app = message.get("app", "Default (Global)")
+                    action = message.get("action")
+
+                    if not action:
+                        await websocket.send_json({
+                            "type": "media_response",
+                            "success": False,
+                            "message": "Missing action parameter",
+                            "timestamp": time.time()
+                        })
+                        continue
+
+                    logger.info(f"[WebSocket Media] Command: app={app}, action={action}")
+
+                    # Execute media command
+                    result = MediaController.send_media_command(app, action)
+
+                    # Send response back to client
+                    await websocket.send_json({
+                        "type": "media_response",
+                        "success": result.get("success", False),
+                        "message": result.get("message", ""),
+                        "timestamp": time.time()
+                    })
+
+                elif message.get("type") == "ping":
+                    await websocket.send_json({"type": "pong"})
+
+                else:
+                    await websocket.send_json({
+                        "type": "error",
+                        "message": f"Unknown message type: {message.get('type')}"
+                    })
+
+            except json.JSONDecodeError:
+                await websocket.send_json({
+                    "type": "error",
+                    "message": "Invalid JSON format"
+                })
+            except Exception as e:
+                logger.error(f"[WebSocket Media] Error handling message: {e}")
+                await websocket.send_json({
+                    "type": "error",
+                    "message": str(e)
+                })
+
+    except WebSocketDisconnect:
+        logger.info("[WebSocket Media] Client disconnected")
+    except Exception as e:
+        logger.error(f"[WebSocket Media] Connection error: {e}")
 
 
 # ============================================================

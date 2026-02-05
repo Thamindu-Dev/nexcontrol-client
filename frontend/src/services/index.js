@@ -21,6 +21,7 @@ import ApiService from './ApiService';
 import { encryptPayload, decryptResponse, setAESKey } from './EncryptionService';
 import WoLService from './WoLService';
 import { wsService, WebSocketState } from './WebSocketService';
+import { mediaWsService, MediaWebSocketState } from './MediaWebSocketService';
 
 export {
   ApiService,
@@ -29,11 +30,14 @@ export {
   setAESKey,
   WoLService,
   wsService,
-  WebSocketState
+  WebSocketState,
+  mediaWsService,
+  MediaWebSocketState
 };
 
 export default {
   ApiService,
   WoLService,
-  wsService
+  wsService,
+  mediaWsService
 };
