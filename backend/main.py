@@ -288,20 +288,16 @@ app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
 # SECURITY: When allow_credentials=False, we can use ["*"] to allow all origins
 # However, for production use, it's recommended to set specific origins via ALLOWED_ORIGINS env var
 # Authentication is handled via JWT tokens in Authorization header, not cookies
+#
+# 🚨 CRITICAL FOR MOBILE APPS: Allow ALL headers to prevent iOS WebView blocking
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=ALLOWED_ORIGINS if ALLOWED_ORIGINS != ["*"] else ["*"],
+    allow_origins=["*"],  # Allow ALL origins (Mobile, Web, Localhost)
     allow_credentials=False,  # Must be False when using wildcard origins
-    allow_methods=["GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"],  # Explicitly allow common methods
-    allow_headers=[
-        "Authorization",
-        "Content-Type",
-        "X-Encrypted",
-        "X-Timestamp",
-        "X-Request-ID"
-    ],  # Explicitly allow required headers
+    allow_methods=["*"],  # Allow ALL methods (GET, POST, OPTIONS, PUT, DELETE, PATCH, etc.)
+    allow_headers=["*"],  # Allow ALL headers (Critical for iOS Capacitor apps)
     max_age=600,  # Cache preflight response for 10 minutes
-    expose_headers=["X-Request-ID"]  # Expose custom headers to browser
+    expose_headers=["*"]  # Expose ALL headers to browser (Required for mobile apps)
 )
 
 # Login attempt tracking (in production, use Redis)
