@@ -22,6 +22,7 @@ import { createPinia } from 'pinia';
 import { useAuthStore } from './auth';
 import { useSettingsStore } from './settings';
 import { useSystemStore } from './system';
+import { createSettingsPersistencePlugin } from './settings';
 
 // Export all stores for easy importing
 export { useAuthStore, useSettingsStore, useSystemStore };
@@ -34,8 +35,9 @@ export { useAuthStore, useSettingsStore, useSystemStore };
 export default defineStore((/* { ssrContext } */) => {
   const pinia = createPinia();
 
-  // You can add Pinia plugins here
-  // pinia.use(SomePiniaPlugin)
+  // Register settings persistence plugin
+  pinia.use(createSettingsPersistencePlugin());
+  console.log('[Pinia] Settings persistence plugin registered');
 
   return pinia;
 });

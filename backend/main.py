@@ -21,6 +21,44 @@ Target: Engineering Students & SysAdmins
 ============================================================
 """
 
+"""
+IMPORTANT: PERMISSION REQUIREMENTS FOR POWER COMMANDS
+============================================================
+This application includes power management features (Hibernate, Shutdown,
+Restart, Lock Screen) that require elevated privileges:
+
+LINUX:
+  Run the server with sudo for power commands to work properly:
+  $ sudo python main.py
+  OR
+  $ sudo python3 main.py
+
+  If you get a "Permission denied" error, the server needs to be run with sudo.
+
+WINDOWS:
+  Right-click the terminal/application and select "Run as Administrator"
+  Command Prompt: Right-click → Run as Administrator
+  PowerShell: Right-click → Run as Administrator
+
+macOS:
+  $ sudo python main.py
+  OR
+  $ sudo python3 main.py
+
+NOTES:
+- "Lock Screen" typically works without elevated privileges (user-level)
+- Power commands (Hibernate/Shutdown/Restart) require Administrator/root
+- If commands fail, check that you're running with proper privileges
+- On Linux, you may need to configure sudoers to allow passwordless commands for specific users
+
+For development/testing, you can add passwordless sudo for specific commands:
+  $ sudo visudo
+  # Add this line (replace username with your actual username):
+  username ALL=(ALL) NOPASSWD: /usr/sbin/shutdown, /usr/bin/systemctl hibernate, /usr/bin/systemctl poweroff, /usr/bin/systemctl reboot
+
+============================================================
+"""
+
 import os
 import sys
 import platform
@@ -31,6 +69,7 @@ import logging
 import re
 import secrets
 import asyncio
+import signal
 from datetime import datetime, timedelta
 from typing import Optional, List, Dict, Any
 from functools import wraps
@@ -195,36 +234,41 @@ ALLOWED_ORIGINS = os.getenv("ALLOWED_ORIGINS", "*").split(",")
 # Note: Managers are instantiated later in the file, but lifespan is called at runtime
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    """Manage lifespan events for background services"""
-    # Startup
-    logger.info("Starting scheduled task manager...")
-    await scheduled_task_manager.start_scheduler()
-    logger.info("Starting threshold notification manager...")
-    await threshold_notification_manager.start_monitor()
+    """
+    Manage lifespan events for background services.
+    Handles graceful startup and shutdown of all background tasks.
+    """
+    # ==================== STARTUP ====================
+    logger.info("🚀 Starting NexControl Background Services...")
+    try:
+        logger.info("→ Starting scheduled task manager...")
+        await scheduled_task_manager.start_scheduler()
 
-    yield
+        logger.info("→ Starting threshold notification manager...")
+        await threshold_notification_manager.start_monitor()
 
-    # Shutdown
-    logger.info("Stopping scheduled task manager...")
-    await scheduled_task_manager.stop_scheduler()
-    logger.info("Stopping threshold notification manager...")
-    await threshold_notification_manager.stop_monitor()
-@asynccontextmanager
-async def lifespan(app: FastAPI):
-    """Manage lifespan events for background services"""
-    # Startup
-    logger.info("Starting scheduled task manager...")
-    await scheduled_task_manager.start_scheduler()
-    logger.info("Starting threshold notification manager...")
-    await threshold_notification_manager.start_monitor()
+        logger.info("✅ All background services started successfully")
+    except Exception as e:
+        logger.error(f"❌ Failed to start background services: {e}")
+        raise
 
-    yield
+    yield  # Server runs here
 
-    # Shutdown
-    logger.info("Stopping scheduled task manager...")
-    await scheduled_task_manager.stop_scheduler()
-    logger.info("Stopping threshold notification manager...")
-    await threshold_notification_manager.stop_monitor()
+    # ==================== SHUTDOWN ====================
+    logger.info("🛑 Shutting down NexControl Background Services...")
+    try:
+        logger.info("→ Stopping threshold notification manager...")
+        await threshold_notification_manager.stop_monitor()
+
+        logger.info("→ Stopping scheduled task manager...")
+        await scheduled_task_manager.stop_scheduler()
+
+        logger.info("✅ All background services stopped gracefully")
+    except Exception as e:
+        logger.error(f"⚠️ Error during shutdown: {e}")
+    finally:
+        logger.info("👋 NexControl Server shutdown complete")
+
 
 
 # Initialize rate limiter
@@ -1273,13 +1317,16 @@ class PowerManager:
             return {"success": False, "message": "Shutdown command timed out"}
         except PermissionError:
             logger.error("Permission denied for shutdown")
-            return {"success": False, "message": "Insufficient permissions"}
+            return {
+                "success": False,
+                "message": "Insufficient permissions. Please run the server as Administrator (Windows) or with sudo (Linux/macOS). On Linux: 'sudo python main.py'"
+            }
         except FileNotFoundError:
             logger.error("Shutdown command not found")
-            return {"success": False, "message": "Shutdown command not available"}
+            return {"success": False, "message": "Shutdown command not available on this system"}
         except Exception as e:
             logger.error(f"Shutdown error: {type(e).__name__}")
-            return {"success": False, "message": "Shutdown failed"}
+            return {"success": False, "message": f"Shutdown failed: {str(e)}"}
 
     @staticmethod
     def hibernate() -> dict:
@@ -1299,9 +1346,18 @@ class PowerManager:
                     capture_output=True,
                     timeout=10
                 )
+                # Check if command failed (often due to permissions)
+                if result.returncode != 0:
+                    stderr = result.stderr.decode('utf-8', errors='ignore').strip()
+                    return {
+                        "success": False,
+                        "message": f"Windows hibernate failed. Please run the server as Administrator. Error: {stderr if stderr else 'Access denied'}"
+                    }
+
             elif OS_TYPE == "Linux":
-                # Linux: systemctl hibernate
-                # Try systemctl first
+                # Linux: Try multiple methods for hibernate
+
+                # Method 1: systemctl hibernate (most common on systemd systems)
                 try:
                     cmd = ["systemctl", "hibernate"]
                     result = subprocess.run(
@@ -1311,15 +1367,46 @@ class PowerManager:
                         timeout=10,
                         check=True
                     )
-                except (subprocess.CalledProcessError, FileNotFoundError):
-                    # Fallback: write to sysfs (requires root)
-                    logger.warning("systemctl hibernate failed, trying sysfs method")
-                    return {
-                        "success": False,
-                        "message": "Hibernate requires root privileges (systemctl hibernate)"
-                    }
+                except subprocess.CalledProcessError:
+                    # systemctl failed, likely a permissions issue
+                    logger.warning("systemctl hibernate failed - checking for alternative methods")
+
+                    # Method 2: Try pm-suspend (pm-utils)
+                    try:
+                        cmd = ["pm-suspend", "--hibernate"]
+                        result = subprocess.run(
+                            cmd,
+                            shell=False,
+                            capture_output=True,
+                            timeout=10,
+                            check=True
+                        )
+                    except (subprocess.CalledProcessError, FileNotFoundError):
+                        # All methods failed - return helpful error message
+                        return {
+                            "success": False,
+                            "message": "Hibernate requires root/admin privileges. Please run the server with sudo (Linux) or as Administrator (Windows). On Linux: 'sudo python main.py'"
+                        }
+
+                except FileNotFoundError:
+                    # systemctl not found, try pm-suspend directly
+                    try:
+                        cmd = ["pm-suspend", "--hibernate"]
+                        result = subprocess.run(
+                            cmd,
+                            shell=False,
+                            capture_output=True,
+                            timeout=10,
+                            check=True
+                        )
+                    except (subprocess.CalledProcessError, FileNotFoundError):
+                        return {
+                            "success": False,
+                            "message": "Hibernate command not available. Please run the server with sudo (Linux) or as Administrator (Windows). On Linux: 'sudo python main.py'"
+                        }
+
             elif OS_TYPE == "Darwin":  # macOS
-                # macOS: pmset sleepnow
+                # macOS: pmset sleepnow (macOS doesn't support true hibernate via command line easily)
                 cmd = ["pmset", "sleepnow"]
                 result = subprocess.run(
                     cmd,
@@ -1327,6 +1414,11 @@ class PowerManager:
                     capture_output=True,
                     timeout=10
                 )
+                if result.returncode != 0:
+                    return {
+                        "success": False,
+                        "message": "macOS sleep failed. Please ensure the app has Accessibility permissions or try 'pmset sleepnow' manually."
+                    }
             else:
                 return {"success": False, "message": f"Unsupported OS: {OS_TYPE}"}
 
@@ -1337,13 +1429,16 @@ class PowerManager:
             return {"success": False, "message": "Hibernate command timed out"}
         except PermissionError:
             logger.error("Permission denied for hibernate")
-            return {"success": False, "message": "Insufficient permissions for hibernate"}
+            return {
+                "success": False,
+                "message": "Insufficient permissions. Please run the server as Administrator (Windows) or with sudo (Linux/macOS). On Linux: 'sudo python main.py'"
+            }
         except FileNotFoundError:
             logger.error("Hibernate command not found")
-            return {"success": False, "message": "Hibernate command not available"}
+            return {"success": False, "message": "Hibernate command not available on this system"}
         except Exception as e:
-            logger.error(f"Hibernate error: {type(e).__name__}")
-            return {"success": False, "message": "Hibernate failed"}
+            logger.error(f"Hibernate error: {type(e).__name__}: {str(e)}")
+            return {"success": False, "message": f"Hibernate failed: {str(e)}"}
 
     @staticmethod
     def restart(delay_seconds: int = 0) -> dict:
@@ -1405,13 +1500,16 @@ class PowerManager:
             return {"success": False, "message": "Restart command timed out"}
         except PermissionError:
             logger.error("Permission denied for restart")
-            return {"success": False, "message": "Insufficient permissions"}
+            return {
+                "success": False,
+                "message": "Insufficient permissions. Please run the server as Administrator (Windows) or with sudo (Linux/macOS). On Linux: 'sudo python main.py'"
+            }
         except FileNotFoundError:
             logger.error("Restart command not found")
-            return {"success": False, "message": "Restart command not available"}
+            return {"success": False, "message": "Restart command not available on this system"}
         except Exception as e:
             logger.error(f"Restart error: {type(e).__name__}")
-            return {"success": False, "message": "Restart failed"}
+            return {"success": False, "message": f"Restart failed: {str(e)}"}
 
     @staticmethod
     def lock_screen() -> dict:
@@ -1488,13 +1586,13 @@ class PowerManager:
             return {"success": False, "message": "Lock screen command timed out"}
         except PermissionError:
             logger.error("Permission denied for lock screen")
-            return {"success": False, "message": "Insufficient permissions"}
+            return {"success": False, "message": "Insufficient permissions for screen lock (try running with sudo on Linux/macOS)"}
         except FileNotFoundError:
             logger.error("Lock screen command not found")
-            return {"success": False, "message": "Lock screen command not available"}
+            return {"success": False, "message": "Lock screen command not available on this system. You may need to install screensaver utilities."}
         except Exception as e:
             logger.error(f"Lock screen error: {type(e).__name__}")
-            return {"success": False, "message": "Lock screen failed"}
+            return {"success": False, "message": f"Lock screen failed: {str(e)}"}
 
 
 # ============================================================
@@ -4026,10 +4124,32 @@ if __name__ == "__main__":
     port = int(os.getenv("PORT", "8000"))
     reload = os.getenv("RELOAD", "true").lower() == "true"
 
-    uvicorn.run(
-        "main:app",
-        host=host,
-        port=port,
-        reload=reload,
-        log_level="info"
-    )
+    # Graceful shutdown handler
+    def handle_shutdown(signum, frame):
+        """Handle shutdown signals gracefully"""
+        signal_name = signal.Signals(signum).name
+        logger.info(f"\n⚠️ Received shutdown signal ({signal_name})")
+        logger.info("🛑 Initiating graceful shutdown...")
+        # Note: The lifespan context manager will handle cleanup
+        sys.exit(0)
+
+    # Register signal handlers for graceful shutdown
+    signal.signal(signal.SIGINT, handle_shutdown)  # Ctrl+C
+    signal.signal(signal.SIGTERM, handle_shutdown)  # Termination signal
+
+    try:
+        uvicorn.run(
+            "main:app",
+            host=host,
+            port=port,
+            reload=reload,
+            log_level="info"
+        )
+    except KeyboardInterrupt:
+        logger.info("\n⚠️ User requested shutdown (Ctrl+C)")
+    except Exception as e:
+        logger.error(f"❌ Server error: {e}")
+        sys.exit(1)
+    finally:
+        logger.info("👋 Exiting NexControl Server. Goodbye!")
+

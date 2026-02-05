@@ -193,7 +193,7 @@
     </q-drawer>
 
     <!-- Page Container -->
-    <q-page-container class="bg-black" style="padding-top: 20px !important; padding-bottom: 20px !important;">
+    <q-page-container class="bg-black" style="padding-bottom: 20px !important;">
       <router-view />
     </q-page-container>
 
