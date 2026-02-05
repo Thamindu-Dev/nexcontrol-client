@@ -12,8 +12,8 @@
 <template>
   <q-layout view="hHh lpR fFf">
     <!-- Static Global Header -->
-    <q-header elevated class="bg-black text-white global-header" style="padding-top: env(safe-area-inset-top) !important; padding-top: constant(safe-area-inset-top) !important;">
-      <q-toolbar style="min-height: 60px;">
+    <q-header elevated class="bg-black text-white global-header">
+      <q-toolbar style="min-height: 60px; padding-top: env(safe-area-inset-top);">
         <!-- Left Side: Navigation Control -->
         <q-btn
           v-if="isDashboard"
@@ -198,7 +198,7 @@
     </q-page-container>
 
     <!-- Footer -->
-    <q-footer v-if="authStore.isAuthenticated" elevated class="app-footer">
+    <q-footer v-if="authStore.isAuthenticated" elevated class="app-footer" style="padding-bottom: 0 !important;">
       <q-toolbar class="q-pa-none">
         <div class="row col-12 items-center q-pa-sm footer-content">
           <div class="row items-center">
@@ -225,20 +225,15 @@
 <!-- Global styles for iOS Safe Area and Overflow (not scoped) -->
 <style>
 /* iOS Safe Area Support - CRITICAL FIX */
-/* .q-header.global-header {
-  padding-top: constant(safe-area-inset-top) !important;
-  padding-top: env(safe-area-inset-top) !important;
-} */
 
-/* .q-header.global-header .q-toolbar {
-  padding-top: constant(safe-area-inset-top) !important;
-  padding-top: env(safe-area-inset-top) !important;
-} */
-
-/* .q-layout > .q-footer {
-  padding-bottom: constant(safe-area-inset-bottom) !important;
-  padding-bottom: env(safe-area-inset-bottom) !important;
-} */
+/* Force remove bottom safe area spacing from footer - COMPLETELY REMOVE IT */
+.q-layout > .q-footer,
+.q-footer,
+.app-footer,
+.q-layout > .q-footer .q-toolbar,
+.q-footer .q-toolbar {
+  padding-bottom: 0 !important;
+}
 
 .q-layout > .q-page-container {
   padding-left: constant(safe-area-inset-left) !important;
@@ -404,8 +399,6 @@ body, #q-app, .q-layout, .q-page, .q-page > * {
 
 .global-header .q-toolbar {
   min-height: 60px;
-  padding-top: env(safe-area-inset-top);
-  padding-top: constant(safe-area-inset-top);
 }
 
 .header-btn {

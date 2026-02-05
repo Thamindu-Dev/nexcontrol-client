@@ -688,6 +688,10 @@ async function saveServerConfig() {
     })
 
     secureNotify.success($q, 'Server configuration saved');
+
+    // Navigate to dashboard after successful save
+    // CRITICAL: Use Vue Router instead of window.location for SPA navigation
+    await router.push('/dashboard');
   } catch (error) {
     secureNotify.error($q, error.message || 'Failed to save server config');
   } finally {

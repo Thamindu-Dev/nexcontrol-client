@@ -55,6 +55,10 @@ export default defineConfig((/* ctx */) => {
 
       extendViteConf(viteConf) {
         viteConf.server = viteConf.server || {};
+
+        // Configure for GitHub Codespaces and development
+        viteConf.server.host = true; // Listen on all addresses
+        viteConf.server.strictPort = true; // Don't try other ports if this one is occupied
         viteConf.server.proxy = viteConf.server.proxy || {};
         viteConf.server.proxy['/api'] = {
           target: 'http://localhost:8000',
