@@ -22,6 +22,15 @@
         @click="confirmAcknowledgeAll"
       />
       <q-btn
+        v-if="alerts.length > 0"
+        flat
+        color="negative"
+        icon="delete_sweep"
+        label="Clear All"
+        @click="clearAllAlerts"
+      />
+      <q-space />
+      <q-btn
         flat
         round
         dense
@@ -29,7 +38,7 @@
         :loading="loading"
         @click="loadAlerts"
       >
-        <q-tooltip>Refresh alerts</q-tooltip>
+        <q-tooltip>Refresh from server</q-tooltip>
       </q-btn>
     </div>
     <div class="text-caption text-grey q-mb-md">
@@ -165,6 +174,7 @@
 <script setup>
 import { ref, computed, onMounted, onUnmounted } from 'vue';
 import { useQuasar } from 'quasar';
+import { storeToRefs } from 'pinia';
 import { useSystemStore } from '../stores/system';
 import api from '../services/ApiService';
 
@@ -176,8 +186,10 @@ defineOptions({
 const $q = useQuasar();
 const systemStore = useSystemStore();
 
+// Use storeToRefs for reactive access to store properties
+const { alerts, unacknowledgedAlertCount } = storeToRefs(systemStore);
+
 // State
-const alerts = ref([]);
 const loading = ref(false);
 
 // Computed
@@ -193,10 +205,6 @@ const sortedAlerts = computed(() => {
 
 const hasUnacknowledgedAlerts = computed(() => {
   return alerts.value.some(alert => !alert.acknowledged);
-});
-
-const unacknowledgedCount = computed(() => {
-  return alerts.value.filter(alert => !alert.acknowledged).length;
 });
 
 /**
@@ -290,7 +298,7 @@ function formatDateTime(isoString) {
 }
 
 /**
- * Load all alerts
+ * Load all alerts from server (optional - for server-side persistence)
  */
 async function loadAlerts() {
   loading.value = true;
@@ -298,17 +306,19 @@ async function loadAlerts() {
   try {
     const response = await api.get('/api/threshold/alerts');
 
-    if (response.success) {
-      alerts.value = response.alerts || [];
-      console.log(`[ThresholdAlerts] Loaded ${alerts.value.length} alerts`);
+    if (response.success && response.alerts) {
+      // Merge server alerts with local alerts (local alerts take precedence for recent ones)
+      const localAlertIds = new Set(alerts.value.map(a => a.id));
+      const serverAlerts = response.alerts.filter(a => !localAlertIds.has(a.id));
+
+      // Add server alerts to the beginning (older alerts)
+      alerts.value = [...alerts.value, ...serverAlerts];
+
+      console.log(`[ThresholdAlerts] Loaded ${serverAlerts.length} server alerts, total: ${alerts.value.length}`);
     }
   } catch (error) {
-    console.error('[ThresholdAlerts] Failed to load alerts:', error);
-    $q.notify({
-      type: 'negative',
-      message: error.message || 'Failed to load alerts',
-      position: 'top'
-    });
+    console.error('[ThresholdAlerts] Failed to load alerts from server:', error);
+    // Don't show notification - local alerts are still available
   } finally {
     loading.value = false;
   }
@@ -317,24 +327,21 @@ async function loadAlerts() {
 /**
  * Acknowledge single alert
  */
-async function acknowledgeAlert(alertId) {
+function acknowledgeAlert(alertId) {
   try {
-    const response = await api.put(`/api/threshold/alerts/${alertId}/acknowledge`);
+    // Update local state immediately for instant feedback
+    systemStore.acknowledgeAlert(alertId);
 
-    if (response.success) {
-      $q.notify({
-        type: 'positive',
-        message: 'Alert acknowledged',
-        position: 'top'
-      });
+    $q.notify({
+      type: 'positive',
+      message: 'Alert acknowledged',
+      position: 'top'
+    });
 
-      // Update local state
-      const alert = alerts.value.find(a => a.id === alertId);
-      if (alert) {
-        alert.acknowledged = true;
-        alert.acknowledged_at = new Date().toISOString();
-      }
-    }
+    // Optionally sync with server (non-blocking)
+    api.put(`/api/threshold/alerts/${alertId}/acknowledge`).catch(err => {
+      console.warn('[ThresholdAlerts] Failed to sync acknowledge with server:', err);
+    });
   } catch (error) {
     console.error('[ThresholdAlerts] Failed to acknowledge alert:', error);
     $q.notify({
@@ -351,39 +358,59 @@ async function acknowledgeAlert(alertId) {
 function confirmAcknowledgeAll() {
   $q.dialog({
     title: 'Acknowledge All Alerts',
-    message: `Are you sure you want to acknowledge all ${unacknowledgedCount.value} active alerts?`,
+    message: `Are you sure you want to acknowledge all ${unacknowledgedAlertCount.value} active alerts?`,
     cancel: true,
     persistent: true
-  }).onOk(async () => {
-    await acknowledgeAllAlerts();
+  }).onOk(() => {
+    acknowledgeAllAlerts();
   });
 }
 
 /**
  * Acknowledge all alerts
  */
-async function acknowledgeAllAlerts() {
+function acknowledgeAllAlerts() {
   try {
-    const response = await api.put('/api/threshold/alerts/acknowledge-all');
+    // Update local state immediately for instant feedback
+    systemStore.acknowledgeAllAlerts();
 
-    if (response.success) {
-      $q.notify({
-        type: 'positive',
-        message: 'All alerts acknowledged',
-        position: 'top'
-      });
+    $q.notify({
+      type: 'positive',
+      message: 'All alerts acknowledged',
+      position: 'top'
+    });
 
-      // Reload alerts
-      await loadAlerts();
-    }
+    // Optionally sync with server (non-blocking)
+    api.put('/api/threshold/alerts/acknowledge-all').catch(err => {
+      console.warn('[ThresholdAlerts] Failed to sync acknowledge all with server:', err);
+    });
   } catch (error) {
     console.error('[ThresholdAlerts] Failed to acknowledge all alerts:', error);
     $q.notify({
       type: 'negative',
-      message: error.message || 'Failed to acknowledge all alerts',
+      message: error.message || 'Failed to acknowledge alerts',
       position: 'top'
     });
   }
+}
+
+/**
+ * Clear all alerts
+ */
+function clearAllAlerts() {
+  $q.dialog({
+    title: 'Clear All Alerts',
+    message: 'Are you sure you want to delete all alerts? This cannot be undone.',
+    cancel: true,
+    persistent: true
+  }).onOk(() => {
+    systemStore.clearAlerts();
+    $q.notify({
+      type: 'positive',
+      message: 'All alerts cleared',
+      position: 'top'
+    });
+  });
 }
 
 /**

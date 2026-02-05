@@ -21,6 +21,7 @@
 import { defineStore } from 'pinia';
 import api from '../services/ApiService';
 import { wsService, WebSocketState } from '../services/WebSocketService';
+import { LocalNotifications } from '@capacitor/local-notifications';
 
 export const useSystemStore = defineStore('system', {
   state: () => ({
@@ -46,6 +47,9 @@ export const useSystemStore = defineStore('system', {
 
     // Screenshot availability
     screenshotAvailable: false,
+
+    // Threshold alerts history
+    alerts: [],
 
     // Loading states
     loading: {
@@ -279,7 +283,31 @@ export const useSystemStore = defineStore('system', {
     /**
      * Get WebSocket service instance
      */
-    wsService: () => wsService
+    wsService: () => wsService,
+
+    /**
+     * Get all alerts
+     */
+    allAlerts: (state) => state.alerts,
+
+    /**
+     * Get unacknowledged alerts
+     */
+    unacknowledgedAlerts: (state) => {
+      return state.alerts.filter(alert => !alert.acknowledged);
+    },
+
+    /**
+     * Get alert count
+     */
+    alertCount: (state) => state.alerts.length,
+
+    /**
+     * Get unacknowledged alert count
+     */
+    unacknowledgedAlertCount: (state) => {
+      return state.alerts.filter(alert => !alert.acknowledged).length;
+    }
   },
 
   actions: {
@@ -725,10 +753,14 @@ export const useSystemStore = defineStore('system', {
       if (cpuValue >= this.thresholdConfig.cpu_threshold) {
         if (now - this._lastAlertTime.cpu > this._alertCooldown) {
           alerts.push({
+            id: `cpu-${now}`,
             type: 'cpu',
+            metric_type: 'cpu',
             metric: 'CPU Usage',
             value: cpuValue,
-            threshold: this.thresholdConfig.cpu_threshold
+            threshold: this.thresholdConfig.cpu_threshold,
+            triggered_at: new Date(now).toISOString(),
+            acknowledged: false
           });
           this._lastAlertTime.cpu = now;
         }
@@ -738,10 +770,14 @@ export const useSystemStore = defineStore('system', {
       if (memoryValue >= this.thresholdConfig.memory_threshold) {
         if (now - this._lastAlertTime.memory > this._alertCooldown) {
           alerts.push({
+            id: `memory-${now}`,
             type: 'memory',
+            metric_type: 'memory',
             metric: 'Memory Usage',
             value: memoryValue,
-            threshold: this.thresholdConfig.memory_threshold
+            threshold: this.thresholdConfig.memory_threshold,
+            triggered_at: new Date(now).toISOString(),
+            acknowledged: false
           });
           this._lastAlertTime.memory = now;
         }
@@ -751,10 +787,14 @@ export const useSystemStore = defineStore('system', {
       if (diskValue >= this.thresholdConfig.disk_threshold) {
         if (now - this._lastAlertTime.disk > this._alertCooldown) {
           alerts.push({
+            id: `disk-${now}`,
             type: 'disk',
+            metric_type: 'disk',
             metric: 'Disk Usage',
             value: diskValue,
-            threshold: this.thresholdConfig.disk_threshold
+            threshold: this.thresholdConfig.disk_threshold,
+            triggered_at: new Date(now).toISOString(),
+            acknowledged: false
           });
           this._lastAlertTime.disk = now;
         }
@@ -764,10 +804,120 @@ export const useSystemStore = defineStore('system', {
       if (alerts.length > 0) {
         alerts.forEach(alert => {
           console.warn('[System] Threshold Alert:', alert);
-          // Store the alert in state for components to react to
-          this.$patch?.({ _lastAlert: alert });
+
+          // Add alert to store for UI
+          this.alerts.unshift(alert);
+
+          // Keep only last 100 alerts to prevent memory issues
+          if (this.alerts.length > 100) {
+            this.alerts = this.alerts.slice(0, 100);
+          }
+
+          // Send native notification
+          this.sendNativeNotification(alert);
         });
+
+        // Update _lastAlert for backwards compatibility
+        this.$patch?.({ _lastAlert: alerts[0] });
       }
+    },
+
+    /**
+     * Send native mobile notification for threshold alert
+     * @param {Object} alert - Alert object
+     */
+    async sendNativeNotification(alert) {
+      try {
+        // Check if we're running in a native environment (Capacitor)
+        const isNative = window.Capacitor?.isNativePlatform?.();
+
+        if (!isNative) {
+          // Not running in native app, skip native notifications
+          console.log('[System] Not in native environment, skipping native notification');
+          return;
+        }
+
+        // Request permissions if not already granted
+        const permissions = await LocalNotifications.checkPermissions();
+        if (permissions.display !== 'granted') {
+          const result = await LocalNotifications.requestPermissions();
+          if (result.display !== 'granted') {
+            console.warn('[System] Notification permission denied');
+            return;
+          }
+        }
+
+        // Determine severity based on how much the threshold is exceeded
+        const excess = alert.value - alert.threshold;
+        let priority = 1; // Default low priority
+        let sound = 'beep';
+
+        if (excess >= 20) {
+          priority = 2; // High priority
+          sound = 'beep';
+        } else if (excess >= 10) {
+          priority = 1.5; // Medium priority
+        }
+
+        // Create notification body with all alerts
+        const body = `${alert.metric}: ${alert.value.toFixed(1)}% (Threshold: ${alert.threshold}%)`;
+
+        // Schedule the notification
+        await LocalNotifications.schedule({
+          notifications: [
+            {
+              id: Date.now(), // Unique ID based on timestamp
+              title: `⚠️ ${alert.metric} Alert`,
+              body: body,
+              schedule: { at: new Date(Date.now() + 100) }, // Fire immediately (100ms delay)
+              sound: sound,
+              priority: priority,
+              smallIcon: 'ic_stat_notification', // Custom icon if available
+              largeIcon: 'ic_stat_notification', // Custom icon if available
+              extra: {
+                alertId: alert.id,
+                type: alert.type
+              }
+            }
+          ]
+        });
+
+        console.log('[System] Native notification sent for alert:', alert.id);
+      } catch (error) {
+        console.error('[System] Failed to send native notification:', error);
+        // Don't throw - notification failures shouldn't break the app
+      }
+    },
+
+    /**
+     * Clear all alerts
+     */
+    clearAlerts() {
+      this.alerts = [];
+    },
+
+    /**
+     * Acknowledge an alert
+     * @param {string} alertId - Alert ID to acknowledge
+     */
+    acknowledgeAlert(alertId) {
+      const alert = this.alerts.find(a => a.id === alertId);
+      if (alert) {
+        alert.acknowledged = true;
+        alert.acknowledged_at = new Date().toISOString();
+      }
+    },
+
+    /**
+     * Acknowledge all alerts
+     */
+    acknowledgeAllAlerts() {
+      this.alerts.forEach(alert => {
+        if (!alert.acknowledged) {
+          alert.acknowledged = true;
+          alert.acknowledged_at = new Date().toISOString();
+        }
+      });
     },
 
     /**
