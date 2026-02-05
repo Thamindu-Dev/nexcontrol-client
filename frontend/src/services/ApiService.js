@@ -310,6 +310,8 @@ const api = {
 
       return responseData;
     } catch (error) {
+      console.error('[API] Request failed:', error);
+
       // Handle abort errors specifically
       if (error.name === 'AbortError') {
         console.error('[API] Request timeout or aborted:', endpoint);
@@ -328,13 +330,29 @@ const api = {
         throw new Error('Decryption failed. Your encryption key may not match the server.');
       }
 
-      // Re-throw API errors
+      // Enhanced network error handling
+      if (error.message && error.message.includes('fetch')) {
+        // Network fetch failed
+        if (typeof window !== 'undefined' && window.Capacitor) {
+          const platform = window.Capacitor.getPlatform();
+          if (platform === 'ios') {
+            console.error('[API] iOS Network Error - Possibly blocked by ATS');
+            throw new Error('iOS Network Error: Cannot reach server. Ensure Local Network permission is allowed in iOS Settings.');
+          } else if (platform === 'android') {
+            throw new Error('Android Network Error: Cannot reach server. Check if the app has permission to access your local network.');
+          }
+        }
+        throw new Error('Network Error: Cannot reach server. Check IP address and ensure both devices are on the same network.');
+      }
+
+      // Re-throw API errors with message
       if (error.message) {
         throw error;
       }
-      // Handle network errors
-      console.error('Network error:', error);
-      throw new Error('Network error. Please check your connection.');
+
+      // Generic network error
+      console.error('[API] Unknown network error:', error);
+      throw new Error(`Network error: ${errorMessage}`);
     }
   },
 

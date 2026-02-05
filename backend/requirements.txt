@@ -11,6 +11,7 @@ websockets==12.0
 # System Monitoring & Process Management
 psutil==5.9.6
 pyautogui==0.9.54
+pywin32==306  # Windows-specific window control for targeted media commands
 
 # Docker Integration
 docker==6.1.3

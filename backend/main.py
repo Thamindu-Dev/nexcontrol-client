@@ -3111,6 +3111,276 @@ async def restart(
 
 
 # ============================================================
+# API ROUTES: MEDIA CONTROL
+# ============================================================
+
+# Supported media applications and their process names
+MEDIA_APPS = {
+    "spotify": ["Spotify.exe", "spotify.exe"],
+    "vlc": ["vlc.exe", "VLC.exe"],
+    "chrome": ["chrome.exe", "Chrome.exe"],
+    "firefox": ["firefox.exe", "Firefox.exe"],
+    "edge": ["msedge.exe", "MicrosoftEdge.exe"],
+    "youtube_music": ["Chrome.exe"],  # Web app, detect via window title
+    "windows_media_player": ["wmplayer.exe"],
+    "groove": ["GrooveMusic.exe", "Microsoft.ZuneMusic.exe"],
+    "itunes": ["iTunes.exe"],
+    "potplayer": ["PotPlayerMini.exe", "PotPlayer.exe"],
+    "kmplayer": ["KMPlayer.exe"],
+}
+
+
+class MediaController:
+    """
+    Media playback controller supporting both global and targeted window control
+    """
+
+    @staticmethod
+    def get_media_apps():
+        """
+        Scan running processes and return list of supported media apps
+
+        Returns:
+            List of available media applications
+        """
+        available_apps = ["Default (Global)"]
+
+        try:
+            for proc in psutil.process_iter(['name']):
+                try:
+                    proc_name = proc.info['name']
+                    if not proc_name:
+                        continue
+
+                    # Check if this process matches any known media app
+                    for app_name, process_names in MEDIA_APPS.items():
+                        if proc_name in process_names:
+                            display_name = app_name.replace("_", " ").title()
+                            if display_name not in available_apps:
+                                available_apps.append(display_name)
+                            break
+                except (psutil.NoSuchProcess, psutil.AccessDenied):
+                    continue
+        except Exception as e:
+            logger.error(f"Error scanning media apps: {e}")
+
+        return available_apps
+
+    @staticmethod
+    def send_media_command(app_name: str, action: str):
+        """
+        Send media command to specified app
+
+        Args:
+            app_name: Target application name (e.g., "spotify", "Default (Global)")
+            action: Command to send (playpause, next, prev, volumeup, volumedown, volumemute)
+
+        Returns:
+            Command execution result
+        """
+        try:
+            # Normalize app name
+            app_key = app_name.lower().replace(" ", "_")
+
+            if app_name == "Default (Global)" or app_key not in MEDIA_APPS:
+                # Global media keys - affect active window
+                return MediaController._send_global_command(action)
+            else:
+                # Targeted command to specific window
+                return MediaController._send_targeted_command(app_key, action)
+
+        except Exception as e:
+            logger.error(f"Media control error: {e}")
+            return {
+                "success": False,
+                "message": f"Failed to send command: {str(e)}"
+            }
+
+    @staticmethod
+    def _send_global_command(action: str):
+        """
+        Send global media key command using pyautogui
+
+        Args:
+            action: Command to execute
+
+        Returns:
+            Execution result
+        """
+        try:
+            key_map = {
+                "playpause": "playpause",
+                "next": "nexttrack",
+                "prev": "prevtrack",
+                "volumeup": "volumeup",
+                "volumedown": "volumedown",
+                "volumemute": "volumemute"
+            }
+
+            if action not in key_map:
+                return {
+                    "success": False,
+                    "message": f"Unknown action: {action}"
+                }
+
+            # Simulate key press
+            pyautogui.press(key_map[action])
+
+            logger.info(f"Sent global media command: {action}")
+            return {
+                "success": True,
+                "message": f"Global {action} command sent"
+            }
+
+        except Exception as e:
+            logger.error(f"Global command error: {e}")
+            return {
+                "success": False,
+                "message": f"Failed to send global command: {str(e)}"
+            }
+
+    @staticmethod
+    def _send_targeted_command(app_key: str, action: str):
+        """
+        Send media command to specific application window
+
+        Args:
+            app_key: Application key from MEDIA_APPS
+            action: Command to send
+
+        Returns:
+            Execution result
+        """
+        try:
+            # Windows-specific window control
+            if OS_TYPE != "Windows":
+                return {
+                    "success": False,
+                    "message": "Targeted control only available on Windows"
+                }
+
+            import win32gui
+            import win32con
+            from ctypes import windll
+
+            # Find the target window
+            target_hwnd = None
+            process_names = MEDIA_APPS.get(app_key, [])
+
+            def callback(hwnd, windows):
+                nonlocal target_hwnd
+                if target_hwnd is not None:
+                    return  # Already found
+
+                if win32gui.IsWindowVisible(hwnd):
+                    _, pid = win32gui.GetWindowThreadProcessId(hwnd)
+                    try:
+                        proc = psutil.Process(pid)
+                        if proc.name() in process_names:
+                            target_hwnd = hwnd
+                    except (psutil.NoSuchProcess, psutil.AccessDenied):
+                        pass
+                return True
+
+            win32gui.EnumWindows(callback, [])
+
+            if not target_hwnd:
+                return {
+                    "success": False,
+                    "message": f"Could not find window for {app_key}"
+                }
+
+            # Map actions to APPCOMMAND values
+            app_commands = {
+                "playpause": 0xE0000,  # APPCOMMAND_MEDIA_PLAY_PAUSE
+                "next": 0xE0001,       # APPCOMMAND_MEDIA_NEXTTRACK
+                "prev": 0xE0002,       # APPCOMMAND_MEDIA_PREVIOUSTRACK
+                "volumeup": 0xE0005,   # APPCOMMAND_VOLUME_UP
+                "volumedown": 0xE0006, # APPCOMMAND_VOLUME_DOWN
+                "volumemute": 0xE0007  # APPCOMMAND_VOLUME_MUTE
+            }
+
+            if action not in app_commands:
+                return {
+                    "success": False,
+                    "message": f"Unknown action: {action}"
+                }
+
+            # Bring window to foreground (optional, for better visibility)
+            try:
+                windll.user32.ShowWindow(target_hwnd, win32con.SW_RESTORE)
+                windll.user32.SetForegroundWindow(target_hwnd)
+            except:
+                pass  # Window might be minimized or locked
+
+            # Send APPCOMMAND message
+            win32gui.PostMessage(
+                target_hwnd,
+                win32con.WM_APPCOMMAND,
+                0,
+                app_commands[action] * 65536  # Shift to high word
+            )
+
+            logger.info(f"Sent targeted {action} command to {app_key} (HWND: {target_hwnd})")
+            return {
+                "success": True,
+                "message": f"Sent {action} to {app_key.replace('_', ' ').title()}"
+            }
+
+        except ImportError:
+            return {
+                "success": False,
+                "message": "pywin32 required for targeted control. Install: pip install pywin32"
+            }
+        except Exception as e:
+            logger.error(f"Targeted command error: {e}")
+            return {
+                "success": False,
+                "message": f"Failed to send targeted command: {str(e)}"
+            }
+
+
+@app.get("/api/media/apps", tags=["Media Control"])
+async def get_media_apps(current_user: dict = Depends(get_current_user)):
+    """
+    Get list of available media applications
+
+    Returns:
+        List of running media apps that can be controlled
+    """
+    apps = MediaController.get_media_apps()
+    return {
+        "success": True,
+        "apps": apps
+    }
+
+
+class MediaControlRequest(BaseModel):
+    """Media control request model"""
+    app: str = Field(..., description="Target application name")
+    action: str = Field(..., description="Action to perform (playpause, next, prev, volumeup, volumedown, volumemute)")
+
+
+@app.post("/api/media/control", tags=["Media Control"])
+async def control_media(
+    request: MediaControlRequest,
+    current_user: dict = Depends(get_current_user)
+):
+    """
+    Send media control command to specified application
+
+    Args:
+        request: Media control request with app and action
+        current_user: Authenticated user
+
+    Returns:
+        Command execution result
+    """
+    result = MediaController.send_media_command(request.app, request.action)
+    return result
+
+
+# ============================================================
 # API ROUTES: SCHEDULED TASKS
 # ============================================================
 

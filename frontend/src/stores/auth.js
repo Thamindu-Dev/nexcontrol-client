@@ -94,11 +94,41 @@ export const useAuthStore = defineStore('auth', {
           return { success: true };
         }
       } catch (error) {
-        this.loginError = error.message || 'Login failed';
+        console.error('[Auth] Login Error Debug:', error);
+
+        let msg = 'Connection Failed';
+
+        // Check for different error types
+        if (error.response) {
+          // Server responded with an error (e.g., 401, 500, 404)
+          const status = error.response.status;
+          const data = error.response.data;
+
+          if (status === 401) {
+            msg = 'Authentication Failed: Invalid password';
+          } else if (status === 404) {
+            msg = 'Server Not Found: Check if the server is running';
+          } else if (status === 500) {
+            msg = `Server Error: ${data?.detail || data?.message || 'Internal server error'}`;
+          } else if (status === 0 || status === null) {
+            msg = 'Network Error: Unable to reach server. Check IP address and ensure both devices are on the same network.';
+          } else {
+            msg = `Server Error (${status}): ${data?.detail || data?.message || 'Unknown error'}`;
+          }
+        } else if (error.request) {
+          // Request sent but no response (Network issue)
+          msg = 'Network Error: Server not reachable. Check IP and ensure server is running.';
+        } else if (error.message) {
+          // Setup error or other client-side error
+          msg = `App Error: ${error.message}`;
+        }
+
+        // Set detailed error message
+        this.loginError = msg;
         this.isAuthenticated = false;
         this.token = null;
 
-        return { success: false, error: this.loginError };
+        return { success: false, error: msg };
       }
     },
 

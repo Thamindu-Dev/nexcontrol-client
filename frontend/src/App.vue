@@ -99,4 +99,23 @@ onUnmounted(() => {
 .q-notifications {
   pointer-events: none !important;
 }
+
+/* FIX: Prevent dialog backdrop from receiving focus (accessibility fix) */
+.q-dialog__backdrop {
+  pointer-events: none !important;
+}
+
+.q-dialog__backdrop:focus {
+  outline: none !important;
+}
+
+/* Ensure dialog content is still interactive */
+.q-dialog {
+  pointer-events: auto !important;
+}
+
+.q-dialog .q-card,
+.q-dialog .q-card * {
+  pointer-events: auto !important;
+}
 </style>

@@ -392,6 +392,131 @@
             </q-card-section>
           </q-card>
         </div>
+
+        <!-- Media Control Card -->
+        <div class="col-12">
+          <q-card class="action-card" flat bordered>
+            <q-card-section class="q-pa-md">
+              <div class="row items-center q-mb-md">
+                <q-icon name="play_circle" size="20px" color="grey-5" class="q-mr-sm" />
+                <div class="text-subtitle2 text-white">Media Control</div>
+              </div>
+            </q-card-section>
+
+            <q-card-section class="q-pt-none q-pb-md q-px-md">
+              <!-- App Selector -->
+              <div class="q-mb-md">
+                <q-select
+                  v-model="selectedMediaApp"
+                  :options="mediaApps"
+                  label="Target Application"
+                  outlined
+                  dark
+                  dense
+                  color="cyan"
+                  emit-value
+                  map-options
+                  @update:model-value="refreshMediaApps"
+                  :loading="mediaAppsLoading"
+                  class="media-selector"
+                >
+                  <template v-slot:prepend>
+                    <q-icon name="apps" color="grey-5" size="16px" />
+                  </template>
+                  <template v-slot:append>
+                    <q-icon
+                      name="refresh"
+                      color="grey-5"
+                      size="16px"
+                      class="cursor-pointer"
+                      @click.stop="refreshMediaApps"
+                    />
+                  </template>
+                </q-select>
+              </div>
+
+              <!-- Playback Controls -->
+              <div class="row q-col-gutter-sm q-mb-md">
+                <div class="col-4">
+                  <q-btn
+                    @click="sendMediaCommand('prev')"
+                    class="media-btn full-width"
+                    size="md"
+                    padding="sm md"
+                    outline
+                  >
+                    <q-icon name="skip_previous" size="24px" />
+                  </q-btn>
+                </div>
+
+                <div class="col-4">
+                  <q-btn
+                    @click="sendMediaCommand('playpause')"
+                    class="media-btn full-width"
+                    size="md"
+                    padding="sm md"
+                    :loading="mediaCommandLoading"
+                    :disable="mediaCommandLoading"
+                    outline
+                  >
+                    <q-icon name="play_circle" size="24px" />
+                  </q-btn>
+                </div>
+
+                <div class="col-4">
+                  <q-btn
+                    @click="sendMediaCommand('next')"
+                    class="media-btn full-width"
+                    size="md"
+                    padding="sm md"
+                    outline
+                  >
+                    <q-icon name="skip_next" size="24px" />
+                  </q-btn>
+                </div>
+              </div>
+
+              <!-- Volume Controls -->
+              <div class="row q-col-gutter-sm">
+                <div class="col-4">
+                  <q-btn
+                    @click="sendMediaCommand('volumedown')"
+                    class="media-btn full-width"
+                    size="sm"
+                    padding="xs"
+                    outline
+                  >
+                    <q-icon name="volume_down" size="20px" />
+                  </q-btn>
+                </div>
+
+                <div class="col-4">
+                  <q-btn
+                    @click="sendMediaCommand('volumemute')"
+                    class="media-btn full-width"
+                    size="sm"
+                    padding="xs"
+                    outline
+                  >
+                    <q-icon name="volume_off" size="20px" />
+                  </q-btn>
+                </div>
+
+                <div class="col-4">
+                  <q-btn
+                    @click="sendMediaCommand('volumeup')"
+                    class="media-btn full-width"
+                    size="sm"
+                    padding="xs"
+                    outline
+                  >
+                    <q-icon name="volume_up" size="20px" />
+                  </q-btn>
+                </div>
+              </div>
+            </q-card-section>
+          </q-card>
+        </div>
       </div>
 
       <!-- Historical Charts -->
@@ -510,6 +635,12 @@ const powerActionLoading = ref(false);
 const autoRefresh = ref(false);
 const refreshInterval = ref(5000); // 5 seconds
 let refreshTimer = null;
+
+// Media Control State
+const mediaApps = ref(['Default (Global)']);
+const selectedMediaApp = ref('Default (Global)');
+const mediaAppsLoading = ref(false);
+const mediaCommandLoading = ref(false);
 
 // Multi-disk state
 const allDisks = ref([]);
@@ -777,6 +908,71 @@ async function executePowerAction(action) {
 }
 
 /**
+ * =============================================================
+ * MEDIA CONTROL FUNCTIONS
+ * =============================================================
+ */
+
+/**
+ * Get available media apps from backend
+ */
+async function refreshMediaApps() {
+  mediaAppsLoading.value = true;
+
+  try {
+    const result = await api.get('/api/media/apps');
+
+    if (result.success && result.apps) {
+      mediaApps.value = result.apps;
+
+      // Ensure selected app is still valid
+      if (!result.apps.includes(selectedMediaApp.value)) {
+        selectedMediaApp.value = 'Default (Global)';
+      }
+    }
+  } catch (error) {
+    console.error('[Dashboard] Failed to load media apps:', error);
+    secureNotify.error($q, 'Failed to load media applications');
+  } finally {
+    mediaAppsLoading.value = false;
+  }
+}
+
+/**
+ * Send media command to selected app
+ */
+async function sendMediaCommand(action) {
+  if (mediaCommandLoading.value) {
+    return;
+  }
+
+  mediaCommandLoading.value = true;
+
+  try {
+    const result = await api.post('/api/media/control', {
+      app: selectedMediaApp.value,
+      action: action
+    });
+
+    if (result.success) {
+      // Provide haptic feedback on mobile
+      if (navigator.vibrate) {
+        navigator.vibrate(50); // Short vibration
+      }
+
+      secureNotify.success($q, result.message || `${action} sent successfully`);
+    } else {
+      secureNotify.error($q, result.message || 'Failed to send command');
+    }
+  } catch (error) {
+    console.error('[Dashboard] Media control error:', error);
+    secureNotify.error($q, error.response?.data?.message || error.message || 'Failed to send media command');
+  } finally {
+    mediaCommandLoading.value = false;
+  }
+}
+
+/**
  * Navigation
  */
 function goToDocker() {
@@ -844,6 +1040,9 @@ onMounted(async () => {
 
   // Load threshold configuration
   await systemStore.loadThresholdConfig();
+
+  // Load media apps
+  await refreshMediaApps();
 
   // Start auto-refresh
   startAutoRefresh();
@@ -1019,6 +1218,29 @@ onUnmounted(() => {
   border-color: #333333 !important;
   color: #666666 !important;
   background: transparent !important;
+}
+
+/* Media Control Buttons */
+.media-btn {
+  background: transparent !important;
+  color: #FFFFFF !important;
+  border: 1px solid #333333 !important;
+  border-radius: 8px;
+  transition: all 0.2s ease;
+}
+
+.media-btn:hover {
+  background: rgba(34, 211, 238, 0.1) !important;
+  border-color: #22d3ee !important;
+  color: #22d3ee !important;
+}
+
+.media-btn:active {
+  transform: scale(0.95);
+}
+
+.media-selector {
+  border-color: #333333 !important;
 }
 
 /* Notification Styling */
