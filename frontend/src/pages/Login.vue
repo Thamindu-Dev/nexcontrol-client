@@ -455,10 +455,8 @@ async function handleLogin() {
   try {
     console.log('[Login] Server config:', serverConfig);
 
-    // Update API service base URL
-    settingsStore.$patch({
-      server: { ...serverConfig }
-    });
+    // Save server config to localStorage and update API service
+    settingsStore.setServerConfig(serverConfig);
 
     // Test connection first
     const testUrl = `${serverConfig.protocol}://${serverConfig.host}:${serverConfig.port}/api/test/connection`;
