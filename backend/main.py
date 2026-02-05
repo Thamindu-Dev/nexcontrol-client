@@ -285,18 +285,26 @@ app.state.limiter = limiter
 app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
 
 # ============================================================
-# ULTRA-PERMISSIVE CORS FOR MOBILE DEBUGGING
+# CORS FIX: Allow all Local Network IPs dynamically using Regex
 # ============================================================
-# CRITICAL FIX: iOS app was blocking POST requests due to CORS
+# CRITICAL FIX: iOS app was blocking POST requests due to "Wildcard + Credentials" conflict
 # - GET requests work (no pre-flight)
-# - POST requests fail (pre-flight OPTIONS was being rejected)
-# - Solution: Most permissive CORS configuration possible
+# - POST requests fail (pre-flight OPTIONS passes but browser rejects response)
+# - Solution: Use allow_origin_regex to match local network patterns while allowing credentials
+#
+# This regex allows:
+# - http://localhost (any port)
+# - http://127.0.0.1 (any port)
+# - http://192.168.x.x (any IP, any port) - covers all local network IPs
+# - capacitor://localhost (Capacitor iOS apps)
+origin_regex = r"^(http://localhost|http://127\.0\.0\.1|http://192\.168\.\d{1,3}\.\d{1,3}|capacitor://localhost)(:\d+)?$"
+
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],  # Allow ALL origins (Mobile IPs, Localhost, etc.)
-    allow_credentials=True,  # Allow credentials (cookies, auth headers)
-    allow_methods=["*"],  # Allow ALL methods (GET, POST, OPTIONS, PUT, DELETE, PATCH, etc.)
-    allow_headers=["*"],  # Allow ALL headers (Content-Type, Authorization, X-Requested-With, etc.)
+    allow_origin_regex=origin_regex,  # Matches any local IP pattern dynamically
+    allow_credentials=True,           # Allows cookies, auth headers, credentials
+    allow_methods=["*"],              # Allow ALL methods (GET, POST, OPTIONS, PUT, DELETE, PATCH, etc.)
+    allow_headers=["*"],              # Allow ALL headers (Content-Type, Authorization, X-Requested-With, etc.)
 )
 
 # ============================================================
