@@ -285,26 +285,25 @@ app.state.limiter = limiter
 app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
 
 # ============================================================
-# CORS FIX: Allow all Local Network IPs dynamically using Regex
+# CORS FIX: Allow all Local Network IPs and Mobile Origins
 # ============================================================
-# CRITICAL FIX: iOS app was blocking POST requests due to "Wildcard + Credentials" conflict
-# - GET requests work (no pre-flight)
-# - POST requests fail (pre-flight OPTIONS passes but browser rejects response)
-# - Solution: Use allow_origin_regex to match local network patterns while allowing credentials
+# CRITICAL FIX: iOS app blocking POST requests - must use explicit origins with allow_credentials=True
+# - Cannot use wildcard (*) with allow_credentials=True (browser rejects)
+# - Solution: Use explicit origins list + comprehensive regex for all local addresses
 #
-# This regex allows:
-# - http://localhost (any port)
-# - http://127.0.0.1 (any port)
-# - http://192.168.x.x (any IP, any port) - covers all local network IPs
-# - capacitor://localhost (Capacitor iOS apps)
-origin_regex = r"^(http://localhost|http://127\.0\.0\.1|http://192\.168\.\d{1,3}\.\d{1,3}|capacitor://localhost)(:\d+)?$"
-
+# This configuration allows:
+# - Capacitor apps (capacitor://localhost, ionic://localhost)
+# - All local network IPs and localhost with any port
 app.add_middleware(
     CORSMiddleware,
-    allow_origin_regex=origin_regex,  # Matches any local IP pattern dynamically
-    allow_credentials=True,           # Allows cookies, auth headers, credentials
-    allow_methods=["*"],              # Allow ALL methods (GET, POST, OPTIONS, PUT, DELETE, PATCH, etc.)
-    allow_headers=["*"],              # Allow ALL headers (Content-Type, Authorization, X-Requested-With, etc.)
+    allow_origins=[
+        "capacitor://localhost",
+        "ionic://localhost",
+    ],
+    allow_origin_regex=r"^https?://(localhost|127\.0\.0\.1|192\.168\.\d{1,3}\.\d{1,3}|10\.\d{1,3}\.\d{1,3}\.\d{1,3}|172\.(1[6-9]|2\d|3[01])\.\d{1,3}\.\d{1,3})(:\d+)?$",
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
 )
 
 # ============================================================
