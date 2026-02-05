@@ -10,8 +10,7 @@
     "scheme": "NexControl",
     "bundleId": "com.nexcontrol.app",
     "overridesWebViewPackage": null,
-    "contentMode": "origin",
-    "contentSecurityPolicy": "default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval'; style-src 'self' 'unsafe-inline'; img-src 'self' data: https:; connect-src 'self' http://192.168.*:* https://192.168.*:* http://10.*:* https://10.*:* http://172.16.*:* https://172.16.*:* http://localhost:* https://localhost:* ws://localhost:* ws://192.168.*:* ws://10.*:*; frame-src 'none';"
+    "contentMode": "origin"
   },
   "android": {
     "buildOptions": {

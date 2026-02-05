@@ -463,6 +463,7 @@ async function handleLogin() {
     // Test connection first
     const testUrl = `${serverConfig.protocol}://${serverConfig.host}:${serverConfig.port}/api/test/connection`;
     console.log('[Login] Attempting to connect to:', testUrl);
+    console.log('[Login] Using API Base URL from EnvConfig:', import('../services/EnvConfig').getApiBaseUrl?.() || 'Not loaded');
 
     try {
       const controller = new AbortController();
@@ -481,6 +482,18 @@ async function handleLogin() {
       }
     } catch (testError) {
       console.error('[Login] Connection test failed:', testError);
+      console.error('[Login] Test URL was:', testUrl);
+      console.error('[Login] Test error details:', {
+        name: testError.name,
+        message: testError.message,
+        stack: testError.stack
+      });
+
+      // Debug alert to show where request was going
+      const { getApiBaseUrl } = await import('../services/EnvConfig');
+      const apiBaseUrl = getApiBaseUrl?.() || 'Unknown';
+      alert(`DEBUG INFO:\n\nAttempted Connection: ${testUrl}\nCurrent API Config: ${apiBaseUrl}\n\nError: ${testError.message}`);
+
       loginError.value = 'Cannot reach server. Make sure your PC is on and check the IP address.';
       loading.value = false;
 

@@ -68,10 +68,23 @@ export function getApiBaseUrl() {
       // Staging API URL
       return 'https://staging-api.nexcontrol.example.com';
 
-    case 'mobile':
-      // Mobile apps should use user-configured server from localStorage
-      // If not configured, default to localhost for local network testing
-      return 'http://localhost:8000';
+    case 'mobile': {
+      // ⚠️ CRITICAL: Mobile apps MUST use user-configured server from localStorage
+      // DO NOT default to localhost - it won't work on actual devices!
+      // If not configured, return empty string to force user to Settings
+      const customConfig = localStorage.getItem('nexcontrol_server_config');
+      if (customConfig) {
+        try {
+          const config = JSON.parse(customConfig);
+          return `${config.protocol}://${config.host}:${config.port}`;
+        } catch {
+          return ''; // Force user to configure
+        }
+      }
+      // No config found - return empty to force user to Settings
+      console.warn('[EnvConfig] Mobile: No server configured. Please configure in Settings.');
+      return '';
+    }
 
     case 'codespaces':
       // In Codespaces, use proxy (empty relative path)
