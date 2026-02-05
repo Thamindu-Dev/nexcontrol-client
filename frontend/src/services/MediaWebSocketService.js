@@ -79,8 +79,8 @@ class MediaWebSocketService {
             const data = JSON.parse(event.data);
             console.log('[MediaWS] Message received:', data);
 
-            // Handle media response
-            if (data.type === 'media_response') {
+            // Handle media and launch responses
+            if (data.type === 'media_response' || data.type === 'launch_response') {
               // Find and execute pending callback
               for (const [id, callback] of this.pendingCommands) {
                 callback(data);
@@ -228,7 +228,50 @@ class MediaWebSocketService {
   }
 
   /**
-   * Fallback to HTTP API
+   * Launch application via WebSocket
+   * @param {string} app_id - Application ID to launch
+   * @returns {Promise} Launch result
+   */
+  async launchApp(app_id) {
+    // If WebSocket is connected, use it
+    if (this.isConnected()) {
+      return new Promise((resolve) => {
+        const commandId = ++this._commandId;
+
+        // Set timeout for response
+        const timeout = setTimeout(() => {
+          if (this.pendingCommands.has(commandId)) {
+            this.pendingCommands.delete(commandId);
+            console.warn('[MediaWS] Launch timeout, falling back to HTTP');
+            // Fallback to HTTP
+            resolve(this._launchViaHttp(app_id));
+          }
+        }, 2000); // 2 second timeout
+
+        // Store callback
+        this.pendingCommands.set(commandId, (result) => {
+          clearTimeout(timeout);
+          resolve(result);
+        });
+
+        // Send launch command
+        const message = JSON.stringify({
+          type: 'launch_app',
+          app_id: app_id
+        });
+
+        console.log('[MediaWS] Sending launch command:', app_id);
+        this.ws.send(message);
+      });
+    } else {
+      // Fallback to HTTP
+      console.log('[MediaWS] Not connected, using HTTP for app launch');
+      return this._launchViaHttp(app_id);
+    }
+  }
+
+  /**
+   * Fallback to HTTP API for media control
    */
   async _sendViaHttp(app, action) {
     const controller = new AbortController();
@@ -248,6 +291,51 @@ class MediaWebSocketService {
           'Authorization': token ? `Bearer ${token}` : ''
         },
         body: JSON.stringify({ app, action }),
+        signal: controller.signal
+      });
+
+      clearTimeout(timeoutId);
+
+      const result = await response.json();
+      return result;
+    } catch (error) {
+      clearTimeout(timeoutId);
+
+      if (error.name === 'AbortError') {
+        return {
+          success: false,
+          message: 'HTTP request timeout'
+        };
+      }
+
+      return {
+        success: false,
+        message: error.message || 'HTTP request failed'
+      };
+    }
+  }
+
+  /**
+   * Fallback to HTTP API for app launch
+   */
+  async _launchViaHttp(app_id) {
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 5000); // 5 second timeout
+
+    try {
+      console.log('[MediaWS] Using HTTP fallback for app launch:', app_id);
+
+      // Use fetch directly to have abort control
+      const url = `${api.baseURL}/api/launch`;
+      const token = await api.getToken();
+
+      const response = await fetch(url, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': token ? `Bearer ${token}` : ''
+        },
+        body: JSON.stringify({ app_id }),
         signal: controller.signal
       });
 

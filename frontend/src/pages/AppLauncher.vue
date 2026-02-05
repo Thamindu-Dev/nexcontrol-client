@@ -109,10 +109,11 @@
 </template>
 
 <script setup>
-import { ref, computed, onMounted } from 'vue';
+import { ref, computed, onMounted, onUnmounted } from 'vue';
 import { useQuasar } from 'quasar';
 import api from '../services/ApiService';
 import { secureNotify } from '../services/NotifyService';
+import { mediaWsService } from '../services/MediaWebSocketService';
 
 // Define component name for ESLint multi-word rule
 defineOptions({
@@ -175,6 +176,7 @@ async function loadApps() {
 
 /**
  * Launch an application
+ * Uses WebSocket for low latency, falls back to HTTP if needed
  */
 async function launchApp(app) {
   if (launchingApp.value) {
@@ -186,9 +188,24 @@ async function launchApp(app) {
   try {
     console.log(`[AppLauncher] Launching ${app.name} (${app.id})`);
 
-    const response = await api.post('/api/launch', {
-      app_id: app.id
-    });
+    // Try to get auth token for WebSocket
+    const token = await api.getToken();
+
+    // Connect to WebSocket if not already connected
+    if (!mediaWsService.isConnected() && token) {
+      console.log('[AppLauncher] Connecting to WebSocket...');
+      try {
+        await mediaWsService.connect(token);
+        console.log('[AppLauncher] WebSocket connected');
+      } catch (wsError) {
+        console.warn('[AppLauncher] WebSocket connection failed, will use HTTP fallback:', wsError);
+      }
+    }
+
+    // Send command via WebSocket (will fall back to HTTP if not connected)
+    console.log('[AppLauncher] Sending launch command via WebSocket...');
+    const response = await mediaWsService.launchApp(app.id);
+    console.log('[AppLauncher] Launch result:', response);
 
     if (response.success) {
       // Provide haptic feedback on mobile
@@ -214,6 +231,12 @@ async function launchApp(app) {
  */
 onMounted(() => {
   loadApps();
+});
+
+onUnmounted(() => {
+  // Cleanup WebSocket connection when leaving the page
+  console.log('[AppLauncher] Cleaning up WebSocket connection');
+  mediaWsService.disconnect();
 });
 </script>
 

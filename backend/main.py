@@ -4744,43 +4744,35 @@ async def websocket_stats(websocket: WebSocket):
 @app.websocket("/ws/media")
 async def websocket_media_control(websocket: WebSocket, token: str = None):
     """
-    WebSocket endpoint for media control commands.
+    WebSocket endpoint for media control commands and app launching.
 
-    Provides low-latency media key commands without HTTP overhead.
-    Supports play/pause, next/previous track, and volume control.
+    Provides low-latency commands without HTTP overhead.
 
     Authentication:
     - Optional token parameter for JWT authentication
     - If not provided, connection is accepted but commands may be rejected
 
     Message Format (Client -> Server):
+    Media Command:
     {
         "type": "media_command",
         "app": "Default (Global)",
-        "action": "playpause"  // playpause, next, prev, volumeup, volumedown, volumemute
+        "action": "playpause"
+    }
+
+    App Launch:
+    {
+        "type": "launch_app",
+        "app_id": "chrome"
     }
 
     Message Format (Server -> Client):
     {
-        "type": "media_response",
+        "type": "media_response" | "launch_response",
         "success": true,
         "message": "Command executed",
         "timestamp": 1234567890.123
     }
-
-    Example:
-        const ws = new WebSocket("ws://localhost:8000/ws/media?token=YOUR_JWT_TOKEN")
-        ws.onopen = () => {
-            ws.send(JSON.stringify({
-                type: "media_command",
-                app: "Default (Global)",
-                action: "volumeup"
-            }))
-        }
-        ws.onmessage = (event) => {
-            const response = JSON.parse(event.data)
-            console.log(response.success, response.message)
-        }
     """
     await websocket.accept()
 
@@ -4791,9 +4783,9 @@ async def websocket_media_control(websocket: WebSocket, token: str = None):
             from jose import jwt
             payload = jwt.decode(token, get_secret_key(), algorithms=["HS256"])
             user = {"sub": payload.get("sub")}
-            logger.info(f"[WebSocket Media] Authenticated user: {user.get('sub')}")
+            logger.info(f"[WebSocket] Authenticated user: {user.get('sub')}")
         except Exception as e:
-            logger.warning(f"[WebSocket Media] Auth failed: {e}")
+            logger.warning(f"[WebSocket] Auth failed: {e}")
             await websocket.send_json({
                 "type": "error",
                 "message": "Authentication failed"
@@ -4801,7 +4793,7 @@ async def websocket_media_control(websocket: WebSocket, token: str = None):
             await websocket.close()
             return
 
-    logger.info(f"[WebSocket Media] Client connected")
+    logger.info(f"[WebSocket] Client connected")
 
     try:
         while True:
@@ -4810,9 +4802,10 @@ async def websocket_media_control(websocket: WebSocket, token: str = None):
 
             try:
                 message = json.loads(data)
+                msg_type = message.get("type")
 
                 # Handle media command
-                if message.get("type") == "media_command":
+                if msg_type == "media_command":
                     app = message.get("app", "Default (Global)")
                     action = message.get("action")
 
@@ -4825,7 +4818,7 @@ async def websocket_media_control(websocket: WebSocket, token: str = None):
                         })
                         continue
 
-                    logger.info(f"[WebSocket Media] Command: app={app}, action={action}")
+                    logger.info(f"[WebSocket] Media command: app={app}, action={action}")
 
                     # Execute media command
                     result = MediaController.send_media_command(app, action)
@@ -4838,13 +4831,96 @@ async def websocket_media_control(websocket: WebSocket, token: str = None):
                         "timestamp": time.time()
                     })
 
-                elif message.get("type") == "ping":
+                # Handle app launch command
+                elif msg_type == "launch_app":
+                    app_id = message.get("app_id")
+
+                    if not app_id:
+                        await websocket.send_json({
+                            "type": "launch_response",
+                            "success": False,
+                            "message": "Missing app_id parameter",
+                            "timestamp": time.time()
+                        })
+                        continue
+
+                    logger.info(f"[WebSocket] Launch app request: {app_id}")
+
+                    # Get app info
+                    apps = get_platform_apps()
+
+                    if app_id not in apps:
+                        await websocket.send_json({
+                            "type": "launch_response",
+                            "success": False,
+                            "message": f"Unknown application: {app_id}",
+                            "timestamp": time.time()
+                        })
+                        continue
+
+                    app_info = apps[app_id]
+                    command = app_info["command"]
+                    args = app_info["args"]
+
+                    # Build the full command based on platform
+                    try:
+                        if OS_TYPE == "Windows":
+                            full_command = f"start {command}"
+                            if args:
+                                full_command += f" {args}"
+                            subprocess.Popen(
+                                full_command,
+                                shell=True,
+                                creationflags=subprocess.CREATE_NEW_CONSOLE
+                            )
+                        elif OS_TYPE == "Darwin":
+                            full_command = f"{command} {args}".strip()
+                            subprocess.Popen(
+                                full_command,
+                                shell=True,
+                                stdout=subprocess.DEVNULL,
+                                stderr=subprocess.DEVNULL
+                            )
+                        else:
+                            full_command = f"{command} {args}".strip()
+                            subprocess.Popen(
+                                full_command.split(),
+                                stdout=subprocess.DEVNULL,
+                                stderr=subprocess.DEVNULL
+                            )
+
+                        logger.info(f"[WebSocket] Launched application: {app_info['name']} ({app_id})")
+
+                        await websocket.send_json({
+                            "type": "launch_response",
+                            "success": True,
+                            "message": f"Launched {app_info['name']}",
+                            "timestamp": time.time()
+                        })
+
+                    except FileNotFoundError:
+                        await websocket.send_json({
+                            "type": "launch_response",
+                            "success": False,
+                            "message": f"Application '{app_id}' is not installed",
+                            "timestamp": time.time()
+                        })
+                    except Exception as e:
+                        logger.error(f"[WebSocket] Failed to launch app: {e}")
+                        await websocket.send_json({
+                            "type": "launch_response",
+                            "success": False,
+                            "message": f"Failed to launch: {str(e)}",
+                            "timestamp": time.time()
+                        })
+
+                elif msg_type == "ping":
                     await websocket.send_json({"type": "pong"})
 
                 else:
                     await websocket.send_json({
                         "type": "error",
-                        "message": f"Unknown message type: {message.get('type')}"
+                        "message": f"Unknown message type: {msg_type}"
                     })
 
             except json.JSONDecodeError:
@@ -4853,16 +4929,16 @@ async def websocket_media_control(websocket: WebSocket, token: str = None):
                     "message": "Invalid JSON format"
                 })
             except Exception as e:
-                logger.error(f"[WebSocket Media] Error handling message: {e}")
+                logger.error(f"[WebSocket] Error handling message: {e}")
                 await websocket.send_json({
                     "type": "error",
                     "message": str(e)
                 })
 
     except WebSocketDisconnect:
-        logger.info("[WebSocket Media] Client disconnected")
+        logger.info("[WebSocket] Client disconnected")
     except Exception as e:
-        logger.error(f"[WebSocket Media] Connection error: {e}")
+        logger.error(f"[WebSocket] Connection error: {e}")
 
 
 # ============================================================
