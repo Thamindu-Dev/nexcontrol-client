@@ -16,6 +16,8 @@
 <script setup>
 import { onMounted, onUnmounted } from 'vue';
 import { Dark, Notify } from 'quasar';
+import { useSettingsStore } from './stores/settings';
+import { useSystemStore } from './stores/system';
 
 /**
  * CRITICAL: Configure global notification defaults
@@ -36,24 +38,41 @@ function handleThemeChange() {
 
 /**
  * App Initialization
- * Force Dark Mode and ensure persistence
+ * Initialize all stores and load persisted settings
  */
-onMounted(() => {
-  // CRITICAL: Force Dark Mode on app startup
-  // This prevents the "white text on white background" issue
-  Dark.set(true);
+onMounted(async () => {
+  // Initialize stores
+  const settingsStore = useSettingsStore();
+  const systemStore = useSystemStore();
 
-  // Store preference in localStorage for persistence
-  localStorage.setItem('quasar-dark-mode', 'true');
+  // Load settings from localStorage
+  settingsStore.loadSettings();
+  console.log('[App] Settings loaded from localStorage');
 
-  // Listen for system theme changes and always force dark mode
-  const mediaQuery = window.matchMedia('(prefers-color-scheme: light)');
-  mediaQuery.addEventListener('change', handleThemeChange);
+  // Load threshold configuration from backend
+  try {
+    await systemStore.loadThresholdConfig();
+    console.log('[App] Threshold config loaded from backend');
+  } catch (error) {
+    console.warn('[App] Failed to load threshold config:', error);
+  }
+
+  // Apply dark mode from saved preferences
+  if (settingsStore.preferences?.theme === 'dark' || settingsStore.preferences?.theme === 'auto') {
+    Dark.set(true);
+  } else {
+    // Default to dark mode if not set
+    Dark.set(true);
+  }
 
   // Double-check dark mode is set (defensive)
   if (!Dark.isActive) {
     Dark.set(true);
   }
+
+  // Listen for system theme changes and always force dark mode
+  const mediaQuery = window.matchMedia('(prefers-color-scheme: light)');
+  mediaQuery.addEventListener('change', handleThemeChange);
 });
 
 /**

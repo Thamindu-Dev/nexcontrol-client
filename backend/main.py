@@ -1754,14 +1754,41 @@ class ThresholdNotificationManager:
             storage_file: Optional file path for alert history storage
         """
         self.storage_file = storage_file
+        self.config_file = "threshold_config.json"  # Config persistence file
         self.config = ThresholdConfig()
         self.alerts: List[ThresholdAlert] = []
         self._monitor_task = None
         self._running = False
         self._last_alert_time = {}  # Track last alert time to prevent spam
         self._alert_cooldown = 300  # 5 minutes cooldown between alerts for same metric
+        self._load_config()  # Load config from disk
         self._load_alerts()
         logger.info("ThresholdNotificationManager initialized")
+
+    def _load_config(self):
+        """Load threshold configuration from persistent storage if available"""
+        try:
+            if os.path.exists(self.config_file):
+                import json
+                with open(self.config_file, 'r') as f:
+                    config_data = json.load(f)
+                    self.config = ThresholdConfig(**config_data)
+                logger.info(f"Loaded threshold config from disk: {self.config.dict()}")
+            else:
+                logger.info("No saved config found, using defaults")
+        except Exception as e:
+            logger.error(f"Error loading config from disk: {type(e).__name__}: {e}")
+            logger.info("Using default threshold configuration")
+
+    def _save_config(self):
+        """Save threshold configuration to persistent storage"""
+        try:
+            import json
+            with open(self.config_file, 'w') as f:
+                json.dump(self.config.dict(), f, indent=2)
+            logger.info(f"Saved threshold config to disk: {self.config.dict()}")
+        except Exception as e:
+            logger.error(f"Error saving config to disk: {type(e).__name__}: {e}")
 
     def _load_alerts(self):
         """Load alert history from persistent storage if available"""
@@ -1807,6 +1834,10 @@ class ThresholdNotificationManager:
             if hasattr(self.config, key) and value is not None:
                 setattr(self.config, key, value)
         logger.info(f"Threshold config updated: {kwargs}")
+
+        # Persist to disk
+        self._save_config()
+
         return self.config
 
     def get_alerts(self, limit: int = 50, unacknowledged_only: bool = False) -> List[ThresholdAlert]:

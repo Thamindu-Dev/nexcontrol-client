@@ -30,6 +30,27 @@ const AES_KEY_KEY = 'nexcontrol_aes_key';
 const PREFS_KEY = 'nexcontrol_preferences';
 const WOL_DEVICES_KEY = 'nexcontrol_wol_devices';
 
+/**
+ * Pinia plugin to auto-save preferences to localStorage
+ */
+export function createSettingsPersistencePlugin() {
+  return ({ store }) => {
+    if (store.$id === 'settings') {
+      store.$subscribe((mutation, state) => {
+        // Only save when preferences change
+        if (mutation.events.key === 'preferences') {
+          try {
+            localStorage.setItem(PREFS_KEY, JSON.stringify(state.preferences));
+            console.log('[SettingsStore] Auto-saved preferences to localStorage:', state.preferences);
+          } catch (error) {
+            console.error('[SettingsStore] Failed to auto-save preferences:', error);
+          }
+        }
+      });
+    }
+  };
+}
+
 export const useSettingsStore = defineStore('settings', {
   state: () => {
     // Check encryption key with proper length validation

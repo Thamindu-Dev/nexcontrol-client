@@ -34,7 +34,7 @@
 </script>
 
 <style scoped>
-/* CRITICAL: Ensure page and button are clickable */
+/* Ensure page and button are clickable */
 .error-page {
   position: relative !important;
   z-index: 1 !important;
@@ -47,7 +47,6 @@
 
 .go-home-btn {
   position: relative !important;
-  z-index: 10000 !important;
   pointer-events: auto !important;
 }
 </style>

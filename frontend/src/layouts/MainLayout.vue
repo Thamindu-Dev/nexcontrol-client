@@ -258,7 +258,15 @@ body,
   margin-right: 0 !important;
 }
 
-/* CRITICAL: Fix Notification Freeze - Ensure notifications don't block UI */
+/* Z-INDEX HIERARCHY - Proper stacking context
+   Quasar defaults:
+   - Drawer: 1000
+   - Drawer backdrop: 500
+   - Dialog/Menu: 6000
+   - Notifications: 9500
+*/
+
+/* Notifications - Must be above everything except top-most modals */
 .q-notifications {
   pointer-events: none !important;
   position: fixed !important;
@@ -267,7 +275,7 @@ body,
   right: 0 !important;
   height: auto !important;
   max-height: 200px !important;
-  z-index: 99999 !important;
+  z-index: 9500 !important; /* Quasar default */
   overflow: visible !important;
 }
 
@@ -279,13 +287,13 @@ body,
   pointer-events: auto !important;
 }
 
-/* CRITICAL: Fix drawer backdrop blocking UI */
+/* Drawer backdrop - Below drawer but above content */
 .q-drawer__backdrop {
   pointer-events: auto !important;
-  z-index: 4999 !important;
+  z-index: 999 !important; /* Just below drawer's 1000 */
 }
 
-/* CRITICAL: Hide backdrop when drawer is closed - MUST NOT BLOCK UI */
+/* Hide backdrop when drawer is closed */
 .q-drawer--on-layout:not(.q-drawer--open) ~ .q-drawer__backdrop,
 .q-layout > .q-drawer__backdrop:hidden,
 .q-drawer:not(.q-drawer--open) ~ .q-drawer__backdrop {
@@ -301,7 +309,9 @@ body,
   opacity: 1 !important;
 }
 
-/* CRITICAL: SUPER AGGRESSIVE FIX - Make entire app clickable */
+/* FIX: Remove overly aggressive z-index overrides
+   Standard UI elements should use natural DOM order */
+
 body,
 #q-app,
 .q-layout,
@@ -310,7 +320,8 @@ body,
   position: relative !important;
 }
 
-/* FORCE all interactive elements to be clickable */
+/* ONLY ensure interactive elements have pointer-events enabled
+   DO NOT add z-index to standard buttons */
 .q-btn,
 button,
 a,
@@ -318,24 +329,9 @@ a,
 .q-card[clickable],
 .q-card.clickable,
 [role="button"],
-[onclick],
-[class*="btn"] {
-  position: relative !important;
-  z-index: 999999 !important;
+[onclick] {
   pointer-events: auto !important;
   cursor: pointer !important;
-}
-
-/* CRITICAL: SUPER FIX - Ensure entire page is interactive */
-#q-app > *,
-.q-layout > *,
-.q-page > *,
-.q-page-container > *,
-.q-drawer > *,
-.q-drawer .q-item,
-.q-drawer .q-btn {
-  position: relative !important;
-  pointer-events: auto !important;
 }
 
 /* ONLY disable pointer-events on specific non-interactive elements */
@@ -345,27 +341,10 @@ a,
   pointer-events: none !important;
 }
 
-/* CRITICAL: SUPER FIX - Ensure entire page is interactive */
-body, #q-app, .q-layout, .q-page, .q-page > * {
-  position: relative !important;
-}
-
-#q-app > *,
-.q-layout > *,
-.q-page-container > *,
-.q-page > * {
-  pointer-events: auto !important;
-}
-
-/* ONLY disable pointer-events on specific non-interactive elements */
-.static-content, .non-interactive, [pointer-events="none"] {
-  pointer-events: none !important;
-}
-
-/* CRITICAL: FIX DRAWER - Ensure drawer and all content is clickable */
+/* CRITICAL: Drawer z-index */
 .q-drawer {
   position: fixed !important;
-  z-index: 10001 !important;
+  z-index: 1000 !important; /* Quasar default */
   pointer-events: auto !important;
 }
 
@@ -443,12 +422,11 @@ body, #q-app, .q-layout, .q-page, .q-page > * {
   margin-bottom: 8px;
 }
 
-/* CRITICAL: Make all drawer items clickable */
+/* Make all drawer items clickable */
 .drawer-list,
 .drawer-list .q-item,
 .drawer-list .nav-item {
   position: relative !important;
-  z-index: 10002 !important;
   pointer-events: auto !important;
   cursor: pointer !important;
 }

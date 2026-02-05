@@ -632,14 +632,13 @@ watch(screenshotHistory, (newHistory) => {
   z-index: 1000;
 }
 
-/* CRITICAL: Ensure all buttons are clickable */
+/* Ensure all buttons are clickable */
 .q-btn {
   position: relative !important;
-  z-index: 1001 !important;
   pointer-events: auto !important;
 }
 
-/* CRITICAL: Ensure all interactive elements are clickable */
+/* Ensure all interactive elements are clickable */
 .q-page > *,
 .q-page .row,
 .q-page .col,

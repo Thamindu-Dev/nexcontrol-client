@@ -883,10 +883,9 @@ onUnmounted(() => {
   color: #FFFFFF;
 }
 
-/* Header buttons - CRITICAL: Must be clickable */
+/* Header buttons */
 .header-menu-btn {
   position: relative !important;
-  z-index: 1001 !important;
   pointer-events: auto !important;
   color: #FFFFFF;
   background: rgba(10, 10, 10, 0.8);
