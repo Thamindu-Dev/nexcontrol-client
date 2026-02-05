@@ -41,6 +41,11 @@ const routes = [
         meta: { requiresAuth: true }
       },
       {
+        path: 'apps',
+        component: () => import('pages/AppLauncher.vue'),
+        meta: { requiresAuth: true }
+      },
+      {
         path: 'screenshot',
         component: () => import('pages/Screenshot.vue'),
         meta: { requiresAuth: true }

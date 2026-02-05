@@ -3460,6 +3460,331 @@ async def control_media(
 
 
 # ============================================================
+# API ROUTES: APP LAUNCHER
+# ============================================================
+
+# Predefined applications list with platform-specific commands
+AVAILABLE_APPS = {
+    "windows": {
+        "chrome": {
+            "name": "Google Chrome",
+            "icon": "language",
+            "command": "chrome",
+            "args": ""
+        },
+        "edge": {
+            "name": "Microsoft Edge",
+            "icon": "travel_explore",
+            "command": "msedge",
+            "args": ""
+        },
+        "firefox": {
+            "name": "Mozilla Firefox",
+            "icon": "public",
+            "command": "firefox",
+            "args": ""
+        },
+        "notepad": {
+            "name": "Notepad",
+            "icon": "edit_note",
+            "command": "notepad",
+            "args": ""
+        },
+        "calculator": {
+            "name": "Calculator",
+            "icon": "calculate",
+            "command": "calc",
+            "args": ""
+        },
+        "spotify": {
+            "name": "Spotify",
+            "icon": "music_note",
+            "command": "spotify",
+            "args": ""
+        },
+        "vscode": {
+            "name": "VS Code",
+            "icon": "code",
+            "command": "code",
+            "args": ""
+        },
+        "explorer": {
+            "name": "File Explorer",
+            "icon": "folder",
+            "command": "explorer",
+            "args": ""
+        },
+        "cmd": {
+            "name": "Command Prompt",
+            "icon": "terminal",
+            "command": "cmd",
+            "args": "/c start cmd"
+        },
+        "powershell": {
+            "name": "PowerShell",
+            "icon": "terminal",
+            "command": "powershell",
+            "args": "-NoExit"
+        },
+        "taskmgr": {
+            "name": "Task Manager",
+            "icon": "analytics",
+            "command": "taskmgr",
+            "args": ""
+        },
+        "mspaint": {
+            "name": "Paint",
+            "icon": "palette",
+            "command": "mspaint",
+            "args": ""
+        }
+    },
+    "linux": {
+        "chrome": {
+            "name": "Google Chrome",
+            "icon": "language",
+            "command": "google-chrome",
+            "args": ""
+        },
+        "firefox": {
+            "name": "Mozilla Firefox",
+            "icon": "public",
+            "command": "firefox",
+            "args": ""
+        },
+        "terminal": {
+            "name": "Terminal",
+            "icon": "terminal",
+            "command": "gnome-terminal",
+            "args": ""
+        },
+        "files": {
+            "name": "File Manager",
+            "icon": "folder",
+            "command": "nautilus",
+            "args": ""
+        },
+        "vscode": {
+            "name": "VS Code",
+            "icon": "code",
+            "command": "code",
+            "args": ""
+        },
+        "spotify": {
+            "name": "Spotify",
+            "icon": "music_note",
+            "command": "spotify",
+            "args": ""
+        },
+        "calculator": {
+            "name": "Calculator",
+            "icon": "calculate",
+            "command": "gnome-calculator",
+            "args": ""
+        },
+        "gedit": {
+            "name": "Text Editor",
+            "icon": "edit_note",
+            "command": "gedit",
+            "args": ""
+        },
+        "system_monitor": {
+            "name": "System Monitor",
+            "icon": "analytics",
+            "command": "gnome-system-monitor",
+            "args": ""
+        }
+    },
+    "darwin": {  # macOS
+        "chrome": {
+            "name": "Google Chrome",
+            "icon": "language",
+            "command": "open",
+            "args": "-a 'Google Chrome'"
+        },
+        "firefox": {
+            "name": "Mozilla Firefox",
+            "icon": "public",
+            "command": "open",
+            "args": "-a Firefox"
+        },
+        "safari": {
+            "name": "Safari",
+            "icon": "public",
+            "command": "open",
+            "args": "-a Safari"
+        },
+        "finder": {
+            "name": "Finder",
+            "icon": "folder",
+            "command": "open",
+            "args": "-a Finder"
+        },
+        "terminal": {
+            "name": "Terminal",
+            "icon": "terminal",
+            "command": "open",
+            "args": "-a Terminal"
+        },
+        "vscode": {
+            "name": "VS Code",
+            "icon": "code",
+            "command": "open",
+            "args": "-a 'Visual Studio Code'"
+        },
+        "spotify": {
+            "name": "Spotify",
+            "icon": "music_note",
+            "command": "open",
+            "args": "-a Spotify"
+        },
+        "calculator": {
+            "name": "Calculator",
+            "icon": "calculate",
+            "command": "open",
+            "args": "-a Calculator"
+        },
+        "notes": {
+            "name": "Notes",
+            "icon": "edit_note",
+            "command": "open",
+            "args": "-a Notes"
+        },
+        "system_prefs": {
+            "name": "System Preferences",
+            "icon": "settings",
+            "command": "open",
+            "args": "-a 'System Preferences'"
+        }
+    }
+}
+
+
+def get_platform_apps():
+    """Get available applications for current platform"""
+    if OS_TYPE == "Windows":
+        return AVAILABLE_APPS.get("windows", {})
+    elif OS_TYPE == "Linux":
+        return AVAILABLE_APPS.get("linux", {})
+    elif OS_TYPE == "Darwin":
+        return AVAILABLE_APPS.get("darwin", {})
+    else:
+        return AVAILABLE_APPS.get("windows", {})  # Default to Windows
+
+
+class LaunchAppRequest(BaseModel):
+    """Launch app request model"""
+    app_id: str = Field(..., description="Application ID to launch")
+
+
+@app.get("/api/apps", tags=["App Launcher"])
+async def get_apps(current_user: dict = Depends(get_current_user)):
+    """
+    Get list of available applications that can be launched
+
+    Returns:
+        List of available applications with names, icons, and IDs
+    """
+    apps = get_platform_apps()
+
+    # Convert to list format for frontend
+    app_list = []
+    for app_id, app_info in apps.items():
+        app_list.append({
+            "id": app_id,
+            "name": app_info["name"],
+            "icon": app_info["icon"],
+            "command": app_info["command"],
+            "args": app_info["args"]
+        })
+
+    return {
+        "success": True,
+        "apps": app_list,
+        "platform": OS_TYPE
+    }
+
+
+@app.post("/api/launch", tags=["App Launcher"])
+async def launch_app(
+    request: LaunchAppRequest,
+    current_user: dict = Depends(get_current_user)
+):
+    """
+    Launch an application on the host PC
+
+    Args:
+        request: Launch request with app_id
+        current_user: Authenticated user
+
+    Returns:
+        Launch result
+    """
+    try:
+        apps = get_platform_apps()
+
+        if request.app_id not in apps:
+            return {
+                "success": False,
+                "message": f"Unknown application: {request.app_id}"
+            }
+
+        app_info = apps[request.app_id]
+        command = app_info["command"]
+        args = app_info["args"]
+
+        # Build the full command based on platform
+        if OS_TYPE == "Windows":
+            # Windows: use START command to run without blocking
+            full_command = f"start {command}"
+            if args:
+                full_command += f" {args}"
+            # On Windows, run through cmd
+            subprocess.Popen(
+                full_command,
+                shell=True,
+                creationflags=subprocess.CREATE_NEW_CONSOLE
+            )
+        elif OS_TYPE == "Darwin":
+            # macOS: use 'open' command
+            full_command = f"{command} {args}".strip()
+            subprocess.Popen(
+                full_command,
+                shell=True,
+                stdout=subprocess.DEVNULL,
+                stderr=subprocess.DEVNULL
+            )
+        else:
+            # Linux: run directly, no console
+            full_command = f"{command} {args}".strip()
+            subprocess.Popen(
+                full_command.split(),
+                stdout=subprocess.DEVNULL,
+                stderr=subprocess.DEVNULL
+            )
+
+        logger.info(f"Launched application: {app_info['name']} ({request.app_id}) by user {current_user.get('sub')}")
+
+        return {
+            "success": True,
+            "message": f"Launched {app_info['name']}"
+        }
+
+    except FileNotFoundError:
+        logger.error(f"Application not found: {request.app_id}")
+        return {
+            "success": False,
+            "message": f"Application '{request.app_id}' is not installed on this system"
+        }
+    except Exception as e:
+        logger.error(f"Failed to launch application: {e}")
+        return {
+            "success": False,
+            "message": f"Failed to launch application: {str(e)}"
+        }
+
+
+# ============================================================
 # API ROUTES: SCHEDULED TASKS
 # ============================================================
 

@@ -713,6 +713,12 @@ const navigationLinks = [
     link: '/processes'
   },
   {
+    title: 'App Launcher',
+    caption: 'Launch Applications',
+    icon: 'apps',
+    link: '/apps'
+  },
+  {
     title: 'Screenshot',
     caption: 'Remote Screenshot',
     icon: 'screenshot',
