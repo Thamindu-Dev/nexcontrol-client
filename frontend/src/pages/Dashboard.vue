@@ -943,16 +943,27 @@ async function refreshMediaApps() {
  */
 async function sendMediaCommand(action) {
   if (mediaCommandLoading.value) {
+    console.warn('[Dashboard] Media command already in progress, ignoring click');
     return;
   }
+
+  console.log('[Dashboard] Media button clicked:', {
+    app: selectedMediaApp.value,
+    action: action,
+    timestamp: new Date().toISOString()
+  });
 
   mediaCommandLoading.value = true;
 
   try {
-    const result = await api.post('/api/media/control', {
+    const payload = {
       app: selectedMediaApp.value,
       action: action
-    });
+    };
+
+    console.log('[Dashboard] Sending media control request:', payload);
+    const result = await api.post('/api/media/control', payload);
+    console.log('[Dashboard] Media control response:', result);
 
     if (result.success) {
       // Provide haptic feedback on mobile

@@ -3205,14 +3205,19 @@ class MediaController:
             Command execution result
         """
         try:
+            logger.info(f"MediaController.send_media_command() called with app='{app_name}', action='{action}'")
+
             # Normalize app name
             app_key = app_name.lower().replace(" ", "_")
+            logger.info(f"Normalized app_key: {app_key}")
 
             if app_name == "Default (Global)" or app_key not in MEDIA_APPS:
                 # Global media keys - affect active window
+                logger.info("Using GLOBAL media keys (affects active window)")
                 return MediaController._send_global_command(action)
             else:
                 # Targeted command to specific window
+                logger.info(f"Using TARGETED media keys for app: {app_key}")
                 return MediaController._send_targeted_command(app_key, action)
 
         except Exception as e:
@@ -3243,14 +3248,19 @@ class MediaController:
                 "volumemute": "volumemute"
             }
 
+            logger.info(f"Processing global media command: {action}")
+
             if action not in key_map:
+                logger.error(f"Unknown action: {action}")
                 return {
                     "success": False,
                     "message": f"Unknown action: {action}"
                 }
 
             # Simulate key press
+            logger.info(f"Calling pyautogui.press('{key_map[action]}')")
             pyautogui.press(key_map[action])
+            logger.info(f"pyautogui.press() completed successfully")
 
             logger.info(f"Sent global media command: {action}")
             return {
@@ -3402,7 +3412,16 @@ async def control_media(
     Returns:
         Command execution result
     """
+    logger.info("=" * 60)
+    logger.info("MEDIA CONTROL REQUEST RECEIVED")
+    logger.info(f"App: {request.app}")
+    logger.info(f"Action: {request.action}")
+    logger.info(f"User: {current_user.get('sub', 'unknown')}")
+    logger.info("=" * 60)
+
     result = MediaController.send_media_command(request.app, request.action)
+
+    logger.info(f"Media control result: success={result.get('success')}, message={result.get('message')}")
     return result
 
 
