@@ -12,8 +12,8 @@
 <template>
   <q-layout view="hHh lpR fFf">
     <!-- Static Global Header -->
-    <q-header elevated class="bg-black text-white global-header">
-      <q-toolbar style="min-height: 60px; padding-top: env(safe-area-inset-top);">
+    <q-header elevated class="bg-black text-white global-header" style="position: fixed !important;">
+      <q-toolbar style="min-height: 60px; padding-top: env(safe-area-inset-top); position: relative; z-index: 1;">
         <!-- Left Side: Navigation Control -->
         <q-btn
           v-if="isDashboard"
@@ -23,6 +23,7 @@
           icon="menu"
           @click="toggleDrawer"
           class="header-btn"
+          style="position: relative; z-index: 2001; pointer-events: auto !important;"
         />
         <q-btn
           v-else
@@ -32,6 +33,7 @@
           icon="arrow_back"
           @click="goBack"
           class="header-btn"
+          style="position: relative; z-index: 2001; pointer-events: auto !important;"
         />
 
         <!-- Center: Page Title -->
@@ -193,7 +195,7 @@
     </q-drawer>
 
     <!-- Page Container -->
-    <q-page-container class="bg-black" style="padding-bottom: 20px !important;">
+    <q-page-container class="bg-black" style="padding-bottom: 60px !important;">
       <router-view />
     </q-page-container>
 
@@ -287,10 +289,10 @@ body,
   pointer-events: auto !important;
 }
 
-/* Drawer backdrop - Below drawer but above content */
+/* Drawer backdrop - Below drawer but above header */
 .q-drawer__backdrop {
   pointer-events: auto !important;
-  z-index: 999 !important; /* Just below drawer's 1000 */
+  z-index: 2900 !important; /* Below drawer (3000), above header (2000) */
 }
 
 /* Hide backdrop when drawer is closed */
@@ -334,6 +336,15 @@ a,
   cursor: pointer !important;
 }
 
+/* CRITICAL: Ensure header buttons are always clickable */
+.global-header .q-btn,
+.global-header button,
+.global-header .header-btn {
+  pointer-events: auto !important;
+  position: relative !important;
+  z-index: 2001 !important; /* Above header (2000), below drawer (3000) */
+}
+
 /* ONLY disable pointer-events on specific non-interactive elements */
 .static-content,
 .non-interactive,
@@ -341,10 +352,10 @@ a,
   pointer-events: none !important;
 }
 
-/* CRITICAL: Drawer z-index */
+/* CRITICAL: Drawer z-index - Drawer MUST be above Header */
 .q-drawer {
   position: fixed !important;
-  z-index: 1000 !important; /* Quasar default */
+  z-index: 3000 !important; /* Above header (2000), below notifications (9500) */
   pointer-events: auto !important;
 }
 
@@ -353,14 +364,14 @@ a,
 .q-drawer .drawer-list,
 .q-drawer .q-item {
   position: relative !important;
-  z-index: 10002 !important;
+  z-index: 3001 !important; /* Above drawer base */
   pointer-events: auto !important;
   cursor: pointer !important;
 }
 
-/* CRITICAL: Backdrop should NOT block drawer */
+/* CRITICAL: Backdrop should be below drawer but above header */
 .q-drawer__backdrop {
-  z-index: 10000 !important;
+  z-index: 2900 !important; /* Below drawer (3000), above header (2000) */
 }
 
 /* Hide backdrop when drawer is closed */
@@ -374,15 +385,22 @@ a,
 .global-header {
   border-bottom: 1px solid #333333;
   min-height: 60px;
+  z-index: 2000 !important; /* BELOW drawer (3000), above page content */
+  position: relative !important;
 }
 
 .global-header .q-toolbar {
   min-height: 60px;
+  position: relative;
+  z-index: 1;
 }
 
 .header-btn {
   min-width: 44px;
   min-height: 44px;
+  position: relative;
+  z-index: 2 !important; /* Above toolbar */
+  pointer-events: auto !important; /* Ensure clickable */
 }
 
 .app-title {
