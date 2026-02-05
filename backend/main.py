@@ -285,25 +285,37 @@ app.state.limiter = limiter
 app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
 
 # ============================================================
-# CORS FIX: Allow all Local Network IPs and Mobile Origins
+# CORS FIX: Allow all Development and Mobile Origins
 # ============================================================
-# CRITICAL FIX: iOS app blocking POST requests - must use explicit origins with allow_credentials=True
+# CRITICAL FIX: Must support multiple environments with allow_credentials=True
 # - Cannot use wildcard (*) with allow_credentials=True (browser rejects)
-# - Solution: Use explicit origins list + comprehensive regex for all local addresses
+# - Solution: Explicit origins list for all supported origins
 #
 # This configuration allows:
-# - Capacitor apps (capacitor://localhost, ionic://localhost)
-# - All local network IPs and localhost with any port
+# - Capacitor/Ionic mobile apps (capacitor://, ionic://)
+# - Local development (localhost, 127.0.0.1 with common ports)
+# - GitHub Codespaces (*.app.github.dev)
+# - Local network ranges (192.168.x.x, 10.x.x.x, 172.16-31.x.x)
 app.add_middleware(
     CORSMiddleware,
     allow_origins=[
         "capacitor://localhost",
         "ionic://localhost",
+        "http://localhost",
+        "http://localhost:3000",
+        "http://localhost:8080",
+        "http://localhost:9000",
+        "http://127.0.0.1",
+        "http://127.0.0.1:3000",
+        "http://127.0.0.1:8080",
+        "http://127.0.0.1:9000",
     ],
-    allow_origin_regex=r"^https?://(localhost|127\.0\.0\.1|192\.168\.\d{1,3}\.\d{1,3}|10\.\d{1,3}\.\d{1,3}\.\d{1,3}|172\.(1[6-9]|2\d|3[01])\.\d{1,3}\.\d{1,3})(:\d+)?$",
+    allow_origin_regex=r"^https?://([a-z0-9-]+\.app\.github\.dev|192\.168\.\d{1,3}\.\d{1,3}|10\.\d{1,3}\.\d{1,3}\.\d{1,3}|172\.(1[6-9]|2\d|3[01])\.\d{1,3}\.\d{1,3})(:\d+)?$",
     allow_credentials=True,
-    allow_methods=["*"],
+    allow_methods=["GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"],
     allow_headers=["*"],
+    expose_headers=["*"],
+    max_age=600,
 )
 
 # ============================================================
