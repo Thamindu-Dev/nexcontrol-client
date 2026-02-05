@@ -284,21 +284,32 @@ app = FastAPI(
 app.state.limiter = limiter
 app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
 
-# CORS Middleware - Configure based on environment
-# SECURITY: When allow_credentials=False, we can use ["*"] to allow all origins
-# However, for production use, it's recommended to set specific origins via ALLOWED_ORIGINS env var
-# Authentication is handled via JWT tokens in Authorization header, not cookies
-#
-# 🚨 CRITICAL FOR MOBILE APPS: Allow ALL headers to prevent iOS WebView blocking
+# ============================================================
+# 🚀 ULTRA-PERMISSIVE CORS FOR MOBILE DEBUGGING
+# ============================================================
+# CRITICAL FIX: iOS app was blocking POST requests due to CORS
+# - GET requests work (no pre-flight)
+# - POST requests fail (pre-flight OPTIONS was being rejected)
+# - Solution: Most permissive CORS configuration possible
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],  # Allow ALL origins (Mobile, Web, Localhost)
-    allow_credentials=False,  # Must be False when using wildcard origins
+    allow_origins=["*"],  # Allow ALL origins (Mobile IPs, Localhost, etc.)
+    allow_credentials=True,  # Allow credentials (cookies, auth headers)
     allow_methods=["*"],  # Allow ALL methods (GET, POST, OPTIONS, PUT, DELETE, PATCH, etc.)
-    allow_headers=["*"],  # Allow ALL headers (Critical for iOS Capacitor apps)
-    max_age=600,  # Cache preflight response for 10 minutes
-    expose_headers=["*"]  # Expose ALL headers to browser (Required for mobile apps)
+    allow_headers=["*"],  # Allow ALL headers (Content-Type, Authorization, X-Requested-With, etc.)
 )
+
+# ============================================================
+# 📡 REQUEST LOGGING MIDDLEWARE (Debug CORS Issues)
+# ============================================================
+@app.middleware("http")
+async def log_requests(request: Request, call_next):
+    """Log every incoming request to debug CORS/pre-flight issues"""
+    origin = request.headers.get('origin')
+    logger.info(f"📥 Incoming: {request.method} {request.url.path} | Origin: {origin} | Client: {request.client}")
+    response = await call_next(request)
+    logger.info(f"📤 Response: {response.status_code} for {request.method} {request.url.path}")
+    return response
 
 # Login attempt tracking (in production, use Redis)
 login_attempts = {}
