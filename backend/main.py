@@ -285,7 +285,7 @@ app.state.limiter = limiter
 app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
 
 # ============================================================
-# 🚀 ULTRA-PERMISSIVE CORS FOR MOBILE DEBUGGING
+# ULTRA-PERMISSIVE CORS FOR MOBILE DEBUGGING
 # ============================================================
 # CRITICAL FIX: iOS app was blocking POST requests due to CORS
 # - GET requests work (no pre-flight)
@@ -300,15 +300,15 @@ app.add_middleware(
 )
 
 # ============================================================
-# 📡 REQUEST LOGGING MIDDLEWARE (Debug CORS Issues)
+# REQUEST LOGGING MIDDLEWARE (Debug CORS Issues)
 # ============================================================
 @app.middleware("http")
 async def log_requests(request: Request, call_next):
     """Log every incoming request to debug CORS/pre-flight issues"""
     origin = request.headers.get('origin')
-    logger.info(f"📥 Incoming: {request.method} {request.url.path} | Origin: {origin} | Client: {request.client}")
+    logger.info(f"Incoming: {request.method} {request.url.path} | Origin: {origin} | Client: {request.client}")
     response = await call_next(request)
-    logger.info(f"📤 Response: {response.status_code} for {request.method} {request.url.path}")
+    logger.info(f"Response: {response.status_code} for {request.method} {request.url.path}")
     return response
 
 # Login attempt tracking (in production, use Redis)
