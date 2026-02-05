@@ -456,7 +456,7 @@ async function handleLogin() {
     console.log('[Login] Server config:', serverConfig);
 
     // Save server config to localStorage and update API service
-    settingsStore.setServerConfig(serverConfig);
+    settingsStore.updateServer(serverConfig);
 
     // Test connection first
     const testUrl = `${serverConfig.protocol}://${serverConfig.host}:${serverConfig.port}/api/test/connection`;
