@@ -60,7 +60,7 @@
           <q-card-section class="q-pa-md">
             <div class="text-caption text-grey-6">Unacknowledged</div>
             <div class="text-h4 text-weight-bold" :class="hasUnacknowledgedAlerts ? 'text-negative' : 'text-positive'">
-              {{ unacknowledgedCount }}
+              {{ unacknowledgedAlertCount }}
             </div>
           </q-card-section>
         </q-card>
@@ -338,10 +338,16 @@ function acknowledgeAlert(alertId) {
       position: 'top'
     });
 
-    // Optionally sync with server (non-blocking)
-    api.put(`/api/threshold/alerts/${alertId}/acknowledge`).catch(err => {
-      console.warn('[ThresholdAlerts] Failed to sync acknowledge with server:', err);
-    });
+    // Only sync with server for server-side alerts (not local IDs)
+    // Local IDs start with "cpu-", "memory-", "disk-"
+    const isLocalAlert = /^cpu-|^memory-|^disk-/.test(alertId);
+
+    if (!isLocalAlert) {
+      // Sync with server (non-blocking)
+      api.put(`/api/threshold/alerts/${alertId}/acknowledge`).catch(err => {
+        console.warn('[ThresholdAlerts] Failed to sync acknowledge with server:', err);
+      });
+    }
   } catch (error) {
     console.error('[ThresholdAlerts] Failed to acknowledge alert:', error);
     $q.notify({
