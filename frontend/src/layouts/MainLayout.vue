@@ -36,9 +36,15 @@
           style="position: relative; z-index: 2001; pointer-events: auto !important;"
         />
 
-        <!-- Center: Page Title -->
+        <!-- Center: Page Title with Icon -->
         <q-toolbar-title class="app-title">
-          {{ currentPageTitle }}
+          <q-icon
+            :name="currentPageInfo.icon"
+            size="20px"
+            color="cyan"
+            class="q-mr-sm"
+          />
+          {{ currentPageInfo.title }}
         </q-toolbar-title>
 
         <!-- Right Side: Actions -->
@@ -669,21 +675,22 @@ const isConnected = computed(() => systemStore.isConnected);
 // Check if current route is dashboard
 const isDashboard = computed(() => $route.path === '/dashboard');
 
-// Page title mapping
+// Page title mapping with icons
 const pageTitleMap = {
-  '/dashboard': 'Dashboard',
-  '/docker': 'Docker Manager',
-  '/processes': 'Process Manager',
-  '/screenshot': 'Screenshot',
-  '/wol': 'Wake on LAN',
-  '/threshold-alerts': 'Threshold Alerts',
-  '/scheduled-tasks': 'Scheduled Tasks',
-  '/settings': 'Settings'
+  '/dashboard': { title: 'Dashboard', icon: 'dashboard' },
+  '/apps': { title: 'App Launcher', icon: 'apps' },
+  '/docker': { title: 'Docker Manager', icon: 'inventory_2' },
+  '/processes': { title: 'Process Manager', icon: 'memory' },
+  '/screenshot': { title: 'Screenshot', icon: 'screenshot' },
+  '/wol': { title: 'Wake on LAN', icon: 'power_settings_new' },
+  '/threshold-alerts': { title: 'Threshold Alerts', icon: 'notifications' },
+  '/scheduled-tasks': { title: 'Scheduled Tasks', icon: 'schedule' },
+  '/settings': { title: 'Settings', icon: 'settings' }
 };
 
-// Current page title
-const currentPageTitle = computed(() => {
-  return pageTitleMap[$route.path] || 'NexControl';
+// Current page info
+const currentPageInfo = computed(() => {
+  return pageTitleMap[$route.path] || { title: 'NexControl', icon: 'computer' };
 });
 
 // CRITICAL: Watch route changes to close drawer on navigation

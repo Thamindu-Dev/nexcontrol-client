@@ -11,121 +11,107 @@
 -->
 <template>
   <div class="app-launcher-page">
-    <q-page padding class="q-pl-none q-pr-md">
-      <!-- App Launcher Card -->
-      <div class="row q-col-gutter-md q-mb-sm">
-        <div class="col-12">
-          <q-card class="action-card" flat bordered>
-            <q-card-section class="q-pa-md">
-              <div class="row items-center justify-between">
-                <div class="row items-center">
-                  <q-icon name="apps" size="20px" color="grey-5" class="q-mr-sm" />
-                  <div class="text-subtitle2 text-white">App Launcher</div>
-                </div>
-                <div class="row items-center q-gutter-xs">
-                  <q-btn
-                    flat
-                    round
-                    dense
-                    icon="add"
-                    size="sm"
-                    class="header-btn"
-                    @click="showAddAppDialog = true"
-                  >
-                    <q-tooltip>Add Custom App</q-tooltip>
-                  </q-btn>
-                  <q-btn
-                    flat
-                    round
-                    dense
-                    icon="refresh"
-                    size="sm"
-                    class="header-btn"
-                    :loading="loading"
-                    @click="loadApps"
-                  >
-                    <q-tooltip>Refresh app list</q-tooltip>
-                  </q-btn>
-                </div>
-              </div>
-            </q-card-section>
+    <q-page padding class="q-pl-md q-pr-md q-pt-md q-pb-md">
+      <!-- Black Container -->
+      <div class="apps-container">
+        <!-- Action Bar -->
+        <div class="row items-center justify-between q-mb-md">
+          <!-- Platform Indicator -->
+          <div class="row items-center q-gutter-sm">
+            <q-chip
+              :icon="platformIcon"
+              :label="platformLabel"
+              color="cyan"
+              text-color="white"
+              size="sm"
+              dense
+              class="platform-chip"
+            />
+            <span v-if="apps.length > 0" class="text-caption text-grey-6">
+              {{ apps.length }} apps ({{ customAppsCount }} custom)
+            </span>
+          </div>
 
-            <q-card-section class="q-pt-none q-pb-md q-px-md">
-              <!-- Platform Indicator -->
-              <div class="row q-mb-md">
-                <div class="col-12">
-                  <q-chip
-                    :icon="platformIcon"
-                    :label="platformLabel"
-                    color="cyan"
-                    text-color="white"
-                    size="sm"
-                    dense
-                    class="platform-chip"
-                  />
-                  <span v-if="apps.length > 0" class="text-grey-6 q-ml-md text-caption">
-                    {{ apps.length }} apps available ({{ customAppsCount }} custom)
-                  </span>
-                </div>
-              </div>
-
-              <!-- Loading State -->
-              <div v-if="loading && apps.length === 0" class="text-center q-pa-xl">
-                <q-spinner color="cyan" size="32px" />
-                <div class="text-caption text-grey-6 q-mt-sm">Loading applications...</div>
-              </div>
-
-              <!-- Error State -->
-              <div v-if="error && apps.length === 0" class="text-center q-pa-lg">
-                <q-icon name="error_outline" size="40px" color="red" class="q-mb-sm" />
-                <div class="text-caption text-white q-mb-sm">{{ error }}</div>
-                <q-btn
-                  flat
-                  label="Retry"
-                  color="cyan"
-                  size="sm"
-                  @click="loadApps"
-                />
-              </div>
-
-              <!-- Apps Grid -->
-              <div v-if="!loading || apps.length > 0">
-                <div class="row q-col-gutter-sm">
-                  <div
-                    v-for="app in apps"
-                    :key="app.id"
-                    class="col-6 col-sm-4 col-md-3 col-lg-2"
-                  >
-                    <q-btn
-                      @click="launchApp(app)"
-                      class="app-launcher-btn full-width"
-                      :loading="launchingApp === app.id"
-                      :disable="launchingApp !== null"
-                      size="md"
-                      padding="md"
-                      outline
-                      stack
-                    >
-                      <q-icon :name="app.icon" size="32px" :color="app.is_custom ? 'orange' : 'cyan'" />
-                      <div class="text-caption text-weight-medium q-mt-xs">{{ app.name }}</div>
-                      <q-tooltip v-if="app.is_custom">
-                        {{ app.name }} (Custom App)
-                        <br>
-                        Type: {{ app.type }}
-                      </q-tooltip>
-                      <q-tooltip v-else>{{ app.name }}</q-tooltip>
-                    </q-btn>
-                  </div>
-                </div>
-              </div>
-            </q-card-section>
-          </q-card>
+          <!-- Action Buttons -->
+          <div class="row items-center q-gutter-xs">
+            <q-btn
+              flat
+              round
+              dense
+              icon="add"
+              size="sm"
+              class="action-btn"
+              @click="showAddAppDialog = true"
+            >
+              <q-tooltip>Add Custom App</q-tooltip>
+            </q-btn>
+            <q-btn
+              flat
+              round
+              dense
+              icon="refresh"
+              size="sm"
+              class="action-btn"
+              :loading="loading"
+              @click="loadApps"
+            >
+              <q-tooltip>Refresh</q-tooltip>
+            </q-btn>
+          </div>
         </div>
-      </div>
+
+        <!-- Loading State -->
+        <div v-if="loading && apps.length === 0" class="text-center q-pa-xl">
+          <q-spinner color="cyan" size="48px" />
+          <div class="text-caption text-grey-6 q-mt-md">Loading applications...</div>
+        </div>
+
+        <!-- Error State -->
+        <div v-if="error && apps.length === 0" class="text-center q-pa-xl">
+          <q-icon name="error_outline" size="64px" color="red" class="q-mb-sm" />
+          <div class="text-h6 text-white q-mb-sm">{{ error }}</div>
+          <q-btn
+            flat
+            label="Retry"
+            color="cyan"
+            @click="loadApps"
+          />
+        </div>
+
+        <!-- Apps Grid -->
+        <div v-if="!loading || apps.length > 0">
+          <div class="row q-col-gutter-sm">
+            <div
+              v-for="app in apps"
+              :key="app.id"
+              class="col-6 col-sm-4 col-md-3 col-lg-2"
+            >
+              <q-btn
+                @click="launchApp(app)"
+                class="app-launcher-btn full-width"
+                :loading="launchingApp === app.id"
+                :disable="launchingApp !== null"
+                size="md"
+                padding="md"
+                outline
+                stack
+              >
+                <q-icon :name="app.icon" size="32px" :color="app.is_custom ? 'orange' : 'cyan'" />
+                <div class="text-caption text-weight-medium q-mt-xs">{{ app.name }}</div>
+                <q-tooltip v-if="app.is_custom">
+                  {{ app.name }} (Custom App)
+                  <br>
+                  Type: {{ app.type }}
+                </q-tooltip>
+                <q-tooltip v-else>{{ app.name }}</q-tooltip>
+              </q-btn>
+            </div>
+          </div>
+        </div>
 
       <!-- Add Custom App Dialog -->
       <q-dialog v-model="showAddAppDialog" class="glass-dialog">
-        <q-card style="min-width: 400px; background: #000000; color: #FFFFFF;">
+        <q-card style="min-width: 400px; background: #0A0A0A; color: #FFFFFF; border: 1px solid #333333;">
           <q-card-section class="q-pa-md">
             <div class="text-h6 text-white">Add Custom App</div>
           </q-card-section>
@@ -446,25 +432,34 @@ onUnmounted(() => {
   background: #000000;
 }
 
+/* Apps Container */
+.apps-container {
+  background: #000000;
+  border: 1px solid #333333;
+  border-radius: 12px;
+  padding: 20px;
+}
+
 /* Platform chip */
 .platform-chip {
   background: rgba(34, 211, 238, 0.15) !important;
   border: 1px solid rgba(34, 211, 238, 0.3);
 }
 
-/* Header button */
-.header-btn {
+/* Action buttons */
+.action-btn {
   color: #FFFFFF;
   background: transparent;
   border: 1px solid #333333;
   border-radius: 8px;
 }
 
-.header-btn:hover {
-  background: rgba(30, 30, 30, 0.9);
+.action-btn:hover {
+  background: rgba(34, 211, 238, 0.1);
+  border-color: #22d3ee;
 }
 
-/* App Launcher Buttons - Matching Dashboard Media Control Style */
+/* App Launcher Buttons */
 .app-launcher-btn {
   background: transparent !important;
   color: #FFFFFF !important;
@@ -491,6 +486,10 @@ onUnmounted(() => {
 
 /* Responsive adjustments */
 @media (max-width: 575.98px) {
+  .apps-container {
+    padding: 16px;
+  }
+
   .app-launcher-btn {
     padding: 12px !important;
   }
