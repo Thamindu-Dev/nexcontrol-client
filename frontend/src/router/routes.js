@@ -63,7 +63,7 @@ const routes = [
       {
         path: 'settings',
         component: () => import('pages/Settings.vue'),
-        meta: { requiresAuth: true }
+        meta: { requiresAuth: false } // Allow access without auth for emergency configuration
       }
     ]
   },

@@ -12,6 +12,18 @@
 <template>
   <div class="dashboard-page">
     <q-page padding class="q-pl-none q-pr-md">
+      <!-- Encryption Key Warning Banner -->
+      <q-banner v-if="showKeyWarning" class="key-warning-banner q-mb-md" dense rounded>
+        <template v-slot:avatar>
+          <q-icon name="warning" color="orange" />
+        </template>
+        <div class="text-body2">
+          <span class="text-orange">⚠️ Data may be encrypted.</span>
+          Configure your Encryption Key in Settings to decrypt all data.
+          <q-btn flat color="orange" label="Go to Settings" size="sm" class="q-ml-sm" @click="router.push('/settings')" />
+        </div>
+      </q-banner>
+
       <!-- System Stats Cards - CENTERED -->
       <div class="stats-container">
         <!-- Row 1: CPU Card (Full Width) -->
@@ -469,6 +481,7 @@ import { useRouter } from 'vue-router';
 import { useQuasar } from 'quasar';
 import { storeToRefs } from 'pinia';
 import { useSystemStore } from '../stores/system';
+import { useSettingsStore } from '../stores/settings';
 import LineChart from '../components/LineChart.vue';
 import api from '../services/ApiService';
 import { secureNotify } from '../services/NotifyService';
@@ -481,9 +494,16 @@ defineOptions({
 const router = useRouter();
 const $q = useQuasar();
 const systemStore = useSystemStore();
+const settingsStore = useSettingsStore();
 
 // Use storeToRefs for reactive store properties (best practice per Pinia docs)
 const { stats, history, loading } = storeToRefs(systemStore);
+
+// Check if encryption key is missing
+const hasEncryptionKey = computed(() => settingsStore.hasEncryptionKey);
+
+// Show warning banner if encryption key is missing
+const showKeyWarning = computed(() => !hasEncryptionKey.value);
 
 // State
 const powerActionLoading = ref(false);
@@ -850,6 +870,17 @@ onUnmounted(() => {
 .stats-container {
   width: 100%;
   position: relative;
+}
+
+/* Encryption Key Warning Banner */
+.key-warning-banner {
+  background: rgba(255, 152, 0, 0.1) !important;
+  border: 1px solid rgba(255, 152, 0, 0.3) !important;
+  color: #FFFFFF !important;
+}
+
+.key-warning-banner .text-body2 {
+  color: #FFFFFF;
 }
 
 /* Header buttons - CRITICAL: Must be clickable */

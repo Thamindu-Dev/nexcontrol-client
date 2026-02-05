@@ -153,6 +153,23 @@
                 />
               </div>
 
+              <!-- Emergency Settings Button -->
+              <div class="row items-center justify-center q-mt-md">
+                <q-btn
+                  flat
+                  round
+                  color="grey-6"
+                  icon="settings"
+                  size="sm"
+                  @click="goToSettings"
+                >
+                  <q-tooltip>Server Settings</q-tooltip>
+                </q-btn>
+                <div class="text-caption text-grey-6 q-ml-xs">
+                  Server Settings
+                </div>
+              </div>
+
             </q-form>
           </q-card-section>
 
@@ -426,6 +443,13 @@ async function handleLogin() {
   } finally {
     loading.value = false;
   }
+}
+
+/**
+ * Navigate to Settings (emergency access)
+ */
+function goToSettings() {
+  router.push('/settings');
 }
 
 /**

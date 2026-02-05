@@ -221,13 +221,22 @@ const api = {
       // PRE-FLIGHT SECURITY CHECK
       // ============================================
       // Check for encryption key before making any request
-      // Skip check for login/register/test endpoints (these don't require encryption)
+      // Skip check for login/register/test/stats endpoints (these don't require encryption)
+      // Stats endpoints are allowed without key so users can view dashboard
       const skipSecurityCheck = [
         '/api/auth/login',
         '/api/auth/register',
         '/api/auth/refresh',
+        '/api/auth/verify',
         '/api/test/connection',
-        '/api/test/echo'
+        '/api/test/echo',
+        '/api/stats/cpu',
+        '/api/stats/memory',
+        '/api/stats/gpu',
+        '/api/stats/disk',
+        '/api/stats/system',
+        '/api/system/info',
+        '/api/screenshot'
       ].some(path => endpoint.includes(path));
 
       if (!skipSecurityCheck && !hasEncryptionKey()) {
