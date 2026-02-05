@@ -3660,6 +3660,47 @@ AVAILABLE_APPS = {
 }
 
 
+# ============================================================
+# CUSTOM APPS STORAGE
+# ============================================================
+# In-memory storage for user-defined custom apps
+# In production, this should be stored in a database
+CUSTOM_APPS = {}
+
+
+def save_custom_apps():
+    """Save custom apps to file for persistence"""
+    try:
+        import json
+        config_dir = os.path.dirname(os.path.abspath(__file__))
+        config_file = os.path.join(config_dir, "custom_apps.json")
+        with open(config_file, "w") as f:
+            json.dump(CUSTOM_APPS, f, indent=2)
+        logger.info(f"Saved {len(CUSTOM_APPS)} custom apps to file")
+    except Exception as e:
+        logger.error(f"Failed to save custom apps: {e}")
+
+
+def load_custom_apps():
+    """Load custom apps from file"""
+    global CUSTOM_APPS
+    try:
+        import json
+        config_dir = os.path.dirname(os.path.abspath(__file__))
+        config_file = os.path.join(config_dir, "custom_apps.json")
+        if os.path.exists(config_file):
+            with open(config_file, "r") as f:
+                CUSTOM_APPS = json.load(f)
+            logger.info(f"Loaded {len(CUSTOM_APPS)} custom apps from file")
+    except Exception as e:
+        logger.error(f"Failed to load custom apps: {e}")
+        CUSTOM_APPS = {}
+
+
+# Load custom apps on startup
+load_custom_apps()
+
+
 def get_platform_apps():
     """Get available applications for current platform"""
     if OS_TYPE == "Windows":
@@ -3677,6 +3718,15 @@ class LaunchAppRequest(BaseModel):
     app_id: str = Field(..., description="Application ID to launch")
 
 
+class CustomAppRequest(BaseModel):
+    """Custom app request model"""
+    name: str = Field(..., min_length=1, max_length=100, description="App display name")
+    type: str = Field(..., pattern="^(local|web)$", description="App type: 'local' or 'web'")
+    path: str = Field(default="", max_length=500, description="Local app path (for type=local)")
+    url: str = Field(default="", max_length=500, description="Web URL (for type=web)")
+    icon: str = Field(default="apps", description="Icon name from Material Icons")
+
+
 @app.get("/api/apps", tags=["App Launcher"])
 async def get_apps(current_user: dict = Depends(get_current_user)):
     """
@@ -3684,10 +3734,11 @@ async def get_apps(current_user: dict = Depends(get_current_user)):
 
     Returns:
         List of available applications with names, icons, and IDs
+        Includes both predefined and custom apps
     """
     apps = get_platform_apps()
 
-    # Convert to list format for frontend
+    # Convert predefined apps to list format
     app_list = []
     for app_id, app_info in apps.items():
         app_list.append({
@@ -3695,7 +3746,20 @@ async def get_apps(current_user: dict = Depends(get_current_user)):
             "name": app_info["name"],
             "icon": app_info["icon"],
             "command": app_info["command"],
-            "args": app_info["args"]
+            "args": app_info["args"],
+            "type": "predefined"
+        })
+
+    # Add custom apps
+    for app_id, app_info in CUSTOM_APPS.items():
+        app_list.append({
+            "id": app_id,
+            "name": app_info["name"],
+            "icon": app_info.get("icon", "apps"),
+            "type": app_info.get("type", "local"),
+            "path": app_info.get("path", ""),
+            "url": app_info.get("url", ""),
+            "is_custom": True
         })
 
     return {
@@ -3703,6 +3767,135 @@ async def get_apps(current_user: dict = Depends(get_current_user)):
         "apps": app_list,
         "platform": OS_TYPE
     }
+
+
+@app.get("/api/apps/custom", tags=["App Launcher"])
+async def get_custom_apps(current_user: dict = Depends(get_current_user)):
+    """
+    Get list of custom applications
+
+    Returns:
+        List of custom applications
+    """
+    custom_list = []
+    for app_id, app_info in CUSTOM_APPS.items():
+        custom_list.append({
+            "id": app_id,
+            **app_info
+        })
+
+    return {
+        "success": True,
+        "apps": custom_list
+    }
+
+
+@app.post("/api/apps/custom", tags=["App Launcher"])
+async def add_custom_app(
+    request: CustomAppRequest,
+    current_user: dict = Depends(get_current_user)
+):
+    """
+    Add a new custom application
+
+    Args:
+        request: Custom app details (name, type, path/url, icon)
+        current_user: Authenticated user
+
+    Returns:
+        Created app details
+    """
+    try:
+        # Validate request based on type
+        if request.type == "local" and not request.path:
+            return {
+                "success": False,
+                "message": "Path is required for local applications"
+            }
+
+        if request.type == "web" and not request.url:
+            return {
+                "success": False,
+                "message": "URL is required for web applications"
+            }
+
+        # Generate unique ID
+        import uuid
+        app_id = f"custom_{uuid.uuid4().hex[:8]}"
+
+        # Store custom app
+        CUSTOM_APPS[app_id] = {
+            "name": request.name,
+            "type": request.type,
+            "path": request.path,
+            "url": request.url,
+            "icon": request.icon,
+            "created_by": current_user.get("sub", "unknown")
+        }
+
+        # Save to file
+        save_custom_apps()
+
+        logger.info(f"Added custom app: {request.name} ({app_id}) by {current_user.get('sub')}")
+
+        return {
+            "success": True,
+            "message": f"Added '{request.name}' to app launcher",
+            "app_id": app_id,
+            "app": CUSTOM_APPS[app_id]
+        }
+
+    except Exception as e:
+        logger.error(f"Failed to add custom app: {e}")
+        return {
+            "success": False,
+            "message": f"Failed to add custom app: {str(e)}"
+        }
+
+
+@app.delete("/api/apps/custom/{app_id}", tags=["App Launcher"])
+async def delete_custom_app(
+    app_id: str,
+    current_user: dict = Depends(get_current_user)
+):
+    """
+    Delete a custom application
+
+    Args:
+        app_id: Custom application ID to delete
+        current_user: Authenticated user
+
+    Returns:
+        Deletion result
+    """
+    try:
+        if app_id not in CUSTOM_APPS:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail=f"Custom app '{app_id}' not found"
+            )
+
+        app_name = CUSTOM_APPS[app_id]["name"]
+        del CUSTOM_APPS[app_id]
+
+        # Save to file
+        save_custom_apps()
+
+        logger.info(f"Deleted custom app: {app_name} ({app_id}) by {current_user.get('sub')}")
+
+        return {
+            "success": True,
+            "message": f"Removed '{app_name}' from app launcher"
+        }
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Failed to delete custom app: {e}")
+        return {
+            "success": False,
+            "message": f"Failed to delete custom app: {str(e)}"
+        }
 
 
 @app.post("/api/launch", tags=["App Launcher"])
@@ -3721,6 +3914,39 @@ async def launch_app(
         Launch result
     """
     try:
+        # Check if it's a custom app
+        if request.app_id in CUSTOM_APPS:
+            app_info = CUSTOM_APPS[request.app_id]
+            app_type = app_info.get("type", "local")
+
+            if app_type == "web":
+                # Web app - open in default browser
+                url = app_info.get("url", "")
+                import webbrowser
+                webbrowser.open(url)
+                logger.info(f"Launched web app: {app_info['name']} -> {url} by user {current_user.get('sub')}")
+                return {
+                    "success": True,
+                    "message": f"Opened {app_info['name']} in browser"
+                }
+            else:
+                # Local custom app
+                app_path = app_info.get("path", "")
+
+                if OS_TYPE == "Windows":
+                    subprocess.Popen([app_path], shell=True)
+                elif OS_TYPE == "Darwin":
+                    subprocess.Popen(["open", app_path])
+                else:
+                    subprocess.Popen([app_path])
+
+                logger.info(f"Launched custom app: {app_info['name']} -> {app_path} by user {current_user.get('sub')}")
+                return {
+                    "success": True,
+                    "message": f"Launched {app_info['name']}"
+                }
+
+        # Predefined app
         apps = get_platform_apps()
 
         if request.app_id not in apps:
@@ -4799,10 +5025,12 @@ async def websocket_media_control(websocket: WebSocket, token: str = None):
         while True:
             # Receive message from client
             data = await websocket.receive_text()
+            logger.info(f"[WebSocket] Received message: {data}")
 
             try:
                 message = json.loads(data)
                 msg_type = message.get("type")
+                logger.info(f"[WebSocket] Message type: {msg_type}")
 
                 # Handle media command
                 if msg_type == "media_command":
@@ -4846,7 +5074,53 @@ async def websocket_media_control(websocket: WebSocket, token: str = None):
 
                     logger.info(f"[WebSocket] Launch app request: {app_id}")
 
-                    # Get app info
+                    # Check if it's a custom app
+                    if app_id in CUSTOM_APPS:
+                        app_info = CUSTOM_APPS[app_id]
+                        app_type = app_info.get("type", "local")
+
+                        try:
+                            if app_type == "web":
+                                # Web app - open in default browser
+                                url = app_info.get("url", "")
+                                import webbrowser
+                                webbrowser.open(url)
+                                logger.info(f"[WebSocket] Launched web app: {app_info['name']} -> {url}")
+                                await websocket.send_json({
+                                    "type": "launch_response",
+                                    "success": True,
+                                    "message": f"Opened {app_info['name']} in browser",
+                                    "timestamp": time.time()
+                                })
+                            else:
+                                # Local custom app
+                                app_path = app_info.get("path", "")
+
+                                if OS_TYPE == "Windows":
+                                    subprocess.Popen([app_path], shell=True)
+                                elif OS_TYPE == "Darwin":
+                                    subprocess.Popen(["open", app_path])
+                                else:
+                                    subprocess.Popen([app_path])
+
+                                logger.info(f"[WebSocket] Launched custom app: {app_info['name']}")
+                                await websocket.send_json({
+                                    "type": "launch_response",
+                                    "success": True,
+                                    "message": f"Launched {app_info['name']}",
+                                    "timestamp": time.time()
+                                })
+                        except Exception as e:
+                            logger.error(f"[WebSocket] Failed to launch custom app: {e}")
+                            await websocket.send_json({
+                                "type": "launch_response",
+                                "success": False,
+                                "message": f"Failed to launch: {str(e)}",
+                                "timestamp": time.time()
+                            })
+                        continue
+
+                    # Predefined app
                     apps = get_platform_apps()
 
                     if app_id not in apps:

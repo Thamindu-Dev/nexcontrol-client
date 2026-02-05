@@ -59,8 +59,9 @@ class MediaWebSocketService {
 
     return new Promise((resolve, reject) => {
       try {
-        const baseUrl = getWebSocketUrl().replace('/ws/stats', '/ws/media');
-        const wsUrl = token ? `${baseUrl}?token=${token}` : baseUrl;
+        // Construct WebSocket URL - append /media to base WebSocket URL
+        const baseUrl = getWebSocketUrl();
+        const wsUrl = token ? `${baseUrl}/media?token=${token}` : `${baseUrl}/media`;
         console.log('[MediaWS] Connecting to:', wsUrl.replace(/token=[^&]+/, 'token=***'));
 
         this.ws = new WebSocket(wsUrl);

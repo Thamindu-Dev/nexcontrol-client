@@ -22,18 +22,31 @@
                   <q-icon name="apps" size="20px" color="grey-5" class="q-mr-sm" />
                   <div class="text-subtitle2 text-white">App Launcher</div>
                 </div>
-                <q-btn
-                  flat
-                  round
-                  dense
-                  icon="refresh"
-                  size="sm"
-                  class="header-btn"
-                  :loading="loading"
-                  @click="loadApps"
-                >
-                  <q-tooltip>Refresh app list</q-tooltip>
-                </q-btn>
+                <div class="row items-center q-gutter-xs">
+                  <q-btn
+                    flat
+                    round
+                    dense
+                    icon="add"
+                    size="sm"
+                    class="header-btn"
+                    @click="showAddAppDialog = true"
+                  >
+                    <q-tooltip>Add Custom App</q-tooltip>
+                  </q-btn>
+                  <q-btn
+                    flat
+                    round
+                    dense
+                    icon="refresh"
+                    size="sm"
+                    class="header-btn"
+                    :loading="loading"
+                    @click="loadApps"
+                  >
+                    <q-tooltip>Refresh app list</q-tooltip>
+                  </q-btn>
+                </div>
               </div>
             </q-card-section>
 
@@ -51,7 +64,7 @@
                     class="platform-chip"
                   />
                   <span v-if="apps.length > 0" class="text-grey-6 q-ml-md text-caption">
-                    {{ apps.length }} apps available
+                    {{ apps.length }} apps available ({{ customAppsCount }} custom)
                   </span>
                 </div>
               </div>
@@ -93,9 +106,14 @@
                       outline
                       stack
                     >
-                      <q-icon :name="app.icon" size="32px" color="cyan" />
+                      <q-icon :name="app.icon" size="32px" :color="app.is_custom ? 'orange' : 'cyan'" />
                       <div class="text-caption text-weight-medium q-mt-xs">{{ app.name }}</div>
-                      <q-tooltip>{{ app.name }}</q-tooltip>
+                      <q-tooltip v-if="app.is_custom">
+                        {{ app.name }} (Custom App)
+                        <br>
+                        Type: {{ app.type }}
+                      </q-tooltip>
+                      <q-tooltip v-else>{{ app.name }}</q-tooltip>
                     </q-btn>
                   </div>
                 </div>
@@ -104,6 +122,98 @@
           </q-card>
         </div>
       </div>
+
+      <!-- Add Custom App Dialog -->
+      <q-dialog v-model="showAddAppDialog" class="glass-dialog">
+        <q-card style="min-width: 400px; background: #000000; color: #FFFFFF;">
+          <q-card-section class="q-pa-md">
+            <div class="text-h6 text-white">Add Custom App</div>
+          </q-card-section>
+
+          <q-card-section class="q-pt-none q-pa-md">
+            <q-form @submit="addCustomApp" class="q-gutter-md">
+              <q-input
+                v-model="newApp.name"
+                label="App Name"
+                outlined
+                dark
+                color="cyan"
+                :rules="[val => !!val || 'Name is required']"
+              />
+
+              <q-select
+                v-model="newApp.type"
+                :options="[
+                  { label: 'Local Application', value: 'local' },
+                  { label: 'Website / URL', value: 'web' }
+                ]"
+                label="App Type"
+                outlined
+                dark
+                color="cyan"
+                emit-value
+                map-options
+              />
+
+              <q-input
+                v-if="newApp.type === 'local'"
+                v-model="newApp.path"
+                label="Application Path"
+                outlined
+                dark
+                color="cyan"
+                hint="e.g., C:\Program Files\MyApp\app.exe or /usr/bin/myapp"
+                :rules="[val => newApp.type === 'local' ? !!val || 'Path is required' : true]"
+              >
+                <template v-slot:prepend>
+                  <q-icon name="folder" color="grey-5" />
+                </template>
+              </q-input>
+
+              <q-input
+                v-if="newApp.type === 'web'"
+                v-model="newApp.url"
+                label="Website URL"
+                outlined
+                dark
+                color="cyan"
+                hint="e.g., https://youtube.com or https://github.com"
+                :rules="[val => newApp.type === 'web' ? !!val || 'URL is required' : true]"
+              >
+                <template v-slot:prepend>
+                  <q-icon name="language" color="grey-5" />
+                </template>
+              </q-input>
+
+              <q-select
+                v-model="newApp.icon"
+                :options="iconOptions"
+                label="Icon"
+                outlined
+                dark
+                color="cyan"
+                emit-value
+                map-options
+              >
+                <template v-slot:prepend>
+                  <q-icon :name="newApp.icon" color="cyan" />
+                </template>
+              </q-select>
+            </q-form>
+          </q-card-section>
+
+          <q-card-section class="q-pa-md" style="display: flex; justify-content: flex-end; gap: 8px;">
+            <q-btn flat label="Cancel" color="grey-5" v-close-popup />
+            <q-btn
+              unelevated
+              label="Add App"
+              color="cyan"
+              :loading="addingApp"
+              @click="addCustomApp"
+            />
+          </q-card-section>
+        </q-card>
+      </q-dialog>
     </q-page>
   </div>
 </template>
@@ -128,6 +238,38 @@ const loading = ref(false);
 const error = ref(null);
 const launchingApp = ref(null);
 const platform = ref('unknown');
+const showAddAppDialog = ref(false);
+const addingApp = ref(false);
+
+// New app form
+const newApp = ref({
+  name: '',
+  type: 'local',
+  path: '',
+  url: '',
+  icon: 'apps'
+});
+
+// Icon options
+const iconOptions = [
+  { label: 'Apps', value: 'apps' },
+  { label: 'Web', value: 'language' },
+  { label: 'Code', value: 'code' },
+  { label: 'Terminal', value: 'terminal' },
+  { label: 'Folder', value: 'folder' },
+  { label: 'Music', value: 'music_note' },
+  { label: 'Video', value: 'play_circle' },
+  { label: 'Image', value: 'image' },
+  { label: 'Settings', value: 'settings' },
+  { label: 'Favorite', value: 'favorite' },
+  { label: 'Star', value: 'star' },
+  { label: 'Cloud', value: 'cloud' },
+  { label: 'Game', value: 'sports_esports' },
+  { label: 'Social', value: 'people' },
+  { label: 'Mail', value: 'email' },
+  { label: 'Calculator', value: 'calculate' },
+  { label: 'Edit', value: 'edit_note' }
+];
 
 // Computed
 const platformIcon = computed(() => {
@@ -146,6 +288,10 @@ const platformLabel = computed(() => {
     case 'Darwin': return 'macOS';
     default: return platform.value;
   }
+});
+
+const customAppsCount = computed(() => {
+  return apps.value.filter(app => app.is_custom).length;
 });
 
 /**
@@ -171,6 +317,59 @@ async function loadApps() {
     secureNotify.error($q, error.value);
   } finally {
     loading.value = false;
+  }
+}
+
+/**
+ * Add custom application
+ */
+async function addCustomApp() {
+  // Validate
+  if (!newApp.value.name) {
+    secureNotify.error($q, 'Please enter an app name');
+    return;
+  }
+
+  if (newApp.value.type === 'local' && !newApp.value.path) {
+    secureNotify.error($q, 'Please enter the application path');
+    return;
+  }
+
+  if (newApp.value.type === 'web' && !newApp.value.url) {
+    secureNotify.error($q, 'Please enter the website URL');
+    return;
+  }
+
+  addingApp.value = true;
+
+  try {
+    const response = await api.post('/api/apps/custom', newApp.value);
+
+    if (response.success) {
+      secureNotify.success($q, response.message || 'Custom app added successfully');
+
+      // Reset form
+      newApp.value = {
+        name: '',
+        type: 'local',
+        path: '',
+        url: '',
+        icon: 'apps'
+      };
+
+      // Close dialog
+      showAddAppDialog.value = false;
+
+      // Reload apps
+      await loadApps();
+    } else {
+      secureNotify.error($q, response.message || 'Failed to add custom app');
+    }
+  } catch (err) {
+    console.error('[AppLauncher] Error adding custom app:', err);
+    secureNotify.error($q, err.message || 'Failed to add custom app');
+  } finally {
+    addingApp.value = false;
   }
 }
 
@@ -213,7 +412,7 @@ async function launchApp(app) {
         navigator.vibrate(50);
       }
 
-      secureNotify.success($q, `Launching ${app.name}...`);
+      secureNotify.success($q, response.message || `Launching ${app.name}...`);
       console.log(`[AppLauncher] Successfully launched ${app.name}`);
     } else {
       secureNotify.error($q, response.message || `Failed to launch ${app.name}`);
