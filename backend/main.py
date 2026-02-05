@@ -239,35 +239,35 @@ async def lifespan(app: FastAPI):
     Handles graceful startup and shutdown of all background tasks.
     """
     # ==================== STARTUP ====================
-    logger.info("🚀 Starting NexControl Background Services...")
+    logger.info("Starting NexControl Background Services...")
     try:
-        logger.info("→ Starting scheduled task manager...")
+        logger.info("Starting scheduled task manager...")
         await scheduled_task_manager.start_scheduler()
 
-        logger.info("→ Starting threshold notification manager...")
+        logger.info("Starting threshold notification manager...")
         await threshold_notification_manager.start_monitor()
 
-        logger.info("✅ All background services started successfully")
+        logger.info("All background services started successfully")
     except Exception as e:
-        logger.error(f"❌ Failed to start background services: {e}")
+        logger.error(f"Failed to start background services: {e}")
         raise
 
     yield  # Server runs here
 
     # ==================== SHUTDOWN ====================
-    logger.info("🛑 Shutting down NexControl Background Services...")
+    logger.info("Shutting down NexControl Background Services...")
     try:
-        logger.info("→ Stopping threshold notification manager...")
+        logger.info("Stopping threshold notification manager...")
         await threshold_notification_manager.stop_monitor()
 
-        logger.info("→ Stopping scheduled task manager...")
+        logger.info("Stopping scheduled task manager...")
         await scheduled_task_manager.stop_scheduler()
 
-        logger.info("✅ All background services stopped gracefully")
+        logger.info("All background services stopped gracefully")
     except Exception as e:
-        logger.error(f"⚠️ Error during shutdown: {e}")
+        logger.error(f"Error during shutdown: {e}")
     finally:
-        logger.info("👋 NexControl Server shutdown complete")
+        logger.info("NexControl Server shutdown complete")
 
 
 
@@ -4128,8 +4128,8 @@ if __name__ == "__main__":
     def handle_shutdown(signum, frame):
         """Handle shutdown signals gracefully"""
         signal_name = signal.Signals(signum).name
-        logger.info(f"\n⚠️ Received shutdown signal ({signal_name})")
-        logger.info("🛑 Initiating graceful shutdown...")
+        logger.info(f"\nReceived shutdown signal ({signal_name})")
+        logger.info("Initiating graceful shutdown...")
         # Note: The lifespan context manager will handle cleanup
         sys.exit(0)
 
@@ -4146,10 +4146,10 @@ if __name__ == "__main__":
             log_level="info"
         )
     except KeyboardInterrupt:
-        logger.info("\n⚠️ User requested shutdown (Ctrl+C)")
+        logger.info("\nUser requested shutdown (Ctrl+C)")
     except Exception as e:
-        logger.error(f"❌ Server error: {e}")
+        logger.error(f"Server error: {e}")
         sys.exit(1)
     finally:
-        logger.info("👋 Exiting NexControl Server. Goodbye!")
+        logger.info("Exiting NexControl Server. Goodbye!")
 

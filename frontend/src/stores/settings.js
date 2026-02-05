@@ -38,7 +38,8 @@ export function createSettingsPersistencePlugin() {
     if (store.$id === 'settings') {
       store.$subscribe((mutation, state) => {
         // Only save when preferences change
-        if (mutation.events.key === 'preferences') {
+        // Use optional chaining to safely check events.key
+        if (mutation.events?.key === 'preferences') {
           try {
             localStorage.setItem(PREFS_KEY, JSON.stringify(state.preferences));
             console.log('[SettingsStore] Auto-saved preferences to localStorage:', state.preferences);
