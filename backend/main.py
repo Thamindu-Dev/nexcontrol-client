@@ -3439,21 +3439,6 @@ class MediaController:
             }
 
 
-@app.get("/api/media/apps", tags=["Media Control"])
-async def get_media_apps(current_user: dict = Depends(get_current_user)):
-    """
-    Get list of available media applications
-
-    Returns:
-        List of running media apps that can be controlled
-    """
-    apps = MediaController.get_media_apps()
-    return {
-        "success": True,
-        "apps": apps
-    }
-
-
 @app.get("/api/media/status", tags=["Media Control"])
 async def get_media_status(current_user: dict = Depends(get_current_user)):
     """
@@ -3471,7 +3456,6 @@ async def get_media_status(current_user: dict = Depends(get_current_user)):
 
 class MediaControlRequest(BaseModel):
     """Media control request model"""
-    app: str = Field(..., description="Target application name")
     action: str = Field(..., description="Action to perform (playpause, next, prev, volumeup, volumedown, volumemute)")
 
 
@@ -3481,10 +3465,10 @@ async def control_media(
     current_user: dict = Depends(get_current_user)
 ):
     """
-    Send media control command to specified application
+    Send media control command to Default (Global)
 
     Args:
-        request: Media control request with app and action
+        request: Media control request with action
         current_user: Authenticated user
 
     Returns:
@@ -3492,12 +3476,11 @@ async def control_media(
     """
     logger.info("=" * 60)
     logger.info("MEDIA CONTROL REQUEST RECEIVED")
-    logger.info(f"App: {request.app}")
     logger.info(f"Action: {request.action}")
     logger.info(f"User: {current_user.get('sub', 'unknown')}")
     logger.info("=" * 60)
 
-    result = MediaController.send_media_command(request.app, request.action)
+    result = MediaController.send_media_command("Default (Global)", request.action)
 
     logger.info(f"Media control result: success={result.get('success')}, message={result.get('message')}")
     return result

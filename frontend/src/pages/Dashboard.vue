@@ -404,37 +404,6 @@
             </q-card-section>
 
             <q-card-section class="q-pt-none q-pb-md q-px-md">
-              <!-- App Selector -->
-              <div class="q-mb-md">
-                <q-select
-                  v-model="selectedMediaApp"
-                  :options="mediaApps"
-                  label="Target Application"
-                  outlined
-                  dark
-                  dense
-                  color="cyan"
-                  emit-value
-                  map-options
-                  @update:model-value="refreshMediaApps"
-                  :loading="mediaAppsLoading"
-                  class="media-selector"
-                >
-                  <template v-slot:prepend>
-                    <q-icon name="apps" color="grey-5" size="16px" />
-                  </template>
-                  <template v-slot:append>
-                    <q-icon
-                      name="refresh"
-                      color="grey-5"
-                      size="16px"
-                      class="cursor-pointer"
-                      @click.stop="refreshMediaApps"
-                    />
-                  </template>
-                </q-select>
-              </div>
-
               <!-- Playback Controls -->
               <div class="row q-col-gutter-sm q-mb-md">
                 <div class="col-4">
@@ -638,9 +607,6 @@ const refreshInterval = ref(5000); // 5 seconds
 let refreshTimer = null;
 
 // Media Control State
-const mediaApps = ref(['Default (Global)']);
-const selectedMediaApp = ref('Default (Global)');
-const mediaAppsLoading = ref(false);
 const mediaCommandLoading = ref(false);
 
 // Multi-disk state
@@ -915,32 +881,7 @@ async function executePowerAction(action) {
  */
 
 /**
- * Get available media apps from backend
- */
-async function refreshMediaApps() {
-  mediaAppsLoading.value = true;
-
-  try {
-    const result = await api.get('/api/media/apps');
-
-    if (result.success && result.apps) {
-      mediaApps.value = result.apps;
-
-      // Ensure selected app is still valid
-      if (!result.apps.includes(selectedMediaApp.value)) {
-        selectedMediaApp.value = 'Default (Global)';
-      }
-    }
-  } catch (error) {
-    console.error('[Dashboard] Failed to load media apps:', error);
-    secureNotify.error($q, 'Failed to load media applications');
-  } finally {
-    mediaAppsLoading.value = false;
-  }
-}
-
-/**
- * Send media command to selected app
+ * Send media command to Default (Global)
  * Uses WebSocket for low latency, falls back to HTTP if needed
  */
 async function sendMediaCommand(action) {
@@ -950,7 +891,7 @@ async function sendMediaCommand(action) {
   }
 
   console.log('[Dashboard] Media button clicked:', {
-    app: selectedMediaApp.value,
+    app: 'Default (Global)',
     action: action,
     timestamp: new Date().toISOString()
   });
@@ -978,7 +919,7 @@ async function sendMediaCommand(action) {
     if (isVolumeCommand) {
       // Fire-and-forget for volume commands - don't wait for response
       console.log('[Dashboard] Sending volume command (fire-and-forget)...');
-      mediaWsService.sendCommand(selectedMediaApp.value, action).catch(err => {
+      mediaWsService.sendCommand('Default (Global)', action).catch(err => {
         console.warn('[Dashboard] Volume command error (suppressed):', err);
       });
 
@@ -989,7 +930,7 @@ async function sendMediaCommand(action) {
     } else {
       // For other commands, wait for response
       console.log('[Dashboard] Sending media command via WebSocket...');
-      const result = await mediaWsService.sendCommand(selectedMediaApp.value, action);
+      const result = await mediaWsService.sendCommand('Default (Global)', action);
       console.log('[Dashboard] Media command result:', result);
 
       if (result.success) {
@@ -1084,18 +1025,6 @@ onMounted(async () => {
 
   // Load threshold configuration
   await systemStore.loadThresholdConfig();
-
-  // Load media apps
-  await refreshMediaApps();
-
-  // Test media control endpoint connectivity (debug)
-  try {
-    console.log('[Dashboard] Testing media control connectivity...');
-    const statusResult = await api.get('/api/media/status');
-    console.log('[Dashboard] Media control status:', statusResult);
-  } catch (error) {
-    console.error('[Dashboard] Media control connectivity test failed:', error);
-  }
 
   // Start auto-refresh
   startAutoRefresh();
