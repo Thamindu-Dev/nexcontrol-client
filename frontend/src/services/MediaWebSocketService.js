@@ -203,7 +203,7 @@ class MediaWebSocketService {
             // Fallback to HTTP
             resolve(this._sendViaHttp(app, action));
           }
-        }, 2000); // 2 second timeout
+        }, 5000); // 5 second timeout (backend may take longer for targeted commands)
 
         // Store callback
         this.pendingCommands.set(commandId, (result) => {
