@@ -98,10 +98,11 @@ logger = logging.getLogger(__name__)
 # ============================================================
 
 from fastapi import FastAPI, HTTPException, Depends, status, Request, Response, WebSocket, WebSocketDisconnect
+from fastapi.exceptions import RequestValidationError
 from fastapi.middleware.cors import CORSMiddleware
 from contextlib import asynccontextmanager
 from fastapi.responses import JSONResponse
-from pydantic import BaseModel, Field, field_validator, constr
+from pydantic import BaseModel, Field, field_validator, constr, ValidationError
 from slowapi import Limiter, _rate_limit_exceeded_handler
 from slowapi.util import get_remote_address
 from slowapi.errors import RateLimitExceeded
@@ -5285,6 +5286,28 @@ async def general_exception_handler(request: Request, exc: Exception):
     General exception handler
     Catches all unhandled exceptions
     """
+    logger.error(f"Unhandled exception: {type(exc).__name__}: {exc}")
+    import traceback
+    logger.error(f"Traceback: {traceback.format_exc()}")
+
+    return JSONResponse(
+        status_code=500,
+        content={"detail": "Internal server error"}
+    )
+
+
+@app.exception_handler(RequestValidationError)
+async def validation_exception_handler(request: Request, exc: RequestValidationError):
+    """
+    FastAPI request validation error handler
+    Logs validation errors for debugging
+    """
+    logger.error(f"Request validation error: {exc.errors()}")
+    logger.error(f"Request body: {exc.body}")
+    return JSONResponse(
+        status_code=422,
+        content={"detail": "Validation error", "errors": exc.errors()}
+    )
     # Log the error with full details for debugging
     logger.error(f"Unhandled exception: {type(exc).__name__}: {str(exc)[:200]}")
 
