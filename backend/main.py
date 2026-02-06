@@ -61,6 +61,7 @@ For development/testing, you can add passwordless sudo for specific commands:
 
 import os
 import sys
+import json
 import platform
 import subprocess
 import base64
