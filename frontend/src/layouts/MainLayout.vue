@@ -679,6 +679,7 @@ const isDashboard = computed(() => $route.path === '/dashboard');
 const pageTitleMap = {
   '/dashboard': { title: 'Dashboard', icon: 'dashboard' },
   '/apps': { title: 'App Launcher', icon: 'apps' },
+  '/clipboard': { title: 'Clipboard Sync', icon: 'content_copy' },
   '/docker': { title: 'Docker Manager', icon: 'inventory_2' },
   '/processes': { title: 'Process Manager', icon: 'memory' },
   '/screenshot': { title: 'Screenshot', icon: 'screenshot' },
@@ -724,6 +725,12 @@ const navigationLinks = [
     caption: 'Launch Applications',
     icon: 'apps',
     link: '/apps'
+  },
+  {
+    title: 'Clipboard Sync',
+    caption: '2-Way Clipboard',
+    icon: 'content_copy',
+    link: '/clipboard'
   },
   {
     title: 'Screenshot',

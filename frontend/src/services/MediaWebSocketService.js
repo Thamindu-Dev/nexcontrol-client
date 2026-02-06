@@ -316,48 +316,6 @@ class MediaWebSocketService {
     });
   }
 
-  /**
-   * Launch application via WebSocket
-   * @param {string} app_id - Application ID to launch
-   * @returns {Promise} Launch result
-   */
-  async launchApp(app_id) {
-    // If WebSocket is connected, use it
-    if (this.isConnected()) {
-      return new Promise((resolve) => {
-        const commandId = ++this._commandId;
-
-        // Set timeout for response
-        const timeout = setTimeout(() => {
-          if (this.pendingCommands.has(commandId)) {
-            this.pendingCommands.delete(commandId);
-            console.warn('[MediaWS] Launch timeout, falling back to HTTP');
-            // Fallback to HTTP
-            resolve(this._launchViaHttp(app_id));
-          }
-        }, 2000); // 2 second timeout
-
-        // Store callback
-        this.pendingCommands.set(commandId, (result) => {
-          clearTimeout(timeout);
-          resolve(result);
-        });
-
-        // Send launch command
-        const message = JSON.stringify({
-          type: 'launch_app',
-          app_id: app_id
-        });
-
-        console.log('[MediaWS] Sending launch command:', app_id);
-        this.ws.send(message);
-      });
-    } else {
-      // Fallback to HTTP
-      console.log('[MediaWS] Not connected, using HTTP for app launch');
-      return this._launchViaHttp(app_id);
-    }
-  }
 
   /**
    * Fallback to HTTP API for media control

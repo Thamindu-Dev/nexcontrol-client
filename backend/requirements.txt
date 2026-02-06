@@ -30,6 +30,7 @@ limits==3.6.0
 pydantic==2.5.0
 pydantic-settings==2.1.0
 python-dotenv==1.0.0
+pyperclip==1.8.2
 
 # Screenshot Support (Pillow is required by pyautogui)
 Pillow==10.1.0

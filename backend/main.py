@@ -4127,6 +4127,83 @@ async def launch_app(
 
 
 # ============================================================
+# API ROUTES: CLIPBOARD SYNC
+# ============================================================
+
+class ClipboardRequest(BaseModel):
+    """Clipboard request model"""
+    text: str = Field(..., min_length=1, max_length=10000, description="Text to copy to clipboard")
+
+
+@app.get("/api/clipboard", tags=["Clipboard Sync"])
+async def get_clipboard(current_user: dict = Depends(get_current_user)):
+    """
+    Get current clipboard content from the host PC
+
+    Returns:
+        Clipboard text
+    """
+    try:
+        import pyperclip
+        clipboard_text = pyperclip.paste()
+        logger.info(f"[Clipboard] Fetched clipboard content ({len(clipboard_text)} chars)")
+        return {
+            "success": True,
+            "text": clipboard_text,
+            "timestamp": time.time()
+        }
+    except ImportError:
+        logger.error("[Clipboard] pyperclip not installed")
+        return {
+            "success": False,
+            "message": "pyperclip module not installed. Install it with: pip install pyperclip"
+        }
+    except Exception as e:
+        logger.error(f"[Clipboard] Failed to read clipboard: {e}")
+        return {
+            "success": False,
+            "message": f"Failed to read clipboard: {str(e)}"
+        }
+
+
+@app.post("/api/clipboard", tags=["Clipboard Sync"])
+async def set_clipboard(
+    request: ClipboardRequest,
+    current_user: dict = Depends(get_current_user)
+):
+    """
+    Set clipboard content on the host PC
+
+    Args:
+        request: Clipboard request with text to copy
+        current_user: Authenticated user
+
+    Returns:
+        Operation result
+    """
+    try:
+        import pyperclip
+        pyperclip.copy(request.text)
+        logger.info(f"[Clipboard] Set clipboard content ({len(request.text)} chars) by {current_user.get('sub')}")
+        return {
+            "success": True,
+            "message": f"Copied {len(request.text)} characters to clipboard"
+        }
+    except ImportError:
+        logger.error("[Clipboard] pyperclip not installed")
+        return {
+            "success": False,
+            "message": "pyperclip module not installed. Install it with: pip install pyperclip"
+        }
+    except Exception as e:
+        logger.error(f"[Clipboard] Failed to set clipboard: {e}")
+        return {
+            "success": False,
+            "message": f"Failed to set clipboard: {str(e)}"
+        }
+
+
+# ============================================================
 # API ROUTES: SCHEDULED TASKS
 # ============================================================
 
