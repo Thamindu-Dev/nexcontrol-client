@@ -3347,7 +3347,15 @@ class MediaController:
                     "message": f"Could not find window for {app_key}"
                 }
 
-            # Map actions to APPCOMMAND values
+            # Map actions to keyboard shortcuts for Chrome/YouTube
+            # YouTube uses keyboard shortcuts: K=play/pause, J=rewind, L=forward
+            chrome_shortcuts = {
+                "playpause": 0x4B,   # VK_K - YouTube play/pause
+                "next": 0x4C,        # VK_L - YouTube forward/seek
+                "prev": 0x4A,        # VK_J - YouTube rewind
+            }
+
+            # Map actions to APPCOMMAND values for other apps
             app_commands = {
                 "playpause": 0xE0000,  # APPCOMMAND_MEDIA_PLAY_PAUSE
                 "next": 0xE0001,       # APPCOMMAND_MEDIA_NEXTTRACK
@@ -3363,14 +3371,47 @@ class MediaController:
                     "message": f"Unknown action: {action}"
                 }
 
-            # Bring window to foreground (optional, for better visibility)
+            # Bring window to foreground (required for keyboard shortcuts)
             try:
                 windll.user32.ShowWindow(target_hwnd, win32con.SW_RESTORE)
                 windll.user32.SetForegroundWindow(target_hwnd)
+                # Small delay to ensure window is focused
+                import time
+                time.sleep(0.05)
             except:
                 pass  # Window might be minimized or locked
 
-            # Send APPCOMMAND message (WM_APPCOMMAND = 0x0319)
+            # For Chrome, use keyboard shortcuts for YouTube support
+            if app_key == "chrome" and action in chrome_shortcuts:
+                import win32api
+                VK_KEY = chrome_shortcuts[action]
+
+                # Scan code for the key
+                scan_code = win32api.MapVirtualKey(VK_KEY, 0)
+
+                # Send key down
+                windll.user32.PostMessageW(
+                    target_hwnd,
+                    win32con.WM_KEYDOWN,
+                    VK_KEY,
+                    scan_code | (0 << 16)  # key down
+                )
+
+                # Send key up
+                windll.user32.PostMessageW(
+                    target_hwnd,
+                    win32con.WM_KEYUP,
+                    VK_KEY,
+                    scan_code | (1 << 31)  # key up
+                )
+
+                logger.info(f"Sent keyboard shortcut to Chrome for {action} (VK: 0x{VK_KEY:02X})")
+                return {
+                    "success": True,
+                    "message": f"Sent {action} to Chrome (keyboard shortcut)"
+                }
+
+            # For other apps, use APPCOMMAND message (WM_APPCOMMAND = 0x0319)
             WM_APPCOMMAND = 0x0319
             win32gui.PostMessage(
                 target_hwnd,
