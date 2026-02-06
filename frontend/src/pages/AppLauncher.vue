@@ -353,7 +353,7 @@ async function loadApps() {
 }
 
 /**
- * Add custom application
+ * Add custom application via WebSocket
  */
 async function addCustomApp() {
   // Validate
@@ -375,7 +375,24 @@ async function addCustomApp() {
   addingApp.value = true;
 
   try {
-    // Prepare data to send - only include relevant fields
+    // Get auth token for WebSocket
+    const token = await api.getToken();
+
+    // Connect to WebSocket if not already connected
+    if (!mediaWsService.isConnected() && token) {
+      console.log('[AppLauncher] Connecting to WebSocket...');
+      try {
+        await mediaWsService.connect(token);
+        console.log('[AppLauncher] WebSocket connected');
+      } catch (wsError) {
+        console.warn('[AppLauncher] WebSocket connection failed:', wsError);
+        secureNotify.error($q, 'Failed to connect to server');
+        addingApp.value = false;
+        return;
+      }
+    }
+
+    // Prepare data to send
     const dataToSend = {
       name: newApp.value.name,
       type: newApp.value.type,
@@ -389,8 +406,10 @@ async function addCustomApp() {
       dataToSend.url = newApp.value.url;
     }
 
-    console.log('[AppLauncher] Adding custom app:', dataToSend);
-    const response = await api.post('/api/apps/custom', dataToSend);
+    console.log('[AppLauncher] Adding custom app via WebSocket:', dataToSend);
+
+    // Send via WebSocket
+    const response = await mediaWsService.addCustomApp(dataToSend);
     console.log('[AppLauncher] Add custom app response:', response);
 
     if (response.success) {

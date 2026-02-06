@@ -80,8 +80,8 @@ class MediaWebSocketService {
             const data = JSON.parse(event.data);
             console.log('[MediaWS] Message received:', data);
 
-            // Handle media and launch responses
-            if (data.type === 'media_response' || data.type === 'launch_response') {
+            // Handle media, launch, and add_custom_app responses
+            if (data.type === 'media_response' || data.type === 'launch_response' || data.type === 'add_custom_app_response') {
               // Find and execute pending callback
               for (const [id, callback] of this.pendingCommands) {
                 callback(data);
@@ -247,6 +247,94 @@ class MediaWebSocketService {
             // Fallback to HTTP
             resolve(this._launchViaHttp(app_id));
           }
+        }, 5000); // 5 second timeout
+
+        // Store callback
+        this.pendingCommands.set(commandId, (result) => {
+          clearTimeout(timeout);
+          resolve(result);
+        });
+
+        // Send launch command
+        const message = JSON.stringify({
+          type: 'launch_app',
+          app_id: app_id
+        });
+
+        console.log('[MediaWS] Sending launch command:', app_id);
+        this.ws.send(message);
+      });
+    } else {
+      // Fallback to HTTP
+      console.log('[MediaWS] Not connected, using HTTP for app launch');
+      return this._launchViaHttp(app_id);
+    }
+  }
+
+  /**
+   * Add custom app via WebSocket (WebSocket only, no HTTP fallback)
+   * @param {Object} appData - App data {name, type, path, url, icon}
+   * @returns {Promise} Add result
+   */
+  async addCustomApp(appData) {
+    if (!this.isConnected()) {
+      return {
+        success: false,
+        message: 'WebSocket not connected. Please refresh the page.'
+      };
+    }
+
+    return new Promise((resolve) => {
+      const commandId = ++this._commandId;
+
+      // Set timeout for response
+      const timeout = setTimeout(() => {
+        if (this.pendingCommands.has(commandId)) {
+          this.pendingCommands.delete(commandId);
+          console.warn('[MediaWS] Add custom app timeout');
+          resolve({
+            success: false,
+            message: 'Request timeout. Please check your connection and try again.'
+          });
+        }
+      }, 5000); // 5 second timeout
+
+      // Store callback
+      this.pendingCommands.set(commandId, (result) => {
+        clearTimeout(timeout);
+        resolve(result);
+      });
+
+      // Send add custom app command
+      const message = JSON.stringify({
+        type: 'add_custom_app',
+        app_data: appData
+      });
+
+      console.log('[MediaWS] Sending add custom app command:', appData);
+      this.ws.send(message);
+    });
+  }
+
+  /**
+   * Launch application via WebSocket
+   * @param {string} app_id - Application ID to launch
+   * @returns {Promise} Launch result
+   */
+  async launchApp(app_id) {
+    // If WebSocket is connected, use it
+    if (this.isConnected()) {
+      return new Promise((resolve) => {
+        const commandId = ++this._commandId;
+
+        // Set timeout for response
+        const timeout = setTimeout(() => {
+          if (this.pendingCommands.has(commandId)) {
+            this.pendingCommands.delete(commandId);
+            console.warn('[MediaWS] Launch timeout, falling back to HTTP');
+            // Fallback to HTTP
+            resolve(this._launchViaHttp(app_id));
+          }
         }, 2000); // 2 second timeout
 
         // Store callback
@@ -273,7 +361,7 @@ class MediaWebSocketService {
 
   /**
    * Fallback to HTTP API for media control
-   */
+  */
   async _sendViaHttp(app, action) {
     const controller = new AbortController();
     const timeoutId = setTimeout(() => controller.abort(), 2000); // 2 second timeout for rapid button presses

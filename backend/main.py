@@ -3844,7 +3844,7 @@ async def add_custom_app(
     current_user: dict = Depends(get_current_user)
 ):
     """
-    Add a new custom application
+    Add a new custom application (HTTP endpoint - fallback)
 
     Args:
         request: Custom app details (name, type, path/url, icon)
@@ -3854,7 +3854,7 @@ async def add_custom_app(
         Created app details
     """
     try:
-        logger.info(f"[add_custom_app] Received request: {request.model_dump()}")
+        logger.info(f"[add_custom_app] Received HTTP request: {request.model_dump()}")
 
         # Basic validation
         if request.type == "local" and not request.path:
@@ -3891,6 +3891,70 @@ async def add_custom_app(
         return {
             "success": True,
             "message": f"Added '{request.name}' to app launcher",
+            "app_id": app_id,
+            "app": CUSTOM_APPS[app_id]
+        }
+
+    except Exception as e:
+        logger.error(f"Failed to add custom app: {e}")
+        import traceback
+        logger.error(f"Traceback: {traceback.format_exc()}")
+        return {
+            "success": False,
+            "message": f"Failed to add custom app: {str(e)}"
+        }
+
+
+def _add_custom_app_internal(app_data: dict, user: dict) -> dict:
+    """
+    Internal function to add custom app (used by both HTTP and WebSocket)
+
+    Args:
+        app_data: App data dict with name, type, path/url, icon
+        user: User dict
+
+    Returns:
+        Result dict with success, message, app_id, app
+    """
+    try:
+        logger.info(f"[add_custom_app_internal] Received request: {app_data}")
+
+        # Basic validation
+        app_type = app_data.get("type")
+        if app_type == "local" and not app_data.get("path"):
+            return {
+                "success": False,
+                "message": "Path is required for local applications"
+            }
+
+        if app_type == "web" and not app_data.get("url"):
+            return {
+                "success": False,
+                "message": "URL is required for web applications"
+            }
+
+        # Generate unique ID
+        import uuid
+        app_id = f"custom_{uuid.uuid4().hex[:8]}"
+
+        # Store custom app
+        CUSTOM_APPS[app_id] = {
+            "name": app_data.get("name"),
+            "type": app_type,
+            "path": app_data.get("path") or "",
+            "url": app_data.get("url") or "",
+            "icon": app_data.get("icon") or "apps",
+            "created_by": user.get("sub", "unknown")
+        }
+
+        # Save to file (runs in background)
+        save_custom_apps()
+
+        logger.info(f"Added custom app: {app_data.get('name')} ({app_id})")
+
+        return {
+            "success": True,
+            "message": f"Added '{app_data.get('name')}' to app launcher",
             "app_id": app_id,
             "app": CUSTOM_APPS[app_id]
         }
@@ -5239,6 +5303,34 @@ async def websocket_media_control(websocket: WebSocket, token: str = None):
                             "message": f"Failed to launch: {str(e)}",
                             "timestamp": time.time()
                         })
+
+                # Handle add custom app command
+                elif msg_type == "add_custom_app":
+                    app_data = message.get("app_data", {})
+
+                    if not app_data.get("name"):
+                        await websocket.send_json({
+                            "type": "add_custom_app_response",
+                            "success": False,
+                            "message": "Missing app name",
+                            "timestamp": time.time()
+                        })
+                        continue
+
+                    logger.info(f"[WebSocket] Add custom app request: {app_data}")
+
+                    # Use internal function to add custom app
+                    result = _add_custom_app_internal(app_data, user)
+
+                    # Send response back to client
+                    await websocket.send_json({
+                        "type": "add_custom_app_response",
+                        "success": result.get("success", False),
+                        "message": result.get("message", ""),
+                        "app_id": result.get("app_id"),
+                        "app": result.get("app"),
+                        "timestamp": time.time()
+                    })
 
                 elif msg_type == "ping":
                     await websocket.send_json({"type": "pong"})
