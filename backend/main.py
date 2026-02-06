@@ -3699,7 +3699,7 @@ CUSTOM_APPS = {}
 
 
 def save_custom_apps():
-    """Save custom apps to file for persistence (non-blocking)"""
+    """Save custom apps to file for persistence (runs in background thread)"""
     try:
         import json
         import threading
@@ -3714,7 +3714,7 @@ def save_custom_apps():
             except Exception as e:
                 logger.error(f"Failed to save custom apps to file: {e}")
 
-        # Save in background thread to avoid blocking
+        # Start save in background thread, don't wait for it
         thread = threading.Thread(target=save_to_file, daemon=True)
         thread.start()
 
@@ -3762,10 +3762,17 @@ class LaunchAppRequest(BaseModel):
 class CustomAppRequest(BaseModel):
     """Custom app request model"""
     name: str = Field(..., min_length=1, max_length=100, description="App display name")
-    type: str = Field(..., pattern="^(local|web)$", description="App type: 'local' or 'web'")
-    path: str = Field(default="", max_length=500, description="Local app path (for type=local)")
-    url: str = Field(default="", max_length=500, description="Web URL (for type=web)")
+    type: str = Field(..., description="App type: 'local' or 'web'")
+    path: str | None = Field(None, max_length=500, description="Local app path (for type=local)")
+    url: str | None = Field(None, max_length=500, description="Web URL (for type=web)")
     icon: str = Field(default="apps", description="Icon name from Material Icons")
+
+    @field_validator('type')
+    @classmethod
+    def validate_type(cls, v):
+        if v not in ['local', 'web']:
+            raise ValueError('type must be either "local" or "web"')
+        return v
 
 
 @app.get("/api/apps", tags=["App Launcher"])
@@ -3850,19 +3857,21 @@ async def add_custom_app(
         logger.info(f"[add_custom_app] Received request: name={request.name}, type={request.type}, path={request.path}, url={request.url}, icon={request.icon}")
 
         # Validate request based on type
-        if request.type == "local" and not request.path:
-            logger.warning("[add_custom_app] Validation failed: Path required for local app")
-            return {
-                "success": False,
-                "message": "Path is required for local applications"
-            }
+        if request.type == "local":
+            if not request.path or request.path.strip() == "":
+                logger.warning("[add_custom_app] Validation failed: Path required for local app")
+                return {
+                    "success": False,
+                    "message": "Path is required for local applications"
+                }
 
-        if request.type == "web" and not request.url:
-            logger.warning("[add_custom_app] Validation failed: URL required for web app")
-            return {
-                "success": False,
-                "message": "URL is required for web applications"
-            }
+        if request.type == "web":
+            if not request.url or request.url.strip() == "":
+                logger.warning("[add_custom_app] Validation failed: URL required for web app")
+                return {
+                    "success": False,
+                    "message": "URL is required for web applications"
+                }
 
         # Generate unique ID
         import uuid
