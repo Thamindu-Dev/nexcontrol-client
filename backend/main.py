@@ -3316,6 +3316,7 @@ class MediaController:
                 }
 
             import win32gui
+            import win32process
             import win32con
             from ctypes import windll
 
@@ -3329,7 +3330,7 @@ class MediaController:
                     return  # Already found
 
                 if win32gui.IsWindowVisible(hwnd):
-                    _, pid = win32gui.GetWindowThreadProcessId(hwnd)
+                    _, pid = win32process.GetWindowThreadProcessId(hwnd)
                     try:
                         proc = psutil.Process(pid)
                         if proc.name() in process_names:

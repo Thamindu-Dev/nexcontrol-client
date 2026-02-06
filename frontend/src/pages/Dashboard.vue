@@ -972,20 +972,36 @@ async function sendMediaCommand(action) {
       }
     }
 
-    // Send command via WebSocket (will fall back to HTTP if not connected)
-    console.log('[Dashboard] Sending media command via WebSocket...');
-    const result = await mediaWsService.sendCommand(selectedMediaApp.value, action);
-    console.log('[Dashboard] Media command result:', result);
+    // For volume commands, use fire-and-forget mode for rapid button presses
+    const isVolumeCommand = action === 'volume_up' || action === 'volume_down';
 
-    if (result.success) {
-      // Provide haptic feedback on mobile
+    if (isVolumeCommand) {
+      // Fire-and-forget for volume commands - don't wait for response
+      console.log('[Dashboard] Sending volume command (fire-and-forget)...');
+      mediaWsService.sendCommand(selectedMediaApp.value, action).catch(err => {
+        console.warn('[Dashboard] Volume command error (suppressed):', err);
+      });
+
+      // Immediate haptic feedback
       if (navigator.vibrate) {
-        navigator.vibrate(50); // Short vibration
+        navigator.vibrate(30);
       }
-
-      secureNotify.success($q, result.message || `${action} sent successfully`);
     } else {
-      secureNotify.error($q, result.message || 'Failed to send command');
+      // For other commands, wait for response
+      console.log('[Dashboard] Sending media command via WebSocket...');
+      const result = await mediaWsService.sendCommand(selectedMediaApp.value, action);
+      console.log('[Dashboard] Media command result:', result);
+
+      if (result.success) {
+        // Provide haptic feedback on mobile
+        if (navigator.vibrate) {
+          navigator.vibrate(50); // Short vibration
+        }
+
+        secureNotify.success($q, result.message || `${action} sent successfully`);
+      } else {
+        secureNotify.error($q, result.message || 'Failed to send command');
+      }
     }
   } catch (error) {
     console.error('[Dashboard] Media control error:', error);

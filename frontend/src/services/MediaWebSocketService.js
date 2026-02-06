@@ -276,7 +276,7 @@ class MediaWebSocketService {
    */
   async _sendViaHttp(app, action) {
     const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), 5000); // 5 second timeout
+    const timeoutId = setTimeout(() => controller.abort(), 2000); // 2 second timeout for rapid button presses
 
     try {
       console.log('[MediaWS] Using HTTP fallback for:', { app, action });
