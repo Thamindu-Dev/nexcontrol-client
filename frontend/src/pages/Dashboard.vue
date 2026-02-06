@@ -424,8 +424,6 @@
                     class="media-btn full-width"
                     size="md"
                     padding="sm md"
-                    :loading="mediaCommandLoading"
-                    :disable="mediaCommandLoading"
                     outline
                   >
                     <q-icon name="play_circle" size="24px" />
@@ -606,8 +604,7 @@ const autoRefresh = ref(false);
 const refreshInterval = ref(5000); // 5 seconds
 let refreshTimer = null;
 
-// Media Control State
-const mediaCommandLoading = ref(false);
+// Media Control State (fire-and-forget mode, no loading state needed)
 
 // Multi-disk state
 const allDisks = ref([]);
@@ -883,73 +880,41 @@ async function executePowerAction(action) {
 /**
  * Send media command to Default (Global)
  * Uses WebSocket for low latency, falls back to HTTP if needed
+ * All commands are fire-and-forget for instant response
  */
 async function sendMediaCommand(action) {
-  if (mediaCommandLoading.value) {
-    console.warn('[Dashboard] Media command already in progress, ignoring click');
-    return;
-  }
-
   console.log('[Dashboard] Media button clicked:', {
     app: 'Default (Global)',
     action: action,
     timestamp: new Date().toISOString()
   });
 
-  mediaCommandLoading.value = true;
-
-  try {
-    // Try to get auth token for WebSocket
-    const token = await api.getToken();
-
-    // Connect to WebSocket if not already connected
-    if (!mediaWsService.isConnected() && token) {
-      console.log('[Dashboard] Connecting to media WebSocket...');
-      try {
-        await mediaWsService.connect(token);
-        console.log('[Dashboard] Media WebSocket connected');
-      } catch (wsError) {
-        console.warn('[Dashboard] WebSocket connection failed, will use HTTP fallback:', wsError);
-      }
-    }
-
-    // For volume commands, use fire-and-forget mode for rapid button presses
-    const isVolumeCommand = action === 'volume_up' || action === 'volume_down';
-
-    if (isVolumeCommand) {
-      // Fire-and-forget for volume commands - don't wait for response
-      console.log('[Dashboard] Sending volume command (fire-and-forget)...');
-      mediaWsService.sendCommand('Default (Global)', action).catch(err => {
-        console.warn('[Dashboard] Volume command error (suppressed):', err);
-      });
-
-      // Immediate haptic feedback
-      if (navigator.vibrate) {
-        navigator.vibrate(30);
-      }
-    } else {
-      // For other commands, wait for response
-      console.log('[Dashboard] Sending media command via WebSocket...');
-      const result = await mediaWsService.sendCommand('Default (Global)', action);
-      console.log('[Dashboard] Media command result:', result);
-
-      if (result.success) {
-        // Provide haptic feedback on mobile
-        if (navigator.vibrate) {
-          navigator.vibrate(50); // Short vibration
-        }
-
-        secureNotify.success($q, result.message || `${action} sent successfully`);
-      } else {
-        secureNotify.error($q, result.message || 'Failed to send command');
-      }
-    }
-  } catch (error) {
-    console.error('[Dashboard] Media control error:', error);
-    secureNotify.error($q, error.message || 'Failed to send media command');
-  } finally {
-    mediaCommandLoading.value = false;
+  // Immediate haptic feedback
+  if (navigator.vibrate) {
+    navigator.vibrate(30);
   }
+
+  // Send command without waiting for response (fire-and-forget)
+  // This allows rapid button presses without blocking
+  const token = await api.getToken();
+
+  // Connect to WebSocket if not already connected
+  if (!mediaWsService.isConnected() && token) {
+    console.log('[Dashboard] Connecting to media WebSocket...');
+    try {
+      await mediaWsService.connect(token);
+      console.log('[Dashboard] Media WebSocket connected');
+    } catch (wsError) {
+      console.warn('[Dashboard] WebSocket connection failed, will use HTTP fallback:', wsError);
+    }
+  }
+
+  // Send command and don't wait - let it execute in background
+  mediaWsService.sendCommand('Default (Global)', action).catch(err => {
+    console.warn('[Dashboard] Media command error (suppressed):', err);
+  });
+
+  console.log('[Dashboard] Media command sent (fire-and-forget)');
 }
 
 /**

@@ -3698,16 +3698,27 @@ CUSTOM_APPS = {}
 
 
 def save_custom_apps():
-    """Save custom apps to file for persistence"""
+    """Save custom apps to file for persistence (non-blocking)"""
     try:
         import json
-        config_dir = os.path.dirname(os.path.abspath(__file__))
-        config_file = os.path.join(config_dir, "custom_apps.json")
-        with open(config_file, "w") as f:
-            json.dump(CUSTOM_APPS, f, indent=2)
-        logger.info(f"Saved {len(CUSTOM_APPS)} custom apps to file")
+        import threading
+
+        def save_to_file():
+            try:
+                config_dir = os.path.dirname(os.path.abspath(__file__))
+                config_file = os.path.join(config_dir, "custom_apps.json")
+                with open(config_file, "w") as f:
+                    json.dump(CUSTOM_APPS, f, indent=2)
+                logger.info(f"Saved {len(CUSTOM_APPS)} custom apps to file")
+            except Exception as e:
+                logger.error(f"Failed to save custom apps to file: {e}")
+
+        # Save in background thread to avoid blocking
+        thread = threading.Thread(target=save_to_file, daemon=True)
+        thread.start()
+
     except Exception as e:
-        logger.error(f"Failed to save custom apps: {e}")
+        logger.error(f"Failed to initiate custom apps save: {e}")
 
 
 def load_custom_apps():
@@ -3835,14 +3846,18 @@ async def add_custom_app(
         Created app details
     """
     try:
+        logger.info(f"[add_custom_app] Received request: name={request.name}, type={request.type}, path={request.path}, url={request.url}, icon={request.icon}")
+
         # Validate request based on type
         if request.type == "local" and not request.path:
+            logger.warning("[add_custom_app] Validation failed: Path required for local app")
             return {
                 "success": False,
                 "message": "Path is required for local applications"
             }
 
         if request.type == "web" and not request.url:
+            logger.warning("[add_custom_app] Validation failed: URL required for web app")
             return {
                 "success": False,
                 "message": "URL is required for web applications"
