@@ -3370,10 +3370,11 @@ class MediaController:
             except:
                 pass  # Window might be minimized or locked
 
-            # Send APPCOMMAND message
+            # Send APPCOMMAND message (WM_APPCOMMAND = 0x0319)
+            WM_APPCOMMAND = 0x0319
             win32gui.PostMessage(
                 target_hwnd,
-                win32con.WM_APPCOMMAND,
+                WM_APPCOMMAND,
                 0,
                 app_commands[action] * 65536  # Shift to high word
             )
