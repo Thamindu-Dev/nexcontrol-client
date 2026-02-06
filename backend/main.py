@@ -3273,8 +3273,10 @@ class MediaController:
 
             try:
                 # Simulate key press with short delay between press and release
-                logger.info(f"Calling pyautogui.press('{key_map[action]}')")
-                pyautogui.press(key_map[action], presses=1, interval=0.1)
+                # For volume commands, press 5 times to change by 5 points
+                presses = 5 if action in ["volumeup", "volumedown"] else 1
+                logger.info(f"Calling pyautogui.press('{key_map[action]}', presses={presses})")
+                pyautogui.press(key_map[action], presses=presses, interval=0.05)
                 logger.info(f"pyautogui.press() completed successfully")
             finally:
                 # Restore original failsafe setting
