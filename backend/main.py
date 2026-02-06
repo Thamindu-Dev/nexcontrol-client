@@ -3763,8 +3763,8 @@ class CustomAppRequest(BaseModel):
     """Custom app request model"""
     name: str = Field(..., min_length=1, max_length=100, description="App display name")
     type: str = Field(..., description="App type: 'local' or 'web'")
-    path: str | None = Field(None, max_length=500, description="Local app path (for type=local)")
-    url: str | None = Field(None, max_length=500, description="Web URL (for type=web)")
+    path: Optional[str] = Field(None, max_length=500, description="Local app path (for type=local)")
+    url: Optional[str] = Field(None, max_length=500, description="Web URL (for type=web)")
     icon: str = Field(default="apps", description="Icon name from Material Icons")
 
     @field_validator('type')
@@ -3854,24 +3854,20 @@ async def add_custom_app(
         Created app details
     """
     try:
-        logger.info(f"[add_custom_app] Received request: name={request.name}, type={request.type}, path={request.path}, url={request.url}, icon={request.icon}")
+        logger.info(f"[add_custom_app] Received request: {request.model_dump()}")
 
-        # Validate request based on type
-        if request.type == "local":
-            if not request.path or request.path.strip() == "":
-                logger.warning("[add_custom_app] Validation failed: Path required for local app")
-                return {
-                    "success": False,
-                    "message": "Path is required for local applications"
-                }
+        # Basic validation
+        if request.type == "local" and not request.path:
+            return {
+                "success": False,
+                "message": "Path is required for local applications"
+            }
 
-        if request.type == "web":
-            if not request.url or request.url.strip() == "":
-                logger.warning("[add_custom_app] Validation failed: URL required for web app")
-                return {
-                    "success": False,
-                    "message": "URL is required for web applications"
-                }
+        if request.type == "web" and not request.url:
+            return {
+                "success": False,
+                "message": "URL is required for web applications"
+            }
 
         # Generate unique ID
         import uuid
@@ -3881,16 +3877,16 @@ async def add_custom_app(
         CUSTOM_APPS[app_id] = {
             "name": request.name,
             "type": request.type,
-            "path": request.path,
-            "url": request.url,
-            "icon": request.icon,
+            "path": request.path or "",
+            "url": request.url or "",
+            "icon": request.icon or "apps",
             "created_by": current_user.get("sub", "unknown")
         }
 
-        # Save to file
+        # Save to file (runs in background)
         save_custom_apps()
 
-        logger.info(f"Added custom app: {request.name} ({app_id}) by {current_user.get('sub')}")
+        logger.info(f"Added custom app: {request.name} ({app_id})")
 
         return {
             "success": True,
@@ -3901,6 +3897,8 @@ async def add_custom_app(
 
     except Exception as e:
         logger.error(f"Failed to add custom app: {e}")
+        import traceback
+        logger.error(f"Traceback: {traceback.format_exc()}")
         return {
             "success": False,
             "message": f"Failed to add custom app: {str(e)}"
