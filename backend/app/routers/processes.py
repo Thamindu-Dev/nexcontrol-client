@@ -6,15 +6,19 @@ from app.services.processes import ProcessManager
 from app.models.schemas import CommandResponse
 
 router = APIRouter(
-    prefix="/system/processes",
+    prefix="/processes",
     tags=["Processes"],
     dependencies=[Depends(SecurityManager.get_current_user)]
 )
 
-@router.get("/list", response_model=List[Dict[str, Any]])
-async def list_processes(limit: int = 50, sort: str = "cpu"):
-    """List running processes"""
-    return ProcessManager.list_processes(limit, sort)
+@router.get("")
+async def list_processes(
+    limit: int = Query(default=30, ge=1, le=100),
+    sort_by: str = Query(default="cpu", regex="^(cpu|memory)$")
+):
+    """List running processes sorted by CPU or memory usage"""
+    processes = ProcessManager.list_processes(limit, sort_by)
+    return {"processes": processes}
 
 @router.post("/kill/{pid}", response_model=CommandResponse)
 async def kill_process(pid: int):

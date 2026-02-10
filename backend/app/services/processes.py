@@ -19,7 +19,7 @@ class ProcessManager:
     }
 
     @staticmethod
-    def list_processes(limit: int = 50, sort_by: str = "cpu") -> list:
+    def list_processes(limit: int = 30, sort_by: str = "cpu") -> list:
         """List top resource-consuming processes"""
         try:
             limit = max(1, min(100, int(limit)))
@@ -31,11 +31,15 @@ class ProcessManager:
             for proc in psutil.process_iter(['pid', 'name', 'username']):
                 try:
                     with proc.oneshot():
+                        # Use cpu_percent without interval for cached/non-blocking value
+                        # interval=None returns cached value immediately
+                        cpu_pct = proc.cpu_percent(interval=None)
+
                         proc_info = {
                             'pid': proc.info['pid'],
                             'name': proc.info['name'],
                             'username': proc.info['username'],
-                            'cpu_percent': proc.cpu_percent(interval=0.1),
+                            'cpu_percent': cpu_pct,
                             'memory_percent': proc.memory_percent()
                         }
 

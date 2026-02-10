@@ -14,10 +14,17 @@ router = APIRouter(
 # Instantiate AppLauncher service
 launcher_service = AppLauncher()
 
-@router.get("/list", response_model=List[Dict[str, Any]])
+from app.core.config import settings
+
+@router.get("", response_model=Dict[str, Any])
 async def list_apps():
     """List all available applications"""
-    return launcher_service.get_all_apps()
+    apps = launcher_service.get_all_apps()
+    return {
+        "success": True,
+        "apps": apps,
+        "platform": settings.OS_TYPE
+    }
 
 @router.post("/launch", response_model=CommandResponse)
 async def launch_app(request: AppLaunchRequest, current_user: str = Depends(SecurityManager.get_current_user)):

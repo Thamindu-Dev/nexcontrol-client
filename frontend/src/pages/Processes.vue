@@ -10,104 +10,139 @@
   ==============================================================================
 -->
 <template>
-  <q-page padding>
-    <!-- Sort Controls -->
-    <div class="row q-mb-md">
-      <div class="col-12">
-        <q-card class="glass-card q-pa-sm">
-          <div class="row items-center q-gutter-md">
-            <div class="text-subtitle2">Sort by:</div>
-            <q-btn-toggle
-              v-model="sortBy"
-              toggle-color="cyan"
-              rounded
-              :options="[
-                { label: 'CPU', value: 'cpu' },
-                { label: 'Memory', value: 'memory' }
-              ]"
-              @update:model-value="handleSortChange"
-            />
-            <q-space />
-            <div class="text-caption text-grey">
-              {{ processes.length }} processes shown
+  <div class="processes-page">
+    <q-page padding class="q-pl-none q-pr-md q-pb-xl">
+      <!-- Sort Controls -->
+      <div class="row q-col-gutter-md q-mb-lg">
+        <div class="col-12">
+          <q-card class="glass-card q-pa-md">
+            <div class="row items-center q-gutter-md">
+              <div class="text-subtitle2 text-white">Sort by:</div>
+              <q-btn-toggle
+                v-model="sortBy"
+                toggle-color="cyan"
+                text-color="grey-6"
+                rounded
+                unelevated
+                :options="[
+                  { label: 'CPU', value: 'cpu' },
+                  { label: 'Memory', value: 'memory' }
+                ]"
+                @update:model-value="handleSortChange"
+                :disable="isRefreshing"
+              />
+              <q-space />
+              <q-btn
+                flat
+                round
+                color="cyan"
+                icon="refresh"
+                :loading="isRefreshing"
+                @click="refreshProcesses"
+                class="q-mr-sm"
+              >
+                <q-tooltip>Refresh processes</q-tooltip>
+              </q-btn>
+              <div class="text-caption text-grey-6">
+                {{ processes.length }} process{{ processes.length !== 1 ? 'es' : '' }} shown
+              </div>
             </div>
+          </q-card>
+        </div>
+      </div>
+
+      <!-- Loading State -->
+      <div v-if="loading.processes || isRefreshing" class="row justify-center q-my-xl">
+        <div class="col-12 col-sm-8 col-md-6 text-center">
+          <q-spinner-dots color="cyan" size="4em" class="q-mb-md" />
+          <div class="text-body1 text-grey-6">Loading processes...</div>
+          <div class="text-caption text-grey-7 q-mt-sm">
+            Fetching system process information
           </div>
-        </q-card>
+        </div>
       </div>
-    </div>
 
-    <!-- Empty State -->
-    <div v-if="processes.length === 0 && !loading.processes" class="row q-mt-lg">
-      <div class="col-12">
-        <q-card class="glass-card q-pa-xl text-center">
-          <q-icon
-            name="memory"
-            size="xl"
-            color="grey"
-            class="q-mb-md"
-          />
-          <div class="text-h6">No processes found</div>
-        </q-card>
+      <!-- Empty State -->
+      <div v-else-if="processes.length === 0" class="row justify-center q-mt-xl">
+        <div class="col-12 col-sm-8 col-md-6 text-center">
+          <q-card class="glass-card q-pa-xl">
+            <q-icon
+              name="memory"
+              size="80px"
+              color="grey-7"
+              class="q-mb-md"
+            />
+            <div class="text-h5 text-white q-mb-md">No processes found</div>
+            <div class="text-body1 text-grey-6">
+              Unable to retrieve process list. Try refreshing.
+            </div>
+          </q-card>
+        </div>
       </div>
-    </div>
 
-    <!-- Processes Table -->
-    <div v-else class="row q-mt-md">
-      <div class="col-12">
-        <q-card class="glass-card">
-          <q-markup-table>
-            <table class="q-table">
-              <thead>
-                <tr>
-                  <th class="text-left">PID</th>
-                  <th class="text-left">Name</th>
-                  <th class="text-right">CPU %</th>
-                  <th class="text-right">Memory %</th>
-                  <th class="text-center">Actions</th>
-                </tr>
-              </thead>
-              <tbody>
-                <tr v-for="process in processes" :key="process.pid">
-                  <td class="text-left">{{ process.pid }}</td>
-                  <td class="text-left">
-                    <div>{{ process.name || 'N/A' }}</div>
-                    <div class="text-caption text-grey-6">
-                      {{ process.username || 'N/A' }}
-                    </div>
-                  </td>
-                  <td class="text-right">
-                    <q-badge
-                      :color="getCPUColor(process.cpu_percent)"
-                      :label="process.cpu_percent?.toFixed(1) || '0'"
-                      text-color="white"
-                    />
-                  </td>
-                  <td class="text-right">
-                    <q-badge
-                      :color="getMemoryColor(process.memory_percent)"
-                      :label="process.memory_percent?.toFixed(1) || '0'"
-                      text-color="white"
-                    />
-                  </td>
-                  <td class="text-center">
-                    <q-btn
-                      flat
-                      dense
-                      round
-                      color="red"
-                      icon="delete"
-                      @click="confirmKillProcess(process.pid, process.name)"
-                      :loading="killLoading[process.pid]"
-                    />
-                  </td>
-                </tr>
-              </tbody>
-            </table>
-          </q-markup-table>
-        </q-card>
+      <!-- Processes Table -->
+      <div v-else class="row q-col-gutter-md q-mt-md">
+        <div class="col-12">
+          <q-card class="glass-card">
+            <q-markup-table>
+              <table class="q-table">
+                <thead>
+                  <tr>
+                    <th class="text-left">PID</th>
+                    <th class="text-left">Name</th>
+                    <th class="text-right">CPU %</th>
+                    <th class="text-right">Memory %</th>
+                    <th class="text-center">Actions</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr v-for="process in processes" :key="process.pid">
+                    <td class="text-left text-mono">{{ process.pid }}</td>
+                    <td class="text-left">
+                      <div class="text-white">{{ process.name || 'N/A' }}</div>
+                      <div class="text-caption text-grey-6">
+                        {{ process.username || 'N/A' }}
+                      </div>
+                    </td>
+                    <td class="text-right">
+                      <q-badge
+                        :color="getCPUColor(process.cpu_percent)"
+                        :label="process.cpu_percent?.toFixed(1) || '0'"
+                        text-color="white"
+                        class="q-px-sm"
+                      />
+                    </td>
+                    <td class="text-right">
+                      <q-badge
+                        :color="getMemoryColor(process.memory_percent)"
+                        :label="process.memory_percent?.toFixed(1) || '0'"
+                        text-color="white"
+                        class="q-px-sm"
+                      />
+                    </td>
+                    <td class="text-center">
+                      <q-btn
+                        flat
+                        dense
+                        round
+                        color="red"
+                        icon="delete"
+                        @click="confirmKillProcess(process.pid, process.name)"
+                        :loading="killLoading[process.pid]"
+                        :disable="killLoading[process.pid]"
+                      >
+                        <q-tooltip>Terminate process</q-tooltip>
+                      </q-btn>
+                    </td>
+                  </tr>
+                </tbody>
+              </table>
+            </q-markup-table>
+          </q-card>
+        </div>
       </div>
-    </div>
-  </q-page>
+    </q-page>
+  </div>
 </template>
 
 <script setup>
@@ -128,6 +163,7 @@ const loading = computed(() => systemStore.loading);
 const processes = computed(() => systemStore.processes);
 const sortBy = ref('cpu');
 const killLoading = ref({});
+const isRefreshing = ref(false);
 
 /**
  * Get CPU color based on usage
@@ -144,28 +180,31 @@ function getCPUColor(percent) {
 function getMemoryColor(percent) {
   if (percent >= 80) return 'red';
   if (percent >= 50) return 'orange';
-  return 'blue';
+  return 'cyan';
 }
 
 /**
  * Handle sort change
  */
-function handleSortChange() {
-  refreshProcesses();
+async function handleSortChange() {
+  await refreshProcesses();
 }
 
 /**
  * Refresh processes list
  */
 async function refreshProcesses() {
+  isRefreshing.value = true;
   try {
-    await systemStore.fetchProcesses(50, sortBy.value);
+    await systemStore.fetchProcesses(30, sortBy.value);
   } catch {
     $q.notify({
       type: 'negative',
       message: 'Failed to fetch processes',
       position: 'top'
     });
+  } finally {
+    isRefreshing.value = false;
   }
 }
 
@@ -177,7 +216,8 @@ function confirmKillProcess(pid, name) {
     title: 'Kill Process',
     message: `Are you sure you want to kill process ${name} (PID: ${pid})?`,
     cancel: true,
-    persistent: true
+    persistent: true,
+    class: 'bg-dark'
   }).onOk(async () => {
     await killProcess(pid);
   });
@@ -199,8 +239,10 @@ async function killProcess(pid) {
         position: 'top'
       });
 
-      // Refresh the list
-      await refreshProcesses();
+      // Refresh the list after a short delay
+      setTimeout(async () => {
+        await refreshProcesses();
+      }, 500);
     } else {
       $q.notify({
         type: 'negative',
@@ -228,6 +270,12 @@ onMounted(async () => {
 </script>
 
 <style scoped>
+/* Page Container */
+.processes-page {
+  background: #000000;
+  min-height: calc(100vh - 50px);
+}
+
 /* OLED Theme Styles */
 .glass-card {
   background: #000000;
@@ -266,12 +314,9 @@ onMounted(async () => {
   background: #000000 !important;
 }
 
-/* Ensure process list text is visible */
-.process-name {
-  color: #FFFFFF;
-}
-
-.process-user {
-  color: #AAAAAA;
+/* Typography */
+.text-mono {
+  font-family: 'JetBrains Mono', 'Roboto Mono', 'Courier New', monospace;
+  letter-spacing: -0.3px;
 }
 </style>

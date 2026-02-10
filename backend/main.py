@@ -105,19 +105,35 @@ async def encryption_middleware(request: Request, call_next):
         "/ws/", "/api/health", "/system/screenshot/capture",
         "/api/test/connection", "/api/test/echo",
         # Stats endpoints - return unencrypted data for dashboard
-        "/api/stats/",
+        "/api/stats",
         "/api/system/info",
         "/api/media/status",
         # Docker endpoints - container management
-        "/api/docker/",
+        "/api/docker",
         # Process endpoints - process management
-        "/api/processes/",
+        "/api/processes",
         # Screenshot status
         "/api/screenshot/status",
         # Threshold config
         "/api/threshold/config",
         # WoL endpoints
-        "/api/wol/"
+        "/api/wol",
+        # Apps endpoints
+        "/api/apps",
+        # Explicit Auth endpoints (login etc)
+        "/api/auth",
+        # System endpoints
+        "/api/system",
+        # Power endpoints
+        "/api/power",
+        # Media endpoints
+        "/api/media",
+        # Clipboard endpoints
+        "/api/clipboard",
+        # Schedule endpoints
+        "/api/schedule",
+        # Settings related (if any exist under generic paths)
+        "/api/settings"
     ]
     
     if request.method == "OPTIONS" or any(request.url.path.startswith(path) for path in excluded_paths):
@@ -144,13 +160,7 @@ async def encryption_middleware(request: Request, call_next):
                             )
                             
                         # Replace request body with decrypted data
-                        # We need to reconstruct the Receive channel
-                        # FastAPI/Starlette caches the body, so we can just update the cache or scope?
-                        # Actually it's cleaner to inject it into request.state or rebuild usage.
-                        # But standard middleware usually wraps the receive.
-                        
                         # Simplified approach for FastAPI:
-                        # Create a new Receive mapping
                         async def new_receive():
                             return {"type": "http.request", "body": json.dumps(decrypted_data).encode("utf-8")}
                         
@@ -170,25 +180,14 @@ async def encryption_middleware(request: Request, call_next):
     if (200 <= response.status_code < 300) and \
        response.headers.get("content-type") == "application/json":
 
-        # Don't encrypt if explicitly excluded or if it's not a streaming response involved
-        # Careful with StreamingResponse. JSONResponse is standard.
-
         # We need to capture the response body.
-        # Standard way is to iterate response.body_iterator
         response_body = b""
         async for chunk in response.body_iterator:
             response_body += chunk
 
         # EXCLUSION CHECK for Response Encryption (double check)
-        # We checked request path earlier but we are in post-processing.
-        # We need to rely on the earlier check variable or recheck.
-        # request URL is still available.
         if request.method == "OPTIONS" or any(request.url.path.startswith(path) for path in excluded_paths):
-            # Should have returned earlier!
-            # Wait, the first check `if request.method == "OPTIONS" or ... return await call_next(request)` handles this.
-            # So if we are here, it is NOT excluded.
-            pass
-
+            return response
 
         try:
             import json
@@ -203,24 +202,12 @@ async def encryption_middleware(request: Request, call_next):
                     "timestamp": time.time()
                 }
 
-                # Prepare headers - MUST preserve CORS headers
+                # Prepare headers
                 headers = dict(response.headers)
 
                 # Remove Content-Length as it will change
                 if "content-length" in headers:
                     del headers["content-length"]
-
-                # CRITICAL: Ensure CORS headers are preserved
-                # These headers are needed for the frontend to accept the response
-                cors_headers = {
-                    "Access-Control-Allow-Origin": "*",
-                    "Access-Control-Allow-Credentials": "true",
-                    "Access-Control-Allow-Methods": "*",
-                    "Access-Control-Allow-Headers": "*",
-                    "Access-Control-Expose-Headers": "*"
-                }
-                for header, value in cors_headers.items():
-                    headers[header] = value
 
                 return JSONResponse(
                     content=new_response_data,
@@ -229,26 +216,9 @@ async def encryption_middleware(request: Request, call_next):
                 )
         except Exception as e:
             logger.error(f"Middleware Encryption Error: {e}")
-            # Fallback to original response or error?
-            # Original to avoid breakage, but log it.
-            # But we already consumed the body iterator! We must reconstruct response.
-
+            
             headers = dict(response.headers)
-
-            # CRITICAL: Ensure CORS headers are preserved even in error case
-            cors_headers = {
-                "Access-Control-Allow-Origin": "*",
-                "Access-Control-Allow-Credentials": "true",
-                "Access-Control-Allow-Methods": "*",
-                "Access-Control-Allow-Headers": "*",
-                "Access-Control-Expose-Headers": "*"
-            }
-            for header, value in cors_headers.items():
-                headers[header] = value
-
-            # Original body, so original content-length is valid?
-            # Actually, we consumed response.body_iterator. Not sure if response object still holds valid length meta if it was streaming.
-            # Better to let Starlette recalculate it for the new Response object we return.
+            
             if "content-length" in headers:
                 del headers["content-length"]
 
@@ -285,28 +255,14 @@ async def global_exception_handler(request: Request, exc: Exception):
     logger.error(traceback.format_exc())
     return JSONResponse(
         status_code=500,
-        content={"detail": "Internal Server Error", "error": str(exc)},
-        headers={
-            "Access-Control-Allow-Origin": "*",
-            "Access-Control-Allow-Credentials": "true",
-            "Access-Control-Allow-Methods": "*",
-            "Access-Control-Allow-Headers": "*",
-            "Access-Control-Expose-Headers": "*"
-        }
+        content={"detail": "Internal Server Error", "error": str(exc)}
     )
 
 @app.exception_handler(HTTPException)
 async def http_exception_handler(request: Request, exc: HTTPException):
     return JSONResponse(
         status_code=exc.status_code,
-        content={"detail": exc.detail},
-        headers={
-            "Access-Control-Allow-Origin": "*",
-            "Access-Control-Allow-Credentials": "true",
-            "Access-Control-Allow-Methods": "*",
-            "Access-Control-Allow-Headers": "*",
-            "Access-Control-Expose-Headers": "*"
-        }
+        content={"detail": exc.detail}
     )
 
 # Static Files (Frontend)

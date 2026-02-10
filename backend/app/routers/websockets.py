@@ -57,14 +57,14 @@ async def websocket_media_control(websocket: WebSocket):
                         result = MediaController.send_media_command(app_name, action)
                         # send result back to sender? Or broadcast?
                         # Usually media control just performs action. But feedback is nice.
-                        await websocket.send_json({"type": "command_result", "data": result})
+                        await websocket.send_json({"type": "media_response", "data": result})
 
                 elif command_type == "launch_app":
                      app_id = message.get("app_id")
                      if app_id:
                          launcher = AppLauncher()
                          result = launcher.launch_app(app_id)
-                         await websocket.send_json({"type": "launch_result", "data": result})
+                         await websocket.send_json({"type": "launch_response", "data": result})
 
                 elif command_type == "ping":
                      await websocket.send_text("pong")
