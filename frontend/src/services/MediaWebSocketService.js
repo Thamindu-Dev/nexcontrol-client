@@ -76,8 +76,20 @@ class MediaWebSocketService {
         };
 
         this.ws.onmessage = (event) => {
+          const message = event.data;
+
+          // Handle WebSocket heartbeat messages (ping/pong)
+          if (message === 'ping' || message === 'pong') {
+            // Respond to ping with pong
+            if (message === 'ping') {
+              this.ws.send('pong');
+            }
+            return;
+          }
+
+          // Handle JSON messages
           try {
-            const data = JSON.parse(event.data);
+            const data = JSON.parse(message);
             console.log('[MediaWS] Message received:', data);
 
             // Handle media, launch, and add_custom_app responses
@@ -96,10 +108,10 @@ class MediaWebSocketService {
                 this.pendingCommands.delete(id);
               }
             } else if (data.type === 'pong') {
-              // Keep-alive response
+              // Keep-alive response (JSON format)
             }
           } catch (error) {
-            console.error('[MediaWS] Failed to parse message:', error);
+            console.error('[MediaWS] Failed to parse message:', error, 'Raw message:', message);
           }
         };
 

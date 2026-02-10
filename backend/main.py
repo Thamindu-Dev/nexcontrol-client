@@ -128,12 +128,12 @@ async def encryption_middleware(request: Request, call_next):
         "/api/power",
         # Media endpoints
         "/api/media",
-        # Clipboard endpoints
-        "/api/clipboard",
         # Schedule endpoints
         "/api/schedule",
         # Settings related (if any exist under generic paths)
-        "/api/settings"
+        "/api/settings",
+        # Clipboard endpoint (no encryption needed for simple text)
+        "/api/clipboard"
     ]
     
     if request.method == "OPTIONS" or any(request.url.path.startswith(path) for path in excluded_paths):

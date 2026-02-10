@@ -236,7 +236,8 @@ const api = {
         '/api/stats/disk',
         '/api/stats/system',
         '/api/system/info',
-        '/api/media/status'
+        '/api/media/status',
+        '/api/clipboard'
       ].some(path => endpoint.includes(path));
 
       if (!skipSecurityCheck && !hasEncryptionKey()) {

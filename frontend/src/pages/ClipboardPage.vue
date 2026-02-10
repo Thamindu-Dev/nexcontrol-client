@@ -145,11 +145,11 @@ async function fetchFromPC() {
   try {
     const response = await api.get('/api/clipboard');
 
-    if (response.success && response.text) {
-      pcText.value = response.text;
+    if (response && response.content !== undefined) {
+      pcText.value = response.content;
       secureNotify.success($q, 'Clipboard content loaded from PC');
     } else {
-      secureNotify.error($q, response.message || 'Failed to fetch clipboard');
+      secureNotify.error($q, 'Failed to fetch clipboard');
     }
   } catch (error) {
     console.error('[Clipboard] Error fetching from PC:', error);
@@ -194,11 +194,11 @@ async function sendToPC() {
 
   try {
     const response = await api.post('/api/clipboard', {
-      text: phoneText.value
+      content: phoneText.value
     });
 
-    if (response.success) {
-      secureNotify.success($q, response.message || 'Sent to PC clipboard');
+    if (response && response.content !== undefined) {
+      secureNotify.success($q, 'Sent to PC clipboard');
       phoneText.value = ''; // Clear after successful send
       // Haptic feedback
       if (navigator.vibrate) {
