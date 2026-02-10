@@ -10,162 +10,218 @@
   ==============================================================================
 -->
 <template>
-  <q-page padding>
-    <!-- Docker Status Bar -->
-    <div class="row q-mb-md q-gutter-sm">
-      <q-btn
-        flat
-        round
-        dense
-        icon="refresh"
-        :loading="loading.containers"
-        @click="refreshContainers"
-      />
-      <q-badge
-        :color="dockerAvailable ? 'positive' : 'negative'"
-        rounded
-      >
-        {{ dockerAvailable ? 'Docker Running' : 'Docker Unavailable' }}
-      </q-badge>
-    </div>
+  <div class="dashboard-page">
+    <q-page padding class="q-pl-none q-pr-md q-pb-xl">
+      <!-- Header Section -->
+      <div class="row items-center justify-between q-mb-lg q-pl-xs">
+        
 
-    <!-- No Docker Available Message -->
-    <div v-if="!dockerAvailable" class="row q-mt-lg">
-      <div class="col-12">
-        <q-card class="glass-card q-pa-xl text-center">
-          <q-icon
-            name="warning"
-            size="xl"
-            color="warning"
-            class="q-mb-md"
-          />
-          <div class="text-h6">Docker is not available</div>
-          <div class="text-caption text-grey q-mt-sm">
-            Docker is either not installed or not running on the remote PC.<br>
-            Install Docker and start the Docker daemon to use this feature.
-          </div>
-        </q-card>
+        <div class="row q-gutter-sm items-center">
+          <q-badge
+            :color="dockerAvailable ? 'cyan' : 'grey-9'"
+            :text-color="dockerAvailable ? 'black' : 'grey-5'"
+            class="q-py-xs q-px-sm text-subtitle2"
+            style="border: 1px solid rgba(255,255,255,0.1)"
+            rounded
+          >
+            <q-icon :name="dockerAvailable ? 'check_circle' : 'error'" class="q-mr-xs" />
+            {{ dockerAvailable ? 'Engine Running' : 'Unavailable' }}
+          </q-badge>
+
+          <q-btn
+            round
+            flat
+            color="cyan"
+            icon="refresh"
+            :loading="loading.containers"
+            @click="refreshContainers"
+            class="header-btn"
+          >
+            <q-tooltip>Refresh List</q-tooltip>
+          </q-btn>
+        </div>
       </div>
-    </div>
 
-    <!-- Containers List -->
-    <div v-else-if="containers.length === 0 && !loading.containers" class="row q-mt-lg">
-      <div class="col-12">
-        <q-card class="glass-card q-pa-xl text-center">
-          <q-icon
-            name="inventory_2"
-            size="xl"
-            color="grey"
-            class="q-mb-md"
-          />
-          <div class="text-h6">No containers found</div>
-        </q-card>
+      <!-- No Docker Available Message -->
+      <div v-if="!dockerAvailable" class="row justify-center q-mt-xl">
+        <div class="col-12 col-md-8 text-center">
+          <q-card class="stat-card q-pa-xl">
+            <q-icon
+              name="cloud_off"
+              size="4rem"
+              color="grey-8"
+              class="q-mb-md"
+            />
+            <div class="text-h5 text-white">Docker Engine Not Detectable</div>
+            <div class="text-body1 text-grey q-mt-sm">
+              Please ensure Docker Desktop/Engine is running on the host machine.
+            </div>
+          </q-card>
+        </div>
       </div>
-    </div>
 
-    <!-- Container Cards -->
-    <div class="row q-gutter-md q-mt-md">
-      <div
-        v-for="container in containers"
-        :key="container.id"
-        class="col-12 col-sm-6 col-md-4"
-      >
-        <q-card class="glass-card">
-          <q-card-section>
-            <div class="row items-center q-mb-sm">
-              <div class="col">
-                <div class="text-subtitle1 text-weight-bold">
-                  {{ container.name }}
+      <!-- Empty State -->
+      <div v-else-if="containers.length === 0 && !loading.containers" class="row justify-center q-mt-xl">
+        <div class="col-12 col-md-8 text-center">
+          <q-card class="stat-card q-pa-xl">
+            <q-icon
+              name="inventory_2"
+              size="4rem"
+              color="grey-8"
+              class="q-mb-md"
+            />
+            <div class="text-h5 text-white">No Containers Found</div>
+            <div class="text-body1 text-grey q-mt-sm">
+              Your container list is empty. Start some containers to see them here.
+            </div>
+          </q-card>
+        </div>
+      </div>
+
+      <!-- Loading State -->
+      <div v-else-if="loading.containers" class="row justify-center q-my-xl">
+        <q-spinner-dots color="cyan" size="4em" />
+      </div>
+
+      <!-- Containers Grid -->
+      <div v-else class="row q-col-gutter-md">
+        <div
+          v-for="container in containers"
+          :key="container.id"
+          class="col-12 col-md-6 col-lg-4"
+        >
+          <q-card class="stat-card column full-height">
+            <!-- Card Header -->
+            <q-card-section class="q-pb-none">
+              <div class="row items-start no-wrap">
+                <div class="col">
+                  <div class="text-h6 text-white text-weight-bold ellipsis">
+                    {{ container.name }}
+                  </div>
+                  <div class="text-caption text-cyan ellipsis q-mt-none">
+                    <q-icon name="image" size="xs" class="q-mr-xs" />
+                    {{ container.image }}
+                  </div>
                 </div>
-                <div class="text-caption text-grey">
-                  {{ container.image }}
+                <div class="col-auto q-ml-sm">
+                  <q-badge
+                    :color="container.state === 'running' ? 'cyan' : 'grey-9'"
+                    :text-color="container.state === 'running' ? 'black' : 'grey-5'"
+                    class="q-py-xs q-px-sm"
+                    style="border: 1px solid rgba(255,255,255,0.1)"
+                    rounded
+                  >
+                    <q-icon
+                      :name="container.state === 'running' ? 'play_circle' : 'stop_circle'"
+                      class="q-mr-xs"
+                      size="xs"
+                    />
+                    {{ container.state.toUpperCase() }}
+                  </q-badge>
                 </div>
               </div>
-              <div class="col-auto">
-                <q-badge
-                  :color="container.state === 'running' ? 'positive' : 'grey'"
-                  :label="container.state"
-                  rounded
-                />
+            </q-card-section>
+
+            <!-- Card Body -->
+            <q-card-section class="q-pt-sm col-grow">
+              <q-separator dark class="q-mb-sm opacity-20" />
+
+              <div class="row q-col-gutter-sm text-caption text-grey-4">
+                <div class="col-6">
+                  <div class="text-grey-6 text-xs">CONTAINER ID</div>
+                  <div class="text-mono">{{ container.id.substring(0, 12) }}</div>
+                </div>
+                <div class="col-6">
+                  <div class="text-grey-6 text-xs">STATUS DETAIL</div>
+                  <div class="ellipsis">{{ container.status }}</div>
+                </div>
               </div>
-            </div>
-          </q-card-section>
+            </q-card-section>
 
-          <q-card-section class="q-pt-none">
-            <div class="text-caption">
-              <div>ID: {{ container.id }}</div>
-              <div>Status: {{ container.status }}</div>
-            </div>
-          </q-card-section>
-
-            <q-card-actions align="right">
+            <!-- Actions -->
+            <q-separator dark class="opacity-20" />
+            <q-card-actions align="around" class="q-py-sm bg-dark-page">
               <q-btn
-                v-if="container.state === 'running'"
+                v-if="container.state !== 'running'"
+                class="action-btn"
                 flat
-                color="grey-7"
-                icon="stop"
-                @click="stopContainer(container.id)"
-                :loading="actionLoading[container.id]"
-              >
-                Stop
-              </q-btn>
-              <q-btn
-                v-else
-                flat
-                color="grey-6"
+                round
+                color="cyan"
                 icon="play_arrow"
                 @click="startContainer(container.id)"
                 :loading="actionLoading[container.id]"
               >
-                Start
+                <q-tooltip>Start Container</q-tooltip>
               </q-btn>
+
               <q-btn
+                v-else
+                class="action-btn"
                 flat
-                color="grey-8"
-                icon="refresh"
+                round
+                color="red-4"
+                icon="stop"
+                @click="stopContainer(container.id)"
+                :loading="actionLoading[container.id]"
+              >
+                <q-tooltip>Stop Container</q-tooltip>
+              </q-btn>
+
+              <q-btn
+                class="action-btn"
+                flat
+                round
+                color="orange-4"
+                icon="restart_alt"
                 @click="restartContainer(container.id)"
                 :loading="actionLoading[container.id]"
               >
-                Restart
+                <q-tooltip>Restart</q-tooltip>
               </q-btn>
+
               <q-btn
+                class="action-btn"
                 flat
-                color="grey"
-                icon="list"
+                round
+                color="grey-4"
+                icon="terminal"
                 @click="viewLogs(container.id)"
               >
-                Logs
+                <q-tooltip>View Logs</q-tooltip>
               </q-btn>
             </q-card-actions>
-        </q-card>
+          </q-card>
+        </div>
       </div>
-    </div>
 
-    <!-- Logs Dialog -->
-    <q-dialog v-model="showLogs" maximized>
-      <q-card class="glass-card">
-        <q-card-section>
-          <div class="row items-center q-gutter-sm">
-            <div class="text-h6">Container Logs</div>
-            <q-space />
-            <q-btn flat round dense icon="close" @click="showLogs = false" />
-          </div>
-        </q-card-section>
+      <!-- Logs Dialog -->
+      <q-dialog v-model="showLogs" maximized transition-show="slide-up" transition-hide="slide-down">
+        <q-card class="bg-black text-white column">
 
-        <q-card-section class="q-pt-none">
-          <div v-if="logsLoading" class="text-center q-pa-lg">
-            <q-spinner color="white" size="3em" />
-            <div class="q-mt-md">Loading logs...</div>
-          </div>
-          <pre v-else class="bg-grey-10 q-pa-md" style="max-height: 400px; overflow-y: auto;">{{ logs || 'No logs available' }}</pre>
-        </q-card-section>
+          <!-- Log Header -->
+          <q-toolbar class="bg-dark-page border-bottom q-py-sm">
+            <q-icon name="terminal" color="cyan" size="sm" class="q-mr-sm" />
+            <q-toolbar-title class="text-subtitle1">
+               Container Logs <span class="text-grey text-caption q-ml-sm">{{ currentContainerId?.substring(0,12) }}</span>
+            </q-toolbar-title>
+            <q-btn flat round dense icon="close" v-close-popup />
+          </q-toolbar>
 
-        <q-card-actions align="right">
-          <q-btn flat label="Close" v-close-popup />
-        </q-card-actions>
-      </q-card>
-    </q-dialog>
-  </q-page>
+          <!-- Log Content -->
+          <q-card-section class="col q-pa-none scroll relative-position bg-black">
+            <div v-if="logsLoading" class="absolute-center text-center">
+              <q-spinner-dots color="cyan" size="3em" />
+              <div class="q-mt-sm text-grey">Fetching logs...</div>
+            </div>
+
+            <div v-else class="fit q-pa-md font-mono text-body2">
+              <pre class="no-margin text-grey-4" style="white-space: pre-wrap; word-break: break-all;">{{ logs || 'No logs available.' }}</pre>
+            </div>
+          </q-card-section>
+        </q-card>
+      </q-dialog>
+    </q-page>
+  </div>
 </template>
 
 <script setup>
@@ -212,20 +268,11 @@ async function refreshContainers() {
  */
 async function startContainer(containerId) {
   actionLoading.value[containerId] = true;
-
   try {
     const result = await systemStore.startContainer(containerId);
-    $q.notify({
-      type: 'positive',
-      message: result.message || 'Container started',
-      position: 'top'
-    });
+    $q.notify({ type: 'positive', message: result.message || 'Container started', position: 'top' });
   } catch (error) {
-    $q.notify({
-      type: 'negative',
-      message: error.message || 'Failed to start container',
-      position: 'top'
-    });
+    $q.notify({ type: 'negative', message: error.message || 'Failed to start container', position: 'top' });
   } finally {
     actionLoading.value[containerId] = false;
   }
@@ -236,20 +283,11 @@ async function startContainer(containerId) {
  */
 async function stopContainer(containerId) {
   actionLoading.value[containerId] = true;
-
   try {
     const result = await systemStore.stopContainer(containerId);
-    $q.notify({
-      type: 'positive',
-      message: result.message || 'Container stopped',
-      position: 'top'
-    });
+    $q.notify({ type: 'positive', message: result.message || 'Container stopped', position: 'top' });
   } catch (error) {
-    $q.notify({
-      type: 'negative',
-      message: error.message || 'Failed to stop container',
-      position: 'top'
-    });
+    $q.notify({ type: 'negative', message: error.message || 'Failed to stop container', position: 'top' });
   } finally {
     actionLoading.value[containerId] = false;
   }
@@ -260,20 +298,11 @@ async function stopContainer(containerId) {
  */
 async function restartContainer(containerId) {
   actionLoading.value[containerId] = true;
-
   try {
     const result = await systemStore.restartContainer(containerId);
-    $q.notify({
-      type: 'positive',
-      message: result.message || 'Container restarted',
-      position: 'top'
-    });
+    $q.notify({ type: 'positive', message: result.message || 'Container restarted', position: 'top' });
   } catch (error) {
-    $q.notify({
-      type: 'negative',
-      message: error.message || 'Failed to restart container',
-      position: 'top'
-    });
+    $q.notify({ type: 'negative', message: error.message || 'Failed to restart container', position: 'top' });
   } finally {
     actionLoading.value[containerId] = false;
   }
@@ -286,6 +315,7 @@ async function viewLogs(containerId) {
   currentContainerId.value = containerId;
   showLogs.value = true;
   logsLoading.value = true;
+  logs.value = ''; // Reset logs
 
   try {
     const result = await api.get(`/api/docker/containers/${containerId}/logs?tail=100`);
@@ -306,21 +336,97 @@ onMounted(async () => {
 </script>
 
 <style scoped>
-/* Container Cards - OLED Theme */
-/* Glass Card - Dark Mode */
-.glass-card {
+/* Dashboard-consistent Card Style */
+.stat-card {
   background: #000000;
   border: 1px solid #333333;
-  border-radius: 12px;
+  border-radius: 16px;
+  transition: all 0.3s ease;
+  min-height: 220px;
 }
 
-/* Preformatted text for logs */
-pre {
-  background: #0A0A0A !important;
-  border: 1px solid #333333;
-  border-radius: 8px;
-  color: #E0E0E0;
-  font-family: 'Courier New', monospace;
-  font-size: 0.85rem;
+.docker-card:hover {
+  border-color: rgba(34, 211, 238, 0.3);
+  box-shadow: 0 4px 20px rgba(34, 211, 238, 0.1);
+  transform: translateY(-2px);
+}
+
+.card-header {
+  background: rgba(0, 0, 0, 0.3);
+}
+
+/* Action Buttons */
+.action-btn {
+  width: 48px;
+  height: 48px;
+  border-radius: 12px;
+  background: rgba(0, 0, 0, 0.3);
+  transition: all 0.2s ease;
+}
+
+.action-btn:hover {
+  background: rgba(34, 211, 238, 0.1);
+  transform: scale(1.05);
+}
+
+/* Logs Dialog */
+.logs-dialog {
+  background: #000000;
+}
+
+.logs-header {
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+/* Typography */
+.text-mono {
+  font-family: 'JetBrains Mono', 'Roboto Mono', 'Courier New', monospace;
+  letter-spacing: -0.3px;
+}
+
+.text-xs {
+  font-size: 0.7rem;
+  letter-spacing: 0.8px;
+  text-transform: uppercase;
+  font-weight: 600;
+}
+
+/* Utilities */
+.opacity-20 {
+  opacity: 0.2;
+}
+
+.bg-dark-page {
+  background: rgba(0, 0, 0, 0.3);
+}
+
+.ellipsis {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.no-margin {
+  margin: 0;
+}
+
+/* Responsive Adjustments */
+@media (max-width: 768px) {
+  .page-header {
+    padding: 16px;
+  }
+
+  .page-content {
+    padding: 16px;
+  }
+
+  .docker-card {
+    min-height: 200px;
+  }
+
+  .action-btn {
+    width: 44px;
+    height: 44px;
+  }
 }
 </style>

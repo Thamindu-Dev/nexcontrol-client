@@ -1,372 +1,73 @@
+
 # NexControl Backend
 
-Secure, local network Remote PC Controller backend powered by FastAPI.
-
-## Features
-
-- **System Monitoring**: Real-time CPU, RAM, Disk, GPU, and Network stats
-- **Power Management**: Shutdown, Hibernate, Restart commands
-- **Docker Control**: Start/Stop/Restart containers, view logs
-- **Process Manager**: List and kill system processes
-- **Screenshot**: Capture screen as base64 image
-- **Security**: AES-256-GCM encryption, JWT authentication, replay attack prevention
-- **Cross-Platform**: Supports Windows and Linux
-
-## Architecture
-
-```
-NexControl Backend (FastAPI)
-├── Security Layer (AES + JWT)
-├── System Monitor (psutil)
-├── Power Manager (OS-specific commands)
-├── Docker Manager (Docker SDK)
-├── Process Manager (psutil)
-└── Screenshot Service (pyautogui)
-```
-
-## Requirements
-
-- Python 3.8+
-- Windows 10/11 or Linux (Ubuntu 20.04+)
-- Docker (optional, for container management)
-- NVIDIA GPU (optional, for temperature monitoring)
-
-## Installation
-
-### 1. Clone or Navigate to Backend Directory
-
-```bash
-cd backend
-```
-
-### 2. Create Virtual Environment
-
-**Linux/macOS:**
-```bash
-python3 -m venv venv
-source venv/bin/activate
-```
-
-**Windows:**
-```cmd
-python -m venv venv
-venv\Scripts\activate
-```
-
-### 3. Install Dependencies
-
-```bash
-pip install -r requirements.txt
-```
-
-### 4. Configure Environment (Optional)
-
-```bash
-# Copy example environment file
-cp .env.example .env
-
-# Edit .env with your configuration
-nano .env  # or use your preferred editor
-```
-
-### 5. Start the Server
-
-**Development Mode (with auto-reload):**
-```bash
-python main.py
-```
-
-**Or using uvicorn directly:**
-```bash
-uvicorn main:app --host 0.0.0.0 --port 8000 --reload
-```
-
-### 6. Access the API
-
-- **API Root**: http://localhost:8000
-- **Swagger UI**: http://localhost:8000/docs
-- **ReDoc**: http://localhost:8000/redoc
-- **Health Check**: http://localhost:8000/health
-
-## Default Credentials
-
-⚠️ **IMPORTANT**: Change the default password in production!
-
-```
-Password: admin123
-```
-
-To change the password, either:
-1. Set `APP_PASSWORD_HASH` in `.env` (bcrypt hash)
-2. Or modify `DEFAULT_APP_PASSWORD` in `main.py`
-
-## API Endpoints
-
-### Authentication
-
-| Method | Endpoint | Description |
-|--------|----------|-------------|
-| POST | `/api/auth/login` | Login with app password, get JWT token |
-| GET | `/api/auth/verify` | Verify JWT token validity |
-
-### System Stats
-
-| Method | Endpoint | Description |
-|--------|----------|-------------|
-| GET | `/api/stats/cpu` | CPU usage percentage |
-| GET | `/api/stats/memory` | RAM usage statistics |
-| GET | `/api/stats/disk` | Disk usage statistics |
-| GET | `/api/stats/gpu` | GPU temperature (NVIDIA) |
-| GET | `/api/stats/network` | Network I/O statistics |
-| GET | `/api/stats/all` | All stats in one call |
-
-### Power Management
-
-| Method | Endpoint | Description |
-|--------|----------|-------------|
-| POST | `/api/power/shutdown` | Shutdown system (with optional delay) |
-| POST | `/api/power/hibernate` | Hibernate system |
-| POST | `/api/power/restart` | Restart system (with optional delay) |
-
-### Docker Management
-
-| Method | Endpoint | Description |
-|--------|----------|-------------|
-| GET | `/api/docker/status` | Check if Docker is available |
-| GET | `/api/docker/containers` | List all containers |
-| POST | `/api/docker/containers/{id}/start` | Start container |
-| POST | `/api/docker/containers/{id}/stop` | Stop container |
-| POST | `/api/docker/containers/{id}/restart` | Restart container |
-| GET | `/api/docker/containers/{id}/logs` | Get container logs |
-
-### Process Management
-
-| Method | Endpoint | Description |
-|--------|----------|-------------|
-| GET | `/api/processes` | List processes (sorted by CPU/Memory) |
-| DELETE | `/api/processes/{pid}` | Kill process by PID |
-| GET | `/api/processes/{pid}` | Get process details |
-
-### Screenshot
-
-| Method | Endpoint | Description |
-|--------|----------|-------------|
-| POST | `/api/screenshot/capture` | Capture screen as base64 image |
-| GET | `/api/screenshot/status` | Check screenshot availability |
-
-### Wake-on-LAN
-
-| Method | Endpoint | Description |
-|--------|----------|-------------|
-| POST | `/api/wol/register` | Register device MAC address |
-| GET | `/api/wol/devices` | List registered devices |
-
-## Security
-
-### Encryption
-
-All sensitive requests use **AES-256-GCM** encryption:
-- Frontend encrypts JSON payload with AES key
-- Backend decrypts and validates timestamp (replay prevention)
-- Response is encrypted before sending back
-
-### Authentication
-
-- **JWT (JSON Web Tokens)** for session management
-- **bcrypt** for password hashing
-- **Token expiration**: 60 minutes (configurable)
-
-### Replay Attack Prevention
-
-- Every request includes a Unix timestamp
-- Server rejects requests with timestamps older than 30 seconds
-- Configurable via `TIMESTAMP_TOLERANCE` constant
-
-## OS-Specific Notes
-
-### Windows
-
-- Power commands use Windows `shutdown` utility
-- Docker Desktop must be running for Docker features
-- GPU monitoring requires NVIDIA GPU with drivers
-
-### Linux
-
-- Power commands use `systemctl`
-- Some power commands may require `sudo` privileges
-- Docker daemon must be running
-
-## Troubleshooting
-
-### Docker not available
-
-```
-Error: Docker not available
-```
-
-**Solution**: Start Docker Desktop (Windows) or Docker service (Linux):
-```bash
-sudo systemctl start docker  # Linux
-```
-
-### GPU temperature not working
-
-```
-Error: GPU monitoring not available
-```
-
-**Solution**: Install NVIDIA drivers and `nvidia-ml-py`:
-```bash
-pip install nvidia-ml-py
-```
-
-### Screenshot fails on headless system
-
-```
-Error: No display available
-```
-
-**Solution**: This is expected on servers without a display. The feature is designed for desktop systems.
-
-### Port already in use
-
-```
-Error: [Errno 48] Address already in use
-```
-
-**Solution**: Change the port in `main.py` or stop the conflicting service:
-```bash
-# Linux/macOS
-lsof -ti:8000 | xargs kill -9
-
-# Windows
-netstat -ano | findstr :8000
-taskkill /PID <PID> /F
-```
-
-## Firewall Configuration
-
-To allow local network access, you may need to configure your firewall:
-
-**Windows (Windows Firewall):**
-```cmd
-netsh advfirewall firewall add rule name="NexControl" dir=in action=allow protocol=TCP localport=8000
-```
-
-**Linux (UFW):**
-```bash
-sudo ufw allow 8000/tcp
-```
-
-**Linux (firewalld):**
-```bash
-sudo firewall-cmd --add-port=8000/tcp --permanent
-sudo firewall-cmd --reload
-```
+This is the backend for the NexControl application, built with FastAPI and Python.
+
+## Modular Structure
+
+The backend has been refactored from a monolithic `main.py` into a modular architecture:
+
+- **`main.py`**: The application entry point. It orchestrates startup/shutdown and includes routers.
+- **`app/`**: The main application package.
+  - **`core/`**: Core configuration and security.
+    - `config.py`: Application settings and environment variables.
+    - `security.py`: Authentication, encryption, and hashing utilities.
+  - **`models/`**: Pydantic models and schemas.
+    - `schemas.py`: Request/response schemas.
+  - **`routers/`**: API route definitions.
+    - `auth.py`: Authentication endpoints.
+    - `system.py`: System monitoring endpoints.
+    - `power.py`: Power management endpoints.
+    - `media.py`: Media control endpoints.
+    - `apps.py`: Application launching endpoints.
+    - `processes.py`: Process management endpoints.
+    - `docker.py`: Docker management endpoints.
+    - `screenshot.py`: Screenshot endpoints.
+    - `wol.py`: Wake-on-LAN endpoints.
+    - `clipboard.py`: Clipboard sync endpoints.
+    - `schedule.py`: Scheduled task endpoints.
+    - `threshold.py`: Notification threshold endpoints.
+    - `websockets.py`: WebSocket handlers for real-time stats and control.
+  - **`services/`**: Business logic and external system interactions.
+    - `system_monitor.py`: Logic for retrieving system stats.
+    - `power.py`: Logic for shutdown, restart, etc.
+    - `media.py`: Logic for media control.
+    - `launcher.py`: Logic for launching applications.
+    - `processes.py`: Logic for listing and killing processes.
+    - `docker.py`: Logic for interacting with Docker engine.
+    - `screenshot.py`: Logic for capturing screenshots.
+    - `wol.py`: Logic for sending WoL packets.
+    - `scheduler.py`: Logic for managing and executing scheduled tasks.
+    - `notifications.py`: Logic for monitoring thresholds and alerts.
+    - `websocket_manager.py`: Logic for managing WebSocket connections.
+
+## Setup
+
+1.  **Install Dependencies**:
+    ```bash
+    pip install -r requirements.txt
+    ```
+
+2.  **Environment Variables**:
+    Copy `.env.example` to `.env` and configure your settings (e.g., specific paths, keys).
+
+3.  **Run**:
+    ```bash
+    uvicorn main:app --reload
+    ```
+    Or simply:
+    ```bash
+    python main.py
+    ```
 
 ## Development
 
-### Project Structure
+-   **Adding Features**: 
+    -   Add business logic in `app/services/`.
+    -   Define Pydantic models in `app/models/schemas.py`.
+    -   Create a new router in `app/routers/` or update an existing one.
+    -   Include the router in `main.py` if it's new.
 
-```
-backend/
-├── main.py              # FastAPI application entry point
-├── requirements.txt     # Python dependencies
-├── .env.example         # Environment configuration template
-├── README.md           # This file
-└── nexcontrol.log      # Application logs (generated)
-```
+-   **Testing**:
+    Run `pytest` to execute tests (if available).
 
-### Adding New Features
-
-1. Add new class or function in appropriate section of `main.py`
-2. Create Pydantic models for request/response if needed
-3. Add route with `@app` decorator
-4. Add authentication dependency if required: `Depends(get_current_user)`
-5. Test endpoint using Swagger UI at `/docs`
-
-### Logging
-
-Logs are written to both:
-- Console (stdout)
-- `nexcontrol.log` file
-
-Change log level in `main.py`:
-```python
-logging.basicConfig(level=logging.DEBUG)  # More verbose
-logging.basicConfig(level=logging.WARNING)  # Less verbose
-```
-
-## Production Deployment
-
-### Security Checklist
-
-- [ ] Change `SECRET_KEY` to a strong random value
-- [ ] Change `DEFAULT_APP_PASSWORD` or set `APP_PASSWORD_HASH`
-- [ ] Use environment variables for sensitive configuration
-- [ ] Disable `reload=True` in uvicorn
-- [ ] Set up reverse proxy (nginx/Apache) for HTTPS
-- [ ] Configure firewall rules
-- [ ] Monitor logs regularly
-- [ ] Set up log rotation
-
-### Running as Service
-
-**Linux (systemd):**
-```ini
-# /etc/systemd/system/nexcontrol.service
-[Unit]
-Description=NexControl Backend
-After=network.target
-
-[Service]
-Type=simple
-User=your_user
-WorkingDirectory=/path/to/backend
-Environment="PATH=/path/to/backend/venv/bin"
-ExecStart=/path/to/backend/venv/bin/python main.py
-Restart=always
-
-[Install]
-WantedBy=multi-user.target
-```
-
-```bash
-sudo systemctl enable nexcontrol
-sudo systemctl start nexcontrol
-```
-
-**Windows (Task Scheduler):**
-1. Open Task Scheduler
-2. Create Basic Task
-3. Trigger: At startup
-4. Action: Start program
-   - Program: `venv\Scripts\python.exe`
-   - Arguments: `main.py`
-   - Start in: `C:\path\to\backend`
-
-## License
-
-MIT License - See LICENSE file for details
-
-## Support
-
-For issues, questions, or contributions, please visit the main project repository.
-
-## Recent Updates
-
-### Version 1.0.0 (2026-02-04)
-- ✅ Fixed disk usage calculation (base-1000 GB instead of base-1024 GiB)
-- ✅ Added connection status tracking to system store
-- ✅ All API endpoints return proper connection status
-- ✅ Security enhancements maintained
-
-### Version 1.0.0 (2026-02-03)
-- ✅ WebSocket support for real-time stats
-- ✅ Scheduled tasks functionality
-- ✅ Threshold notification system
-
----
-
-**Version**: 1.0.0
-**Last Updated**: 2026-02-04

@@ -45,6 +45,7 @@ except ImportError:
 # =============================================================================
 ENV_FILE = Path(__file__).parent / "backend" / ".env"
 AES_KEY_LENGTH = 32  # bytes
+SECRET_KEY_LENGTH = 32  # bytes
 
 # Password hashing context - Using Argon2id (OWASP/NIST recommended)
 pwd_context = CryptContext(
@@ -193,6 +194,10 @@ def main():
     aes_key = generate_aes_key()
     print(f"✅ Generated {AES_KEY_LENGTH}-byte AES key")
 
+    print("🔄 Generating secure SECRET_KEY...")
+    secret_key = secrets.token_urlsafe(SECRET_KEY_LENGTH)
+    print(f"✅ Generated {SECRET_KEY_LENGTH}-byte Secret key")
+
     print("🔄 Hashing admin password...")
     password_hash = hash_password(admin_password)
     print("✅ Password hashed (Argon2id - OWASP/NIST recommended)")
@@ -205,6 +210,7 @@ def main():
 
     # Update only the target keys
     env_data["config"]["AES_KEY"] = aes_key
+    env_data["config"]["SECRET_KEY"] = secret_key
     env_data["config"]["APP_PASSWORD_HASH"] = password_hash
 
     # Write back to file
@@ -216,7 +222,36 @@ def main():
     )
     print(f"✅ Updated: {ENV_FILE}")
 
-    # Step 4: Display AES_KEY for mobile app
+    # Step 4: Update Frontend .env (if exists)
+    print("\n" + "-" * 60)
+    print("Step 4/5: Update Frontend .env")
+    print("-" * 60)
+    frontend_env_path = Path(__file__).parent / "frontend" / ".env"
+    
+    if frontend_env_path.exists():
+        frontend_env_data = read_env_file(frontend_env_path)
+        
+        # Update VITE_AES_KEY
+        if "config" not in frontend_env_data:
+             frontend_env_data["config"] = {}
+             
+        frontend_env_data["config"]["VITE_AES_KEY"] = aes_key
+        
+        write_env_file(
+            frontend_env_path,
+            frontend_env_data["config"],
+            frontend_env_data["comments"],
+            frontend_env_data["other_lines"]
+        )
+        print(f"✅ Updated Frontend .env: {frontend_env_path}")
+    else:
+        print("⚠️  Frontend .env not found. Creating new...")
+        # Create new .env with just the key
+        with open(frontend_env_path, 'w', encoding='utf-8') as f:
+            f.write(f"VITE_AES_KEY={aes_key}\n")
+        print(f"✅ Created Frontend .env: {frontend_env_path}")
+
+    # Step 5: Display AES_KEY for mobile app
     print("\n" + "=" * 60)
     print("📱 Copy This Key to Your Mobile App")
     print("=" * 60)
@@ -230,8 +265,10 @@ def main():
     print()
     print("💡 Tip: You can also find this key in backend/.env file")
     print("   under the 'AES_KEY' variable.")
+    print("   Also updated in frontend/.env as VITE_AES_KEY") 
+    print()
 
-    # Step 5: Self-deletion
+    # Step 6: Self-deletion
     print("\n" + "=" * 60)
     print("🧹 Cleanup")
     print("=" * 60)
@@ -256,7 +293,7 @@ def main():
     print("=" * 60)
     print("\nNext steps:")
     print("1. Start the backend: cd backend && python main.py")
-    print("2. Open the mobile app and enter the AES_KEY in Settings")
+    print("2. Start the frontend: cd frontend && npm run dev")
     print("3. Login with the admin password you just set")
     print()
 

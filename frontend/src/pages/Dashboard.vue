@@ -126,9 +126,6 @@
               />
               <div class="text-caption text-grey-7">
                 {{ stats.gpu?.name || 'N/A' }}
-                <template v-if="stats.gpu?.temperature">
-                  <span class="text-grey-6 q-ml-xs">· {{ stats.gpu.temperature.toFixed(0) }}°C</span>
-                </template>
               </div>
             </q-card-section>
           </q-card>
@@ -169,19 +166,49 @@
                 <q-icon name="thermostat" size="20px" color="grey-5" class="q-mr-xs" />
                 <div class="text-caption text-grey-6 text-weight-bold">TEMPERATURE</div>
               </div>
-              <div class="row items-center justify-between">
-                <div class="text-h4 text-weight-bold text-white q-mb-sm">
-                  {{ stats.cpu?.temperature?.toFixed(0) || stats.temperature?.toFixed(0) || 'N/A' }}
-                  <span class="text-caption text-grey-6">°C</span>
+
+              <!-- CPU Temperature -->
+              <div class="row items-center justify-between q-mb-sm">
+                <div>
+                  <div class="text-caption text-grey-7">CPU</div>
+                  <div class="text-h6 text-weight-bold text-white">
+                    {{ stats.cpu?.temperature?.toFixed(0) || stats.temperature?.toFixed(0) || 'N/A' }}°C
+                  </div>
                 </div>
                 <q-icon
                   :name="getTemperatureIcon(stats.cpu?.temperature || stats.temperature)"
                   :color="getTemperatureColor(stats.cpu?.temperature || stats.temperature)"
-                  size="32px"
+                  size="28px"
                 />
               </div>
-              <div class="text-caption text-grey-7 q-mt-sm">
-                CPU Temperature
+
+              <q-separator class="q-my-sm bg-grey-8" style="opacity: 0.3" />
+
+              <!-- GPU Temperature -->
+              <div class="row items-center justify-between q-mt-sm">
+                <div>
+                  <div class="text-caption text-grey-7">GPU</div>
+                  <div class="text-h6 text-weight-bold text-white">
+                    <template v-if="stats.gpu">
+                      {{ stats.gpu.temperature?.toFixed(0) || 'N/A' }}°C
+                    </template>
+                    <template v-else>
+                      N/A
+                    </template>
+                  </div>
+                </div>
+                <q-icon
+                  v-if="stats.gpu"
+                  :name="getTemperatureIcon(stats.gpu.temperature)"
+                  :color="getTemperatureColor(stats.gpu.temperature)"
+                  size="28px"
+                />
+                <q-icon
+                  v-else
+                  name="help_outline"
+                  color="grey-6"
+                  size="28px"
+                />
               </div>
             </q-card-section>
           </q-card>

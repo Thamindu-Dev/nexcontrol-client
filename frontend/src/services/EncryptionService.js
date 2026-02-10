@@ -37,13 +37,16 @@ const TIMESTAMP_TOLERANCE = 30; // seconds
  */
 function getAESKey() {
   // This key MUST match the backend's AES_KEY
-  // For now, using the same default as backend
-  // In production, load from secure storage
-  const defaultKey = 'NexControl-AES-Key-32-Bytes-Change!!';
+  // Loaded from .env (VITE_AES_KEY)
+  const defaultKey = import.meta.env.VITE_AES_KEY;
+
+  if (!defaultKey) {
+    console.error('Encryption Key (VITE_AES_KEY) not found in environment variables!');
+  }
 
   // Try to get from localStorage (user configurable)
   const storedKey = localStorage.getItem('nexcontrol_aes_key');
-  return storedKey || defaultKey.substring(0, AES_KEY_SIZE);
+  return storedKey || (defaultKey ? defaultKey.substring(0, AES_KEY_SIZE) : '');
 }
 
 /**
