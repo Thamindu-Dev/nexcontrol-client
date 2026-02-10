@@ -72,8 +72,8 @@ class ProcessManager:
             return []
 
     @staticmethod
-    def kill_process(pid: int) -> dict:
-        """Kill a process by PID"""
+    def kill_process(pid: int, current_user: str = None) -> dict:
+        """Kill a process by PID with ownership checking"""
         if not SecurityManager.validate_pid(pid):
             return {"success": False, "message": "Invalid PID"}
 
@@ -84,12 +84,36 @@ class ProcessManager:
             proc = psutil.Process(pid)
             name = SecurityManager.sanitize_input(proc.name(), max_length=128)
 
-            # Additional protection: don't kill kernel processes on Linux
+            # Check ownership - only allow killing own processes
+            try:
+                proc_username = proc.username()
+                if current_user:
+                    # Normalize usernames for comparison (handles DOMAIN\user format on Windows)
+                    current_normalized = current_user.split('\\')[-1].lower()
+                    proc_normalized = proc_username.split('\\')[-1].lower()
+
+                    if current_normalized != proc_normalized:
+                        logger.warning(f"Attempt to kill process owned by another user: {name} (PID: {pid}, owner: {proc_username}, attempted by: {current_user})")
+                        return {"success": False, "message": "Cannot kill processes owned by other users"}
+            except (psutil.AccessDenied, psutil.NoSuchProcess):
+                pass
+
+            # Additional protection: don't kill critical system processes
             if settings.OS_TYPE == "Linux":
                 try:
                     cmdline = proc.cmdline()
-                    if cmdline and any('kernel' in str(c).lower() for c in cmdline):
-                        return {"success": False, "message": "Cannot kill kernel process"}
+                    if cmdline and any('kernel' in str(c).lower() or 'systemd' in str(c).lower() for c in cmdline):
+                        return {"success": False, "message": "Cannot kill critical system process"}
+                except (psutil.AccessDenied, psutil.NoSuchProcess):
+                    pass
+            elif settings.OS_TYPE == "Windows":
+                try:
+                    # Check if parent is services.exe or csrss.exe (system processes)
+                    parent = proc.parent()
+                    if parent:
+                        parent_name = parent.name().lower()
+                        if parent_name in ['services.exe', 'csrss.exe', 'wininit.exe', 'lsass.exe']:
+                            return {"success": False, "message": "Cannot kill system service process"}
                 except (psutil.AccessDenied, psutil.NoSuchProcess):
                     pass
 

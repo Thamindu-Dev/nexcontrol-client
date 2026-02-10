@@ -41,5 +41,9 @@ nvidia-ml-py>=12.535.133
 # GPUtil as fallback for older systems
 gputil>=1.4.0
 
+# GUI Support
+customtkinter>=5.2.2
+packaging>=23.2
+
 # Development (Optional - remove in production)
 pyinstaller>=6.3.0

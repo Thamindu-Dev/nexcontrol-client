@@ -19,6 +19,7 @@ class ScheduledTaskManager:
         self.tasks: Dict[str, ScheduledTask] = {}
         self._scheduler_task = None
         self._running = False
+        self._task_lock = None  # Will be initialized as asyncio.Lock in start_scheduler
         self._load_tasks()
         logger.info("ScheduledTaskManager initialized")
 
@@ -30,9 +31,8 @@ class ScheduledTaskManager:
                     data = json.load(f)
                     for task_data in data:
                         task = ScheduledTask(**task_data)
+                        # Keep all tasks, including disabled ones - don't delete them
                         self.tasks[task.id] = task
-                        if not task.enabled:
-                            self.tasks.pop(task.id, None)
                 logger.info(f"Loaded {len(self.tasks)} scheduled tasks from storage")
         except Exception as e:
             logger.error(f"Error loading scheduled tasks: {type(e).__name__}")
@@ -107,6 +107,7 @@ class ScheduledTaskManager:
             return
 
         self._running = True
+        self._task_lock = asyncio.Lock()  # Initialize the lock
         self._scheduler_task = asyncio.create_task(self._scheduler_loop())
         logger.info(f"Scheduled task manager started. Monitoring {len(self.tasks)} tasks")
 
@@ -127,35 +128,38 @@ class ScheduledTaskManager:
             try:
                 # Use UTC time for consistent comparison with scheduled times
                 now = datetime.now(timezone.utc)
-                for task_id, task in list(self.tasks.items()):
-                    if not task.enabled:
-                        continue
 
-                    try:
-                        # Parse scheduled time and handle timezone
-                        # Frontend sends times with 'Z' suffix (UTC)
-                        scheduled_dt = datetime.fromisoformat(task.scheduled_time.replace('Z', '+00:00'))
+                # Use lock to prevent race conditions
+                async with self._task_lock:
+                    for task_id, task in list(self.tasks.items()):
+                        if not task.enabled:
+                            continue
 
-                        # Check if task is due (scheduled time has passed)
-                        if scheduled_dt <= now:
-                            logger.info(f"Executing scheduled task: {task.name} ({task.action}) at {now.isoformat()}")
+                        try:
+                            # Parse scheduled time and handle timezone
+                            # Frontend sends times with 'Z' suffix (UTC)
+                            scheduled_dt = datetime.fromisoformat(task.scheduled_time.replace('Z', '+00:00'))
 
-                            # Execute the task
-                            result = await self._execute_task(task)
+                            # Check if task is due (scheduled time has passed)
+                            if scheduled_dt <= now:
+                                logger.info(f"Executing scheduled task: {task.name} ({task.action}) at {now.isoformat()}")
 
-                            # Update task status instead of deleting
-                            task.last_run = now.isoformat()
-                            task.execution_result = result
+                                # Execute the task
+                                result = await self._execute_task(task)
 
-                            # If this is a one-time task, disable it
-                            # For recurring tasks (future feature), we'd reschedule
-                            task.enabled = False
-                            self._save_tasks()
+                                # Update task status instead of deleting
+                                task.last_run = now.isoformat()
+                                task.execution_result = result
 
-                            logger.info(f"Task {task.name} completed. Success: {result.get('success', False)}")
+                                # If this is a one-time task, disable it
+                                # For recurring tasks (future feature), we'd reschedule
+                                task.enabled = False
+                                self._save_tasks()
 
-                    except Exception as e:
-                        logger.error(f"Error processing task {task_id}: {type(e).__name__}: {e}", exc_info=True)
+                                logger.info(f"Task {task.name} completed. Success: {result.get('success', False)}")
+
+                        except Exception as e:
+                            logger.error(f"Error processing task {task_id}: {type(e).__name__}: {e}", exc_info=True)
 
                 await asyncio.sleep(1)
 

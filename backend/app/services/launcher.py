@@ -175,8 +175,12 @@ class AppLauncher:
                     return {"success": True, "message": f"Opened {app_info['name']} in browser"}
                 else:
                     app_path = app_info.get("path", "")
+                    # Validate path to prevent command injection
+                    if not SecurityManager.validate_file_path(app_path):
+                        return {"success": False, "message": "Invalid application path"}
+
                     if settings.OS_TYPE == "Windows":
-                        subprocess.Popen([app_path], shell=True, cwd=home_dir)
+                        subprocess.Popen([app_path], shell=False, cwd=home_dir)
                     elif settings.OS_TYPE == "Darwin":
                         subprocess.Popen(["open", app_path], cwd=home_dir)
                     else:
@@ -195,17 +199,30 @@ class AppLauncher:
             args = app_info["args"]
 
             if settings.OS_TYPE == "Windows":
-                # Use 'start /d' to set working directory for Windows
-                full_command = f"start /d \"{home_dir}\" {command}"
+                # Secure: Use list of arguments instead of shell=True
+                cmd_args = ["cmd", "/c", "start", "/d", home_dir]
+                if command:
+                    cmd_args.append(command)
                 if args:
-                    full_command += f" {args}"
-                subprocess.Popen(full_command, shell=True, creationflags=subprocess.CREATE_NEW_CONSOLE)
+                    cmd_args.extend(args.split())
+                subprocess.Popen(cmd_args, shell=False, creationflags=subprocess.CREATE_NEW_CONSOLE)
             elif settings.OS_TYPE == "Darwin":
-                full_command = f"{command} {args}".strip()
-                subprocess.Popen(full_command, shell=True, cwd=home_dir, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+                # Secure: Use list of arguments
+                cmd_args = ["open"]
+                if command:
+                    cmd_args.append(command)
+                if args:
+                    cmd_args.extend(args.split())
+                subprocess.Popen(cmd_args, shell=False, cwd=home_dir, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
             else:
-                full_command = f"{command} {args}".strip()
-                subprocess.Popen(full_command.split(), cwd=home_dir, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+                # Secure: Use list of arguments
+                cmd_args = []
+                if command:
+                    cmd_args.append(command)
+                if args:
+                    cmd_args.extend(args.split())
+                if cmd_args:
+                    subprocess.Popen(cmd_args, shell=False, cwd=home_dir, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
 
             logger.info(f"Launched application: {app_info['name']} ({app_id}) by user {user}")
             return {"success": True, "message": f"Launched {app_info['name']}"}

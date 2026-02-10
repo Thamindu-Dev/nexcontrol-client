@@ -46,7 +46,7 @@ class Settings:
     # Rate Limiting
     MAX_LOGIN_ATTEMPTS = 5
     LOGIN_LOCKOUT_MINUTES = 15
-    TIMESTAMP_TOLERANCE = 30
+    TIMESTAMP_TOLERANCE = 5  # Reduced from 30 to 5 seconds for better security
     
     # OS Detection
     OS_TYPE = platform.system()

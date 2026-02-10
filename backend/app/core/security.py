@@ -203,15 +203,35 @@ class SecurityManager:
 
     @staticmethod
     def validate_pid(pid: int) -> bool:
-        return isinstance(pid, int) and 1 <= pid <= 4194304
+        """Validate PID is within valid system range"""
+        if not isinstance(pid, int):
+            return False
+
+        # Platform-specific max PID values
+        import platform
+        if platform.system() == "Windows":
+            max_pid = 4194304  # Windows max
+        elif platform.system() == "Darwin":  # macOS
+            max_pid = 99999
+        else:  # Linux and others
+            max_pid = 32768  # Linux default (can be higher but 32768 is safe default)
+
+        return 1 <= pid <= max_pid
 
     @staticmethod
     def validate_container_id(container_id: str) -> bool:
+        """Validate Docker container ID/name to prevent path traversal"""
         if not isinstance(container_id, str):
             return False
+
+        # Check for path traversal attempts
+        if '..' in container_id or '/' in container_id or '\\' in container_id:
+            return False
+
         sanitized = SecurityManager.sanitize_input(container_id, max_length=256)
-        hex_pattern = r'^[a-f0-9]{1,64}$'
-        name_pattern = r'^[a-zA-Z0-9][a-zA-Z0-9_.-]*$'
+        hex_pattern = r'^[a-f0-9]{12,64}$'  # Docker IDs are minimum 12 chars
+        name_pattern = r'^[a-zA-Z0-9][a-zA-Z0-9_-]{0,62}$'  # No leading ., max 63 chars
+
         return bool(re.match(hex_pattern, sanitized) or re.match(name_pattern, sanitized))
 
     @staticmethod
@@ -219,7 +239,62 @@ class SecurityManager:
         if not isinstance(mac_address, str):
             return False
         pattern = r'^([0-9A-Fa-f]{2}[:-]){5}([0-9A-Fa-f]{2})$'
-        return bool(re.match(pattern, mac_address))
+        if not re.match(pattern, mac_address):
+            return False
+
+        # Reject broadcast MAC address
+        clean_mac = mac_address.upper().replace(':', '').replace('-', '')
+        if clean_mac == 'FFFFFFFFFFFF':
+            return False
+
+        # Reject multicast MAC addresses (LSB of first octet is 1)
+        try:
+            first_octet = int(mac_address[:2], 16)
+            if first_octet & 1:  # If LSB is 1, it's multicast
+                return False
+        except (ValueError, IndexError):
+            return False
+
+        return True
+
+    @staticmethod
+    def validate_file_path(file_path: str) -> bool:
+        """Validate file path to prevent path traversal and command injection"""
+        import os
+
+        if not isinstance(file_path, str):
+            return False
+
+        # Reject empty paths
+        if not file_path or not file_path.strip():
+            return False
+
+        # Reject path traversal attempts
+        if '..' in file_path or '~' in file_path:
+            return False
+
+        # Reject suspicious characters that could enable command injection
+        # Only allow alphanumeric, spaces, and certain punctuation
+        # Windows: allow : for drive letter, \ for path separator
+        # Linux/macOS: allow / for path separator
+        allowed_chars = set(r'a-zA-Z0-9\s\:\/\\._-')
+        if not set(file_path).issubset(allowed_chars):
+            # Check for shell metacharacters specifically
+            shell_chars = set('&|<>$`!()[]{};\'"')
+            if any(char in file_path for char in shell_chars):
+                return False
+
+        # Validate path format (basic check)
+        try:
+            # Normalize the path
+            normalized = os.path.normpath(file_path)
+            # Ensure it doesn't escape to parent directories
+            if '..' in normalized:
+                return False
+        except:
+            return False
+
+        return True
 
     @staticmethod
     async def get_current_user(token: str = Depends(oauth2_scheme)):
@@ -246,16 +321,31 @@ class SecurityManager:
             # Filter out attempts older than lockout period
             valid_window = now - (settings.LOGIN_LOCKOUT_MINUTES * 60)
             login_attempts[ip] = [t for t in login_attempts[ip] if t > valid_window]
-            
+
+            # Remove IP entry if no recent attempts
+            if not login_attempts[ip]:
+                del login_attempts[ip]
+
         attempts = login_attempts.get(ip, [])
         return len(attempts) < settings.MAX_LOGIN_ATTEMPTS
+
+    @staticmethod
+    def cleanup_old_login_attempts():
+        """Clean up old login attempts to prevent memory leak"""
+        now = time.time()
+        cutoff = now - (settings.LOGIN_LOCKOUT_MINUTES * 60 * 2)  # 2x lockout period
+
+        # Clean up IPs with only old attempts
+        for ip in list(login_attempts.keys()):
+            if not login_attempts[ip] or max(login_attempts[ip]) < cutoff:
+                del login_attempts[ip]
 
     @staticmethod
     def record_login_attempt(ip: str, success: bool):
         """Record a login attempt"""
         if success:
             if ip in login_attempts:
-                # Reset attempts on success? 
+                # Reset attempts on success?
                 # Yes, usually.
                 del login_attempts[ip]
         else:

@@ -83,15 +83,31 @@ app = FastAPI(
     # Disable docs in production if desired, but keep for now
 )
 
-# CORS Configuration
+# CORS Configuration - Use specific origins for security
+allowed_origins = settings.ALLOWED_ORIGINS if settings.ALLOWED_ORIGINS != ["*"] else ["http://localhost:9000", "http://localhost:8080", "http://127.0.0.1:9000", "http://127.0.0.1:8080"]
+
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],  # Allow all origins for development
+    allow_origins=allowed_origins,  # Specific origins only, no wildcard
     allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
-    expose_headers=["*"],
+    allow_methods=["GET", "POST", "PUT", "DELETE", "PATCH"],  # Explicit methods
+    allow_headers=["Authorization", "Content-Type", "X-Requested-With"],  # Explicit headers
+    expose_headers=["Content-Type", "Authorization"],
+    max_age=3600,  # Cache preflight for 1 hour
 )
+
+# Security Headers Middleware
+@app.middleware("http")
+async def add_security_headers(request: Request, call_next):
+    response = await call_next(request)
+    # Add security headers
+    response.headers["X-Content-Type-Options"] = "nosniff"
+    response.headers["X-Frame-Options"] = "DENY"
+    response.headers["X-XSS-Protection"] = "1; mode=block"
+    response.headers["Strict-Transport-Security"] = "max-age=31536000; includeSubDomains"
+    # Content-Security-Policy for frontend
+    response.headers["Content-Security-Policy"] = "default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; font-src 'self';"
+    return response
 
 # Encryption Middleware
 @app.middleware("http")
@@ -247,14 +263,19 @@ async def global_exception_handler(request: Request, exc: Exception):
     logger.error(f"Global error: {exc}")
     import traceback
     logger.error(traceback.format_exc())
+
+    # Hide error details in production for security
+    error_detail = "Internal Server Error"
+    # In development mode, include error details
+    if os.getenv("DEBUG", "false").lower() == "true":
+        error_detail = f"Internal Server Error: {str(exc)}"
+
     return JSONResponse(
         status_code=500,
-        content={"detail": "Internal Server Error", "error": str(exc)},
+        content={"detail": error_detail},
         headers={
-            "Access-Control-Allow-Origin": "*",
+            "Access-Control-Allow-Origin": allowed_origins[0] if allowed_origins else "*",
             "Access-Control-Allow-Credentials": "true",
-            "Access-Control-Allow-Methods": "*",
-            "Access-Control-Allow-Headers": "*",
         }
     )
 
