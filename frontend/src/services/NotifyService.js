@@ -26,38 +26,70 @@ const SECURITY_NOTIFICATION_DEBOUNCE = 3000; // 3 seconds
 
 /**
  * Default notification options
+ * Theme: OLED Dark with Cyan accents
  */
 const DEFAULT_OPTIONS = {
-  html: false,           // Disable HTML rendering to prevent XSS attacks
-  timeout: 3000,         // Auto-dismiss after 3 seconds
-  position: 'top',       // Consistent positioning
-  progress: false,       // Progress bar (enabled for long operations)
-  closeBtn: true         // Show close button
+  html: false,                    // Disable HTML rendering to prevent XSS attacks
+  timeout: 3000,                  // Auto-dismiss after 3 seconds
+  position: 'top',                // Consistent positioning
+  progress: true,                 // Progress bar for better UX
+  closeBtn: true,                 // Show close button
+  textColor: 'white',             // White text for dark theme
+  classes: 'oled-notification'    // Custom CSS class for theming
 };
 
 /**
  * Notification type configurations
+ * Theme: OLED Dark with Cyan/Orange/Red accents
  */
 const NOTIFY_TYPES = {
   positive: {
     icon: 'check_circle',
-    color: 'positive',
-    timeout: 2500
+    color: 'cyan',                // Cyan for success (matches brand)
+    iconColor: 'cyan',
+    backgroundColor: '#0A0A0A',    // Dark background
+    textColor: 'white',
+    classes: 'notify-success',
+    timeout: 2500,
+    attrs: {
+      style: 'border-left: 4px solid #22d3ee; background: rgba(10, 10, 10, 0.95);'
+    }
   },
   negative: {
-    icon: 'error',
-    color: 'negative',
-    timeout: 4000  // Longer timeout for errors to read message
+    icon: 'error_outline',
+    color: 'red-9',               // Dark red background
+    iconColor: 'red-4',
+    backgroundColor: '#1A0A0A',    // Dark red-tinted background
+    textColor: 'white',
+    classes: 'notify-error',
+    timeout: 4000,                 // Longer timeout for errors
+    attrs: {
+      style: 'border-left: 4px solid #ef4444; background: rgba(26, 10, 10, 0.95);'
+    }
   },
   warning: {
     icon: 'warning',
-    color: 'warning',
-    timeout: 3500
+    color: 'orange-9',            // Dark orange background
+    iconColor: 'orange-4',
+    backgroundColor: '#1A0D05',    // Dark orange-tinted background
+    textColor: 'white',
+    classes: 'notify-warning',
+    timeout: 3500,
+    attrs: {
+      style: 'border-left: 4px solid #f97316; background: rgba(26, 13, 5, 0.95);'
+    }
   },
   info: {
     icon: 'info',
-    color: 'info',
-    timeout: 3000
+    color: 'grey-9',              // Dark grey background
+    iconColor: 'cyan-4',
+    backgroundColor: '#0A0A0A',    // Dark background
+    textColor: 'white',
+    classes: 'notify-info',
+    timeout: 3000,
+    attrs: {
+      style: 'border-left: 4px solid #22d3ee; background: rgba(10, 10, 10, 0.95);'
+    }
   }
 };
 
@@ -77,11 +109,18 @@ function createNotify($q, type, message, options = {}) {
     ...typeConfig,
     ...options,
     type,
-    message
+    message,
+    group: type, // Group same-type notifications
+    multiLine: false // Keep notifications compact
   };
 
   // Ensure HTML is disabled for security
   notifyOptions.html = false;
+
+  // Apply custom styling
+  if (typeConfig.attrs) {
+    notifyOptions.attrs = typeConfig.attrs;
+  }
 
   $q.notify(notifyOptions);
 }

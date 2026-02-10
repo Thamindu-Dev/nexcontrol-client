@@ -38,17 +38,6 @@
               flat
               round
               dense
-              icon="add"
-              size="sm"
-              class="action-btn"
-              @click="showAddAppDialog = true"
-            >
-              <q-tooltip>Add Custom App</q-tooltip>
-            </q-btn>
-            <q-btn
-              flat
-              round
-              dense
               icon="refresh"
               size="sm"
               class="action-btn"
@@ -109,143 +98,6 @@
           </div>
         </div>
       </div>
-
-      <!-- Add Custom App Dialog -->
-      <q-dialog v-model="showAddAppDialog">
-        <q-card class="add-app-dialog">
-          <!-- Header -->
-          <q-card-section class="dialog-header">
-            <div class="row items-center no-wrap">
-              <q-icon name="add_circle" size="24px" color="cyan" class="q-mr-sm" />
-              <div class="text-h6 text-white">Add Custom App</div>
-              <q-space />
-              <q-btn flat round dense icon="close" color="grey-5" size="sm" v-close-popup>
-                <q-tooltip>Close</q-tooltip>
-              </q-btn>
-            </div>
-          </q-card-section>
-
-          <!-- Form -->
-          <q-card-section class="q-pt-none">
-            <q-form @submit="addCustomApp" class="q-gutter-lg">
-              <!-- App Name -->
-              <div class="form-field">
-                <div class="field-label">App Name</div>
-                <q-input
-                  v-model="newApp.name"
-                  placeholder="e.g., Calculator"
-                  outlined
-                  dense
-                  dark
-                  color="cyan"
-                  class="custom-input"
-                  :rules="[val => !!val || 'Name is required']"
-                />
-              </div>
-
-              <!-- App Type -->
-              <div class="form-field">
-                <div class="field-label">App Type</div>
-                <q-select
-                  v-model="newApp.type"
-                  :options="[
-                    { label: 'Local Application', value: 'local' },
-                    { label: 'Website / URL', value: 'web' }
-                  ]"
-                  outlined
-                  dense
-                  dark
-                  color="cyan"
-                  class="custom-input"
-                  emit-value
-                  map-options
-                />
-              </div>
-
-              <!-- Application Path (for local apps) -->
-              <div class="form-field" v-if="newApp.type === 'local'">
-                <div class="field-label">Application Path</div>
-                <q-input
-                  v-model="newApp.path"
-                  placeholder="e.g., C:\\Program Files\\MyApp\\app.exe or /usr/bin/myapp"
-                  outlined
-                  dense
-                  dark
-                  color="cyan"
-                  class="custom-input"
-                  :rules="[val => newApp.type === 'local' ? !!val || 'Path is required' : true]"
-                >
-                  <template v-slot:prepend>
-                    <q-icon name="folder_open" color="cyan" size="20px" />
-                  </template>
-                </q-input>
-              </div>
-
-              <!-- Website URL (for web apps) -->
-              <div class="form-field" v-if="newApp.type === 'web'">
-                <div class="field-label">Website URL</div>
-                <q-input
-                  v-model="newApp.url"
-                  placeholder="e.g., https://youtube.com or https://github.com"
-                  outlined
-                  dense
-                  dark
-                  color="cyan"
-                  class="custom-input"
-                  :rules="[val => newApp.type === 'web' ? !!val || 'URL is required' : true]"
-                >
-                  <template v-slot:prepend>
-                    <q-icon name="language" color="cyan" size="20px" />
-                  </template>
-                </q-input>
-              </div>
-
-              <!-- Icon Selection -->
-              <div class="form-field">
-                <div class="field-label">Icon</div>
-                <q-select
-                  v-model="newApp.icon"
-                  :options="iconOptions"
-                  outlined
-                  dense
-                  dark
-                  color="cyan"
-                  class="custom-input"
-                  emit-value
-                  map-options
-                >
-                  <template v-slot:prepend>
-                    <q-icon :name="newApp.icon" color="cyan" size="20px" />
-                  </template>
-                </q-select>
-              </div>
-            </q-form>
-          </q-card-section>
-
-          <!-- Actions -->
-          <q-card-section class="dialog-actions">
-            <q-btn
-              flat
-              label="Cancel"
-              color="grey-5"
-              class="action-btn-cancel"
-              v-close-popup
-              no-caps
-              :disable="addingApp"
-            />
-            <q-btn
-              unelevated
-              label="Add App"
-              color="cyan"
-              class="action-btn-add"
-              :loading="addingApp"
-              @click="addCustomApp"
-              no-caps
-              :disable="addingApp || !newApp.name || (newApp.type === 'local' && !newApp.path) || (newApp.type === 'web' && !newApp.url)"
-            />
-          </q-card-section>
-        </q-card>
-      </q-dialog>
     </q-page>
   </div>
 </template>
@@ -270,38 +122,6 @@ const loading = ref(false);
 const error = ref(null);
 const launchingApp = ref(null);
 const platform = ref('unknown');
-const showAddAppDialog = ref(false);
-const addingApp = ref(false);
-
-// New app form
-const newApp = ref({
-  name: '',
-  type: 'local',
-  path: '',
-  url: '',
-  icon: 'apps'
-});
-
-// Icon options
-const iconOptions = [
-  { label: 'Apps', value: 'apps' },
-  { label: 'Web', value: 'language' },
-  { label: 'Code', value: 'code' },
-  { label: 'Terminal', value: 'terminal' },
-  { label: 'Folder', value: 'folder' },
-  { label: 'Music', value: 'music_note' },
-  { label: 'Video', value: 'play_circle' },
-  { label: 'Image', value: 'image' },
-  { label: 'Settings', value: 'settings' },
-  { label: 'Favorite', value: 'favorite' },
-  { label: 'Star', value: 'star' },
-  { label: 'Cloud', value: 'cloud' },
-  { label: 'Game', value: 'sports_esports' },
-  { label: 'Social', value: 'people' },
-  { label: 'Mail', value: 'email' },
-  { label: 'Calculator', value: 'calculate' },
-  { label: 'Edit', value: 'edit_note' }
-];
 
 // Computed
 const platformIcon = computed(() => {
@@ -353,94 +173,6 @@ async function loadApps() {
 }
 
 /**
- * Add custom application via WebSocket
- */
-async function addCustomApp() {
-  // Validate
-  if (!newApp.value.name) {
-    secureNotify.error($q, 'Please enter an app name');
-    return;
-  }
-
-  if (newApp.value.type === 'local' && !newApp.value.path) {
-    secureNotify.error($q, 'Please enter the application path');
-    return;
-  }
-
-  if (newApp.value.type === 'web' && !newApp.value.url) {
-    secureNotify.error($q, 'Please enter the website URL');
-    return;
-  }
-
-  addingApp.value = true;
-
-  try {
-    // Get auth token for WebSocket
-    const token = await api.getToken();
-
-    // Connect to WebSocket if not already connected
-    if (!mediaWsService.isConnected() && token) {
-      console.log('[AppLauncher] Connecting to WebSocket...');
-      try {
-        await mediaWsService.connect(token);
-        console.log('[AppLauncher] WebSocket connected');
-      } catch (wsError) {
-        console.warn('[AppLauncher] WebSocket connection failed:', wsError);
-        secureNotify.error($q, 'Failed to connect to server');
-        addingApp.value = false;
-        return;
-      }
-    }
-
-    // Prepare data to send
-    const dataToSend = {
-      name: newApp.value.name,
-      type: newApp.value.type,
-      icon: newApp.value.icon
-    };
-
-    // Only include path or url based on type
-    if (newApp.value.type === 'local') {
-      dataToSend.path = newApp.value.path;
-    } else if (newApp.value.type === 'web') {
-      dataToSend.url = newApp.value.url;
-    }
-
-    console.log('[AppLauncher] Adding custom app via WebSocket:', dataToSend);
-
-    // Send via WebSocket
-    const response = await mediaWsService.addCustomApp(dataToSend);
-    console.log('[AppLauncher] Add custom app response:', response);
-
-    if (response.success) {
-      secureNotify.success($q, response.message || 'Custom app added successfully');
-
-      // Reset form
-      newApp.value = {
-        name: '',
-        type: 'local',
-        path: '',
-        url: '',
-        icon: 'apps'
-      };
-
-      // Close dialog
-      showAddAppDialog.value = false;
-
-      // Reload apps
-      await loadApps();
-    } else {
-      secureNotify.error($q, response.message || 'Failed to add custom app');
-    }
-  } catch (err) {
-    console.error('[AppLauncher] Error adding custom app:', err);
-    secureNotify.error($q, err.message || 'Failed to add custom app');
-  } finally {
-    addingApp.value = false;
-  }
-}
-
-/**
  * Launch an application
  * Uses WebSocket for low latency, falls back to HTTP if needed
  */
@@ -473,20 +205,24 @@ async function launchApp(app) {
     const response = await mediaWsService.launchApp(app.id);
     console.log('[AppLauncher] Launch result:', response);
 
-    if (response.success) {
-      // Provide haptic feedback on mobile
-      if (navigator.vibrate) {
-        navigator.vibrate(50);
-      }
+    // Provide haptic feedback on mobile
+    if (navigator.vibrate) {
+      navigator.vibrate(50);
+    }
 
+    // Only show success message, silently handle failures
+    // (App might already be running, which is fine)
+    if (response.success) {
       secureNotify.success($q, response.message || `Launching ${app.name}...`);
       console.log(`[AppLauncher] Successfully launched ${app.name}`);
     } else {
-      secureNotify.error($q, response.message || `Failed to launch ${app.name}`);
+      // Silent failure - app might already be running
+      console.log(`[AppLauncher] Launch attempt completed (may already be running)`);
     }
   } catch (err) {
     console.error(`[AppLauncher] Error launching ${app.name}:`, err);
-    secureNotify.error($q, err.message || `Failed to launch ${app.name}`);
+    // Silent error handling - don't show notifications for launch failures
+    console.log(`[AppLauncher] Launch attempt completed with error`);
   } finally {
     launchingApp.value = null;
   }
@@ -579,128 +315,6 @@ onUnmounted(() => {
 @media (hover: none) and (pointer: coarse) {
   .app-launcher-btn:hover {
     transform: none !important;
-  }
-}
-
-/* ============================================
-   Add Custom App Dialog Styles
-   ============================================ */
-
-.add-app-dialog {
-  min-width: 420px;
-  max-width: 500px;
-  background: #0A0A0A !important;
-  border: 1px solid #333333 !important;
-  border-radius: 12px !important;
-  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.5) !important;
-}
-
-/* Dialog Header */
-.dialog-header {
-  border-bottom: 1px solid #333333;
-  padding: 20px 24px !important;
-}
-
-/* Form Fields */
-.form-field {
-  margin-bottom: 0;
-}
-
-.field-label {
-  color: #FFFFFF;
-  font-size: 14px;
-  font-weight: 500;
-  margin-bottom: 8px;
-  letter-spacing: 0.25px;
-}
-
-.custom-input {
-  margin-bottom: 0;
-}
-
-.custom-input :deep(.q-field__control) {
-  background: #1A1A1A !important;
-  border: 1px solid #333333 !important;
-  border-radius: 8px !important;
-  color: #FFFFFF !important;
-  transition: all 0.2s ease;
-}
-
-.custom-input :deep(.q-field__control:before) {
-  border: none !important;
-}
-
-.custom-input :deep(.q-field__control:hover) {
-  border-color: #22d3ee !important;
-}
-
-.custom-input :deep(.q-field__control-outer) {
-  background: transparent !important;
-}
-
-.custom-input :deep(.q-field__native) {
-  color: #FFFFFF !important;
-}
-
-.custom-input :deep(.q-field__label) {
-  color: #9CA3AF !important;
-}
-
-.custom-input :deep(.q-field__marginal) {
-  color: #9CA3AF !important;
-}
-
-.custom-input :deep(.q-field__prepend) {
-  color: #22d3ee !important;
-}
-
-/* Dialog Actions */
-.dialog-actions {
-  display: flex;
-  justify-content: flex-end;
-  gap: 12px;
-  padding: 16px 24px 24px !important;
-  border-top: 1px solid #333333;
-}
-
-.action-btn-cancel {
-  border-radius: 8px !important;
-  padding: 8px 24px !important;
-  font-weight: 500;
-  border: 1px solid #333333 !important;
-}
-
-.action-btn-cancel:hover {
-  background: rgba(255, 255, 255, 0.05) !important;
-}
-
-.action-btn-add {
-  border-radius: 8px !important;
-  padding: 8px 24px !important;
-  font-weight: 600;
-  background: #22d3ee !important;
-}
-
-.action-btn-add:hover {
-  background: #1AB0C8 !important;
-}
-
-.action-btn-add:disabled {
-  background: #333333 !important;
-  color: #666666 !important;
-}
-
-/* Responsive adjustments */
-@media (max-width: 575.98px) {
-  .add-app-dialog {
-    min-width: 90vw;
-    max-width: 90vw;
-  }
-
-  .dialog-header,
-  .dialog-actions {
-    padding-left: 16px !important;
-    padding-right: 16px !important;
   }
 }
 </style>

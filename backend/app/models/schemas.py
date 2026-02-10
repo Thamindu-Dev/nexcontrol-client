@@ -67,16 +67,18 @@ class ScheduledTask(BaseModel):
     """Scheduled task model"""
     id: str = Field(..., description="Unique task ID")
     name: str = Field(..., min_length=1, max_length=100, description="Task name")
-    action: str = Field(..., description="Action: shutdown, hibernate, restart")
+    action: str = Field(..., description="Action: shutdown, hibernate, restart, lock")
     scheduled_time: str = Field(..., description="Scheduled time in ISO format")
     enabled: bool = Field(True, description="Whether the task is enabled")
     created_at: str = Field(..., description="Creation timestamp in ISO format")
+    last_run: Optional[str] = Field(None, description="Last execution timestamp (ISO format)")
+    execution_result: Optional[dict] = Field(None, description="Result of last execution")
 
     @field_validator('action')
     @classmethod
     def validate_action(cls, v):
         """Validate action is allowed"""
-        allowed = ['shutdown', 'hibernate', 'restart']
+        allowed = ['shutdown', 'hibernate', 'restart', 'lock']
         if v.lower() not in allowed:
             raise ValueError(f"Action must be one of: {', '.join(allowed)}")
         return v.lower()
@@ -85,14 +87,14 @@ class ScheduledTask(BaseModel):
 class CreateScheduledTaskRequest(BaseModel):
     """Create scheduled task request schema"""
     name: str = Field(..., min_length=1, max_length=100, description="Task name")
-    action: str = Field(..., description="Action: shutdown, hibernate, restart")
+    action: str = Field(..., description="Action: shutdown, hibernate, restart, lock")
     scheduled_time: str = Field(..., description="Scheduled time in ISO format (YYYY-MM-DDTHH:MM:SS)")
 
     @field_validator('action')
     @classmethod
     def validate_action(cls, v):
         """Validate action is allowed"""
-        allowed = ['shutdown', 'hibernate', 'restart']
+        allowed = ['shutdown', 'hibernate', 'restart', 'lock']
         if v.lower() not in allowed:
             raise ValueError(f"Action must be one of: {', '.join(allowed)}")
         return v.lower()
@@ -157,9 +159,10 @@ class ThresholdAlert(BaseModel):
     id: str
     metric_type: str = Field(..., description="Type: cpu, memory, disk")
     threshold: int = Field(..., description="Threshold value that was exceeded")
-    current_value: float = Field(..., description="Current value that exceeded threshold")
-    timestamp: str = Field(..., description="Alert timestamp")
+    value: float = Field(..., description="Current value that exceeded threshold")
+    triggered_at: str = Field(..., description="Alert timestamp")
     acknowledged: bool = Field(False, description="Whether alert was acknowledged")
+    unit: str = Field("%", description="Unit of measurement (percentage)")
 
 class AppLaunchRequest(BaseModel):
     """App launch request schema"""

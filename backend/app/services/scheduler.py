@@ -3,7 +3,7 @@ import asyncio
 import json
 import os
 import logging
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import Dict, List, Optional
 from app.core.config import settings, logger
 from app.models.schemas import ScheduledTask
@@ -103,11 +103,12 @@ class ScheduledTaskManager:
     async def start_scheduler(self):
         """Start the background task scheduler"""
         if self._running:
+            logger.warning("Scheduler already running")
             return
 
         self._running = True
         self._scheduler_task = asyncio.create_task(self._scheduler_loop())
-        logger.info("Scheduled task manager started")
+        logger.info(f"Scheduled task manager started. Monitoring {len(self.tasks)} tasks")
 
     async def stop_scheduler(self):
         """Stop the background task scheduler"""
@@ -124,48 +125,70 @@ class ScheduledTaskManager:
         """Background loop that checks and executes scheduled tasks"""
         while self._running:
             try:
-                now = datetime.now()
+                # Use UTC time for consistent comparison with scheduled times
+                now = datetime.now(timezone.utc)
                 for task_id, task in list(self.tasks.items()):
                     if not task.enabled:
                         continue
 
                     try:
+                        # Parse scheduled time and handle timezone
+                        # Frontend sends times with 'Z' suffix (UTC)
                         scheduled_dt = datetime.fromisoformat(task.scheduled_time.replace('Z', '+00:00'))
 
+                        # Check if task is due (scheduled time has passed)
                         if scheduled_dt <= now:
-                            logger.info(f"Executing scheduled task: {task.name} ({task.action})")
-                            await self._execute_task(task)
-                            self.delete_task(task_id)
+                            logger.info(f"Executing scheduled task: {task.name} ({task.action}) at {now.isoformat()}")
+
+                            # Execute the task
+                            result = await self._execute_task(task)
+
+                            # Update task status instead of deleting
+                            task.last_run = now.isoformat()
+                            task.execution_result = result
+
+                            # If this is a one-time task, disable it
+                            # For recurring tasks (future feature), we'd reschedule
+                            task.enabled = False
+                            self._save_tasks()
+
+                            logger.info(f"Task {task.name} completed. Success: {result.get('success', False)}")
 
                     except Exception as e:
-                        logger.error(f"Error processing task {task_id}: {type(e).__name__}")
+                        logger.error(f"Error processing task {task_id}: {type(e).__name__}: {e}", exc_info=True)
 
                 await asyncio.sleep(1)
 
             except asyncio.CancelledError:
                 break
             except Exception as e:
-                logger.error(f"Scheduler loop error: {type(e).__name__}")
+                logger.error(f"Scheduler loop error: {type(e).__name__}: {e}", exc_info=True)
                 await asyncio.sleep(5)
 
     async def _execute_task(self, task: ScheduledTask):
         """Execute a scheduled task"""
         try:
+            logger.info(f"Executing task action: {task.action} for task: {task.name}")
+
             if task.action == "shutdown":
-                # Calls static methods of PowerManager
                 result = PowerManager.shutdown(0)
             elif task.action == "restart":
                 result = PowerManager.restart(0)
             elif task.action == "hibernate":
                 result = PowerManager.hibernate()
+            elif task.action == "lock":
+                result = PowerManager.lock_screen()
             else:
                 logger.error(f"Unknown action: {task.action}")
-                return
+                return {"success": False, "message": f"Unknown action: {task.action}"}
 
             if result.get("success"):
-                logger.info(f"Task executed successfully: {task.name}")
+                logger.info(f"Task executed successfully: {task.name} - {result.get('message')}")
             else:
                 logger.error(f"Task execution failed: {task.name} - {result.get('message')}")
 
+            return result
+
         except Exception as e:
-            logger.error(f"Error executing task {task.name}: {type(e).__name__}")
+            logger.error(f"Exception executing task {task.name}: {type(e).__name__}: {e}")
+            return {"success": False, "message": f"Exception: {str(e)}"}

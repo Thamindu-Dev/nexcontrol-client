@@ -13,7 +13,7 @@ router = APIRouter(
 @router.post("/shutdown", response_model=CommandResponse)
 async def shutdown_system(request: PowerActionRequest):
     """Shutdown the system"""
-    result = PowerManager.shutdown(request.delay)
+    result = PowerManager.shutdown(request.delay_seconds)
     if not result["success"]:
         raise HTTPException(status_code=500, detail=result["message"])
     return result
@@ -21,7 +21,7 @@ async def shutdown_system(request: PowerActionRequest):
 @router.post("/restart", response_model=CommandResponse)
 async def restart_system(request: PowerActionRequest):
     """Restart the system"""
-    result = PowerManager.restart(request.delay)
+    result = PowerManager.restart(request.delay_seconds)
     if not result["success"]:
         raise HTTPException(status_code=500, detail=result["message"])
     return result

@@ -1,0 +1,74 @@
+[
+  {
+    "id": "7f0de0f4-9f02-445e-a510-225abc6bbd26",
+    "metric_type": "memory",
+    "threshold": 65,
+    "value": 93.7,
+    "triggered_at": "2026-02-10T22:21:43.356538",
+    "acknowledged": false,
+    "unit": "%"
+  },
+  {
+    "id": "41597a1a-e583-4a4b-beec-c1fcb0f425e5",
+    "metric_type": "memory",
+    "threshold": 65,
+    "value": 94.3,
+    "triggered_at": "2026-02-10T22:24:11.096898",
+    "acknowledged": false,
+    "unit": "%"
+  },
+  {
+    "id": "da25a23d-c0b1-4d92-840e-85e80f6d4e7b",
+    "metric_type": "memory",
+    "threshold": 65,
+    "value": 93.3,
+    "triggered_at": "2026-02-10T22:24:47.488108",
+    "acknowledged": false,
+    "unit": "%"
+  },
+  {
+    "id": "e7f869bd-3f3f-4fb0-872f-681b4ece5e6d",
+    "metric_type": "memory",
+    "threshold": 65,
+    "value": 92.3,
+    "triggered_at": "2026-02-10T22:30:05.521350",
+    "acknowledged": false,
+    "unit": "%"
+  },
+  {
+    "id": "2e8d613d-2c20-4c7b-b0ae-0b66e6c71f64",
+    "metric_type": "memory",
+    "threshold": 80,
+    "value": 95.5,
+    "triggered_at": "2026-02-10T22:32:43.190676",
+    "acknowledged": false,
+    "unit": "%"
+  },
+  {
+    "id": "a18929ed-a528-4a5b-982d-f3d8ff890970",
+    "metric_type": "memory",
+    "threshold": 80,
+    "value": 95.6,
+    "triggered_at": "2026-02-10T22:38:01.401298",
+    "acknowledged": false,
+    "unit": "%"
+  },
+  {
+    "id": "28e6e7f1-7747-4de0-b246-8f91933f0067",
+    "metric_type": "memory",
+    "threshold": 80,
+    "value": 88.2,
+    "triggered_at": "2026-02-10T22:43:19.671065",
+    "acknowledged": false,
+    "unit": "%"
+  },
+  {
+    "id": "e860d3b7-b66e-4467-b275-67318a5b4fac",
+    "metric_type": "memory",
+    "threshold": 80,
+    "value": 91.6,
+    "triggered_at": "2026-02-10T22:48:37.675133",
+    "acknowledged": false,
+    "unit": "%"
+  }
+]

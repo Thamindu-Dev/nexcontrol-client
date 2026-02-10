@@ -304,18 +304,8 @@ async function loadAlerts() {
   loading.value = true;
 
   try {
-    const response = await api.get('/api/threshold/alerts');
-
-    if (response.success && response.alerts) {
-      // Merge server alerts with local alerts (local alerts take precedence for recent ones)
-      const localAlertIds = new Set(alerts.value.map(a => a.id));
-      const serverAlerts = response.alerts.filter(a => !localAlertIds.has(a.id));
-
-      // Add server alerts to the beginning (older alerts)
-      alerts.value = [...alerts.value, ...serverAlerts];
-
-      console.log(`[ThresholdAlerts] Loaded ${serverAlerts.length} server alerts, total: ${alerts.value.length}`);
-    }
+    await systemStore.fetchAlerts();
+    console.log(`[ThresholdAlerts] Loaded ${systemStore.alerts.length} alerts from store`);
   } catch (error) {
     console.error('[ThresholdAlerts] Failed to load alerts from server:', error);
     // Don't show notification - local alerts are still available
@@ -344,7 +334,7 @@ function acknowledgeAlert(alertId) {
 
     if (!isLocalAlert) {
       // Sync with server (non-blocking)
-      api.put(`/api/threshold/alerts/${alertId}/acknowledge`).catch(err => {
+      api.post(`/api/threshold/alerts/${alertId}/acknowledge`).catch(err => {
         console.warn('[ThresholdAlerts] Failed to sync acknowledge with server:', err);
       });
     }
@@ -387,7 +377,7 @@ function acknowledgeAllAlerts() {
     });
 
     // Optionally sync with server (non-blocking)
-    api.put('/api/threshold/alerts/acknowledge-all').catch(err => {
+    api.post('/api/threshold/alerts/acknowledge-all').catch(err => {
       console.warn('[ThresholdAlerts] Failed to sync acknowledge all with server:', err);
     });
   } catch (error) {

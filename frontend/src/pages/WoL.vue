@@ -244,7 +244,7 @@ function isValidMac(val) {
 /**
  * Add device
  */
-function addDevice() {
+async function addDevice() {
   if (!newDevice.name || !newDevice.mac || !isValidMac(newDevice.mac)) {
     $q.notify({
       type: 'negative',
@@ -254,28 +254,40 @@ function addDevice() {
     return;
   }
 
-  const device = {
-    id: Date.now(),
-    name: newDevice.name,
-    mac: newDevice.mac.toUpperCase(),
-    broadcast: newDevice.broadcast || '255.255.255.255',
-    port: newDevice.port || 9
-  };
+  try {
+    // Register device on backend
+    const WoLService = (await import('../services/WoLService')).default;
+    await WoLService.registerDevice(newDevice.name, newDevice.mac.toUpperCase());
 
-  devices.value.push(device);
-  saveDevices();
+    const device = {
+      id: Date.now(),
+      name: newDevice.name,
+      mac: newDevice.mac.toUpperCase(),
+      broadcast: newDevice.broadcast || '255.255.255.255',
+      port: newDevice.port || 9
+    };
 
-  // Reset form
-  newDevice.name = '';
-  newDevice.mac = '';
-  newDevice.broadcast = '';
-  newDevice.port = 9;
+    devices.value.push(device);
+    saveDevices();
 
-  $q.notify({
-    type: 'positive',
-    message: 'Device added successfully',
-    position: 'top'
-  });
+    // Reset form
+    newDevice.name = '';
+    newDevice.mac = '';
+    newDevice.broadcast = '';
+    newDevice.port = 9;
+
+    $q.notify({
+      type: 'positive',
+      message: 'Device added successfully',
+      position: 'top'
+    });
+  } catch (error) {
+    $q.notify({
+      type: 'negative',
+      message: error.message || 'Failed to add device',
+      position: 'top'
+    });
+  }
 }
 
 /**
@@ -295,15 +307,35 @@ function confirmDeleteDevice(device) {
 /**
  * Delete device
  */
-function deleteDevice(deviceId) {
-  devices.value = devices.value.filter(d => d.id !== deviceId);
-  saveDevices();
+async function deleteDevice(deviceId) {
+  try {
+    const device = devices.value.find(d => d.id === deviceId);
+    if (device) {
+      // Delete from backend using device name
+      const WoLService = (await import('../services/WoLService')).default;
+      await WoLService.deleteDevice(device.name);
+    }
 
-  $q.notify({
-    type: 'info',
-    message: 'Device deleted',
-    position: 'top'
-  });
+    devices.value = devices.value.filter(d => d.id !== deviceId);
+    saveDevices();
+
+    $q.notify({
+      type: 'info',
+      message: 'Device deleted',
+      position: 'top'
+    });
+  } catch (error) {
+    console.error('Delete error:', error);
+    // Still delete from local even if backend fails
+    devices.value = devices.value.filter(d => d.id !== deviceId);
+    saveDevices();
+
+    $q.notify({
+      type: 'info',
+      message: 'Device deleted (local only)',
+      position: 'top'
+    });
+  }
 }
 
 /**
@@ -344,10 +376,41 @@ function saveDevices() {
 /**
  * Load devices from local storage
  */
-function loadDevices() {
+async function loadDevices() {
+  // Load from local storage first
   const saved = settingsStore.woLDevices;
   if (saved) {
     devices.value = [...saved];
+  }
+
+  // Try to sync with backend
+  try {
+    const WoLService = (await import('../services/WoLService')).default;
+    const backendDevices = await WoLService.getRegisteredDevices();
+
+    // Merge backend devices with local devices
+    // Backend returns: {devices: {deviceName: {mac_address, broadcast_ip, port}}}
+    if (backendDevices && typeof backendDevices === 'object') {
+      const localDeviceNames = new Set(devices.value.map(d => d.name));
+
+      for (const [name, info] of Object.entries(backendDevices)) {
+        // Add backend devices that aren't in local storage
+        if (!localDeviceNames.has(name)) {
+          devices.value.push({
+            id: Date.now() + Math.random(),
+            name: name,
+            mac: info.mac_address,
+            broadcast: info.broadcast_ip,
+            port: info.port
+          });
+        }
+      }
+
+      // Save merged list
+      saveDevices();
+    }
+  } catch {
+    console.log('[WoL] Could not sync with backend (using local devices only)');
   }
 }
 

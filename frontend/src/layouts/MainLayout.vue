@@ -142,11 +142,11 @@
         </q-item-label>
 
         <q-item
+          clickable
           @click="refreshStats"
           :disable="loading"
           class="nav-item"
           v-ripple
-          style="cursor: pointer !important;"
         >
           <q-item-section avatar>
             <div class="icon-wrapper">
@@ -183,10 +183,10 @@
 
         <!-- Logout -->
         <q-item
+          clickable
           @click="logout"
           class="nav-item"
           v-ripple
-          style="cursor: pointer !important;"
         >
           <q-item-section avatar>
             <div class="icon-wrapper">
@@ -799,12 +799,31 @@ function logout() {
   $q.dialog({
     title: 'Logout',
     message: 'Are you sure you want to logout?',
-    cancel: true,
+    cancel: {
+      color: 'grey-5',
+      flat: true
+    },
+    ok: {
+      color: 'cyan',
+      label: 'Logout',
+      flat: true
+    },
     persistent: true,
     class: 'glass-dialog'
   }).onOk(async () => {
-    await authStore.logout();
-    router.push('/login');
+    try {
+      await authStore.logout();
+      // Close drawer before redirecting
+      leftDrawerOpen.value = false;
+      router.push('/login');
+    } catch (error) {
+      console.error('[MainLayout] Logout error:', error);
+      $q.notify({
+        type: 'negative',
+        message: error.message || 'Logout failed',
+        position: 'top'
+      });
+    }
   });
 }
 
@@ -820,20 +839,20 @@ async function refreshStats() {
       systemStore.fetchDiskStats(),
       systemStore.fetchGPUStats()
     ]);
-    // isConnected is now managed by the store
+
     $q.notify({
       type: 'positive',
       message: 'Stats refreshed successfully',
-      position: 'bottom',
-      classes: 'notification-glossy'
+      position: 'top',
+      color: 'positive'
     });
-  } catch {
-    // isConnected is now managed by the store
+  } catch (error) {
+    console.error('[MainLayout] Failed to refresh stats:', error);
     $q.notify({
       type: 'negative',
-      message: 'Failed to refresh stats',
-      position: 'bottom',
-      classes: 'notification-glossy'
+      message: error.message || 'Failed to refresh stats',
+      position: 'top',
+      color: 'negative'
     });
   } finally {
     loading.value = false;

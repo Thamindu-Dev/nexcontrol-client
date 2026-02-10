@@ -579,15 +579,20 @@ async function saveThresholdConfig() {
   savingThreshold.value = true;
 
   try {
-    const response = await apiService.put('/api/threshold/config', null, {
+    const response = await apiService.post('/api/threshold/config', {
       cpu_threshold: thresholdConfig.cpu_threshold,
       memory_threshold: thresholdConfig.memory_threshold,
       disk_threshold: thresholdConfig.disk_threshold,
       enabled: thresholdConfig.enabled
     });
 
-    if (response.success) {
+    // Backend returns ThresholdConfig directly on success
+    if (response && (response.cpu_threshold !== undefined || response.enabled !== undefined)) {
       secureNotify.success($q, 'Threshold settings saved');
+      // Update local state with response
+      Object.assign(thresholdConfig, response);
+    } else {
+      secureNotify.error($q, 'Failed to save threshold settings');
     }
   } catch (error) {
     secureNotify.error($q, error.message || 'Failed to save threshold settings');

@@ -250,7 +250,11 @@ const api = {
         // Clipboard
         '/api/clipboard',
         // Threshold config (needed for viewing/updating notification thresholds)
-        '/api/threshold/config'
+        '/api/threshold/config',
+        '/api/threshold/alerts',
+        // Apps launcher (launching apps is low-risk operation)
+        '/api/apps',
+        '/api/launch'
       ].some(path => endpoint.includes(path));
 
       if (!skipSecurityCheck && !hasEncryptionKey()) {

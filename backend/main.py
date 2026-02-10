@@ -122,8 +122,12 @@ async def encryption_middleware(request: Request, call_next):
         "/api/screenshot",
         # Clipboard endpoint (simple text data)
         "/api/clipboard",
-        # Threshold config (viewing/updating notification thresholds)
-        "/api/threshold/config"
+        # Threshold endpoints (viewing alerts and config)
+        "/api/threshold/config",
+        "/api/threshold/alerts",
+        # Apps launcher (launching apps is low-risk operation)
+        "/api/apps",
+        "/api/launch"
     ]
     
     if request.method == "OPTIONS" or any(request.url.path.startswith(path) for path in excluded_paths):
@@ -245,14 +249,26 @@ async def global_exception_handler(request: Request, exc: Exception):
     logger.error(traceback.format_exc())
     return JSONResponse(
         status_code=500,
-        content={"detail": "Internal Server Error", "error": str(exc)}
+        content={"detail": "Internal Server Error", "error": str(exc)},
+        headers={
+            "Access-Control-Allow-Origin": "*",
+            "Access-Control-Allow-Credentials": "true",
+            "Access-Control-Allow-Methods": "*",
+            "Access-Control-Allow-Headers": "*",
+        }
     )
 
 @app.exception_handler(HTTPException)
 async def http_exception_handler(request: Request, exc: HTTPException):
     return JSONResponse(
         status_code=exc.status_code,
-        content={"detail": exc.detail}
+        content={"detail": exc.detail},
+        headers={
+            "Access-Control-Allow-Origin": "*",
+            "Access-Control-Allow-Credentials": "true",
+            "Access-Control-Allow-Methods": "*",
+            "Access-Control-Allow-Headers": "*",
+        }
     )
 
 # Static Files (Frontend)

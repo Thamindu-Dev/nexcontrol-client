@@ -30,6 +30,8 @@ class ThresholdNotificationManager:
         self._alert_cooldown = 300  # 5 minutes cooldown between alerts for same metric
         self._load_config()  # Load config from disk
         self._load_alerts()
+        self._cleanup_old_alerts()  # Remove very old alerts
+        self._restore_cooldown_from_alerts()  # Restore cooldown from recent alerts
         logger.info("ThresholdNotificationManager initialized")
 
     def _load_config(self):
@@ -61,21 +63,104 @@ class ThresholdNotificationManager:
             if os.path.exists(self.storage_file):
                 with open(self.storage_file, 'r') as f:
                     data = json.load(f)
+                    loaded_count = 0
                     for alert_data in data:
-                        alert = ThresholdAlert(**alert_data)
-                        self.alerts.append(alert)
-                logger.info(f"Loaded {len(self.alerts)} alerts from storage")
+                        try:
+                            # Migrate old field names if present
+                            if 'current_value' in alert_data and 'value' not in alert_data:
+                                alert_data['value'] = alert_data.pop('current_value')
+                            if 'timestamp' in alert_data and 'triggered_at' not in alert_data:
+                                alert_data['triggered_at'] = alert_data.pop('timestamp')
+                            # Ensure unit field exists
+                            if 'unit' not in alert_data:
+                                alert_data['unit'] = '%'
+
+                            alert = ThresholdAlert(**alert_data)
+                            self.alerts.append(alert)
+                            loaded_count += 1
+                        except Exception as e:
+                            logger.warning(f"Skipping invalid alert data: {e}")
+                            continue
+                    logger.info(f"Loaded {loaded_count} alerts from storage (total data: {len(data)})")
         except Exception as e:
-            logger.error(f"Error loading alerts: {type(e).__name__}")
+            logger.error(f"Error loading alerts: {type(e).__name__}: {e}")
+
+    def _restore_cooldown_from_alerts(self):
+        """Restore cooldown timers from recent unacknowledged alerts to prevent spam on restart"""
+        try:
+            now = time.time()
+            for alert in self.alerts:
+                if not alert.acknowledged:
+                    try:
+                        # Parse ISO format timestamp
+                        alert_time = datetime.fromisoformat(alert.triggered_at).timestamp()
+                        time_since_alert = now - alert_time
+
+                        # If the alert is recent (within cooldown period), restore the cooldown
+                        if time_since_alert < self._alert_cooldown:
+                            remaining_cooldown = self._alert_cooldown - time_since_alert
+                            # Set last alert time to now minus remaining cooldown
+                            # This effectively extends the cooldown from the existing alert
+                            self._last_alert_time[alert.metric_type] = now - remaining_cooldown
+                            logger.info(f"Restored cooldown for {alert.metric_type}: {remaining_cooldown:.0f}s remaining")
+                    except Exception as e:
+                        logger.warning(f"Could not parse alert timestamp for cooldown: {e}")
+        except Exception as e:
+            logger.warning(f"Error restoring cooldown from alerts: {e}")
+
+    def _cleanup_old_alerts(self):
+        """Remove old acknowledged alerts to prevent clutter"""
+        try:
+            now = time.time()
+            one_day_ago = now - 86400  # 24 hours
+
+            # Keep unacknowledged alerts and recent acknowledged alerts (within 24 hours)
+            cleaned_alerts = []
+            removed_count = 0
+
+            for alert in self.alerts:
+                if not alert.acknowledged:
+                    cleaned_alerts.append(alert)
+                else:
+                    try:
+                        alert_time = datetime.fromisoformat(alert.triggered_at).timestamp()
+                        if alert_time > one_day_ago:
+                            cleaned_alerts.append(alert)
+                        else:
+                            removed_count += 1
+                    except:
+                        # Keep if we can't parse the time
+                        cleaned_alerts.append(alert)
+
+            if removed_count > 0:
+                logger.info(f"Cleaned up {removed_count} old acknowledged alerts")
+
+            self.alerts = cleaned_alerts
+        except Exception as e:
+            logger.warning(f"Error cleaning up old alerts: {e}")
 
     def _save_alerts(self):
         """Save alerts to persistent storage"""
         try:
-            # Keep only last 100 alerts
-            alerts_to_save = self.alerts[-100:] if len(self.alerts) > 100 else self.alerts
+            # Clean up old alerts: keep last 50 and remove old acknowledged ones
+            now = time.time()
+
+            # Separate unacknowledged and acknowledged alerts
+            unacknowledged = [a for a in self.alerts if not a.acknowledged]
+            acknowledged = [a for a in self.alerts if a.acknowledged]
+
+            # Keep all unacknowledged, but only last 20 acknowledged
+            self.alerts = unacknowledged + acknowledged[-20:]
+
+            # Keep total of max 50 alerts
+            if len(self.alerts) > 50:
+                self.alerts = self.alerts[-50:]
+
             with open(self.storage_file, 'w') as f:
-                alerts_data = [alert.dict() for alert in alerts_to_save]
+                alerts_data = [alert.dict() for alert in self.alerts]
                 json.dump(alerts_data, f, indent=2)
+
+            logger.debug(f"Saved {len(self.alerts)} alerts ({len(unacknowledged)} unacknowledged)")
         except Exception as e:
             logger.error(f"Error saving alerts: {type(e).__name__}")
 
@@ -101,7 +186,7 @@ class ThresholdNotificationManager:
         if unacknowledged_only:
             alerts = [a for a in alerts if not a.acknowledged]
         # Return most recent first
-        return sorted(alerts, key=lambda x: x.timestamp, reverse=True)[:limit]
+        return sorted(alerts, key=lambda x: x.triggered_at, reverse=True)[:limit]
 
     def acknowledge_alert(self, alert_id: str) -> bool:
         """Acknowledge an alert"""
@@ -131,8 +216,22 @@ class ThresholdNotificationManager:
         if current_value < threshold:
             return None
 
-        # Check cooldown to prevent alert spam
+        # Check if there's already a recent unacknowledged alert for this metric
         now = time.time()
+        for alert in reversed(self.alerts):  # Check most recent first
+            if (alert.metric_type == metric_type and
+                not alert.acknowledged and
+                alert.value >= threshold):  # Value is still above threshold
+                try:
+                    alert_time = datetime.fromisoformat(alert.triggered_at).timestamp()
+                    # If alert is less than 10 minutes old, don't create a new one
+                    if now - alert_time < 600:
+                        logger.debug(f"Skipping {metric_type} alert - recent unacknowledged alert exists")
+                        return None
+                except:
+                    pass
+
+        # Check cooldown to prevent alert spam
         last_alert = self._last_alert_time.get(metric_type, 0)
         if now - last_alert < self._alert_cooldown:
             return None
@@ -142,8 +241,8 @@ class ThresholdNotificationManager:
             id=str(uuid.uuid4()),
             metric_type=metric_type,
             threshold=threshold,
-            current_value=current_value,
-            timestamp=datetime.now().isoformat(),
+            value=current_value,
+            triggered_at=datetime.now().isoformat(),
             acknowledged=False
         )
 
@@ -167,27 +266,27 @@ class ThresholdNotificationManager:
 
             # Check CPU threshold
             if self.config.cpu_threshold > 0:
-                cpu_usage = stats.get('cpu', {}).get('usage_percent', 0)
+                cpu_usage = stats.get('cpu', {}).get('cpu_percent', 0)
                 alert = self._check_threshold('cpu', cpu_usage, self.config.cpu_threshold)
                 if alert:
                     new_alerts.append(alert)
 
             # Check Memory threshold
             if self.config.memory_threshold > 0:
-                memory_usage = stats.get('memory', {}).get('usage_percent', 0)
+                memory_usage = stats.get('memory', {}).get('percent', 0)
                 alert = self._check_threshold('memory', memory_usage, self.config.memory_threshold)
                 if alert:
                     new_alerts.append(alert)
 
             # Check Disk threshold
             if self.config.disk_threshold > 0:
-                disk_usage = stats.get('disk', {}).get('usage_percent', 0)
+                disk_usage = stats.get('disk', {}).get('percent', 0)
                 alert = self._check_threshold('disk', disk_usage, self.config.disk_threshold)
                 if alert:
                     new_alerts.append(alert)
 
         except Exception as e:
-            logger.error(f"Error checking thresholds: {type(e).__name__}")
+            logger.error(f"Error checking thresholds: {type(e).__name__}: {e}")
 
         return new_alerts
 

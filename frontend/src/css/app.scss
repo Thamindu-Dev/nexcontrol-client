@@ -82,3 +82,143 @@ body.platform-ios {
   border: 1px solid #333333;
   color: #FFFFFF;
 }
+
+/* ============================================
+   OLED Notification Styles
+   ============================================ */
+
+/* Override Quasar notification default styles */
+.q-notifications {
+  /* Ensure notifications have proper z-index */
+  z-index: 9999 !important;
+}
+
+/* Notification Container */
+.q-notification {
+  border-radius: 8px !important;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.5) !important;
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  max-width: 400px;
+  width: auto !important;
+  min-width: 300px;
+}
+
+/* Success Notifications (Cyan theme) */
+.q-notification__icon.q-notification__icon--positive,
+.q-notification.icon-positive .q-notification__icon {
+  color: #22d3ee !important;
+}
+
+.notify-success {
+  background: rgba(10, 10, 10, 0.95) !important;
+  border-left: 4px solid #22d3ee !important;
+  border: 1px solid rgba(34, 211, 238, 0.2) !important;
+  border-left-width: 4px !important;
+}
+
+.notify-success .q-notification__message {
+  color: #FFFFFF !important;
+  font-weight: 500;
+}
+
+.notify-success .q-notification__icon {
+  color: #22d3ee !important;
+}
+
+/* Error Notifications (Red theme) */
+.q-notification__icon.q-notification__icon--negative,
+.q-notification.icon-negative .q-notification__icon {
+  color: #ef4444 !important;
+}
+
+.notify-error {
+  background: rgba(26, 10, 10, 0.95) !important;
+  border-left: 4px solid #ef4444 !important;
+  border: 1px solid rgba(239, 68, 68, 0.2) !important;
+  border-left-width: 4px !important;
+}
+
+.notify-error .q-notification__message {
+  color: #FFFFFF !important;
+  font-weight: 500;
+}
+
+.notify-error .q-notification__icon {
+  color: #ef4444 !important;
+}
+
+/* Warning Notifications (Orange theme) */
+.q-notification__icon.q-notification__icon--warning,
+.q-notification.icon-warning .q-notification__icon {
+  color: #f97316 !important;
+}
+
+.notify-warning {
+  background: rgba(26, 13, 5, 0.95) !important;
+  border-left: 4px solid #f97316 !important;
+  border: 1px solid rgba(249, 115, 22, 0.2) !important;
+  border-left-width: 4px !important;
+}
+
+.notify-warning .q-notification__message {
+  color: #FFFFFF !important;
+  font-weight: 500;
+}
+
+.notify-warning .q-notification__icon {
+  color: #f97316 !important;
+}
+
+/* Info Notifications (Cyan/Grey theme) */
+.q-notification__icon.q-notification__icon--info,
+.q-notification.icon-info .q-notification__icon {
+  color: #22d3ee !important;
+}
+
+.notify-info {
+  background: rgba(10, 10, 10, 0.95) !important;
+  border-left: 4px solid #22d3ee !important;
+  border: 1px solid rgba(34, 211, 238, 0.2) !important;
+  border-left-width: 4px !important;
+}
+
+.notify-info .q-notification__message {
+  color: #FFFFFF !important;
+  font-weight: 500;
+}
+
+.notify-info .q-notification__icon {
+  color: #22d3ee !important;
+}
+
+/* Progress bar styling */
+.q-notification__progress {
+  height: 3px !important;
+  background: rgba(255, 255, 255, 0.1) !important;
+}
+
+.q-notification__progress .q-linear-progress {
+  background: rgba(255, 255, 255, 0.1) !important;
+}
+
+.q-notification__progress .q-linear-progress__track {
+  background: rgba(255, 255, 255, 0.1) !important;
+}
+
+/* Close button styling */
+.q-notification__close {
+  color: rgba(255, 255, 255, 0.6) !important;
+  transition: color 0.2s ease;
+}
+
+.q-notification__close:hover {
+  color: #FFFFFF !important;
+}
+
+/* Caption styling */
+.q-notification__caption {
+  color: rgba(255, 255, 255, 0.7) !important;
+  font-size: 12px;
+  margin-top: 4px;
+}

@@ -5,17 +5,19 @@ import platform
 import logging
 
 # Try to use NVIDIA's official NVML library (supports RTX 40-series)
+HAS_NVIDIA_GPU = False
+HAS_GPU_UTIL = False
+
 try:
     import pynvml
     HAS_NVIDIA_GPU = True
 except ImportError:
-    HAS_NVIDIA_GPU = False
     try:
         # Fallback to GPUtil for older systems
         import GPUtil
         HAS_GPU_UTIL = True
     except ImportError:
-        HAS_GPU_UTIL = False
+        pass
 
 from app.core.config import settings, logger
 

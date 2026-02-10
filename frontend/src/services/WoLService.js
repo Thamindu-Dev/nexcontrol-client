@@ -49,15 +49,12 @@ export async function sendMagicPacket(macAddress, broadcastIp = '255.255.255.255
       throw new Error('Invalid MAC address format');
     }
 
-    // Build query parameters
-    const params = new URLSearchParams({
+    // Send through backend as JSON body
+    const response = await api.post('/api/wol/send', {
       mac_address: macAddress,
-      broadcast_ip: broadcastIp,
-      port: port.toString()
+      broadcast_ip: broadcastIp || '255.255.255.255',
+      port: port || 9
     });
-
-    // Send through backend using query parameters
-    const response = await api.post(`/api/wol/send?${params.toString()}`);
 
     return response;
   } catch (error) {
@@ -88,7 +85,10 @@ export async function registerDevice(deviceName, macAddress) {
     }
 
     // Send to backend for storage
-    const response = await api.post('/api/wol/register', null, false);
+    const response = await api.post('/api/wol/register', {
+      device_name: deviceName,
+      mac_address: macAddress
+    });
     return response;
   } catch (error) {
     console.error('WoL registration error:', error);
@@ -107,6 +107,22 @@ export async function getRegisteredDevices() {
     return response.devices || {};
   } catch (error) {
     console.error('Get WoL devices error:', error);
+    throw error;
+  }
+}
+
+/**
+ * Delete a registered device
+ *
+ * @param {string} deviceName - Name of the device to delete
+ * @returns {Promise} Result
+ */
+export async function deleteDevice(deviceName) {
+  try {
+    const response = await api.delete(`/api/wol/devices/${encodeURIComponent(deviceName)}`);
+    return response;
+  } catch (error) {
+    console.error('Delete WoL device error:', error);
     throw error;
   }
 }
@@ -184,6 +200,7 @@ export function removeDevice(deviceName) {
 export default {
   sendMagicPacket,
   registerDevice,
+  deleteDevice,
   getRegisteredDevices,
   validateMacAddress,
   formatMacAddress,

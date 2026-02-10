@@ -172,12 +172,12 @@
                 <div>
                   <div class="text-caption text-grey-7">CPU</div>
                   <div class="text-h6 text-weight-bold text-white">
-                    {{ stats.cpu?.temperature?.toFixed(0) || stats.temperature?.toFixed(0) || 'N/A' }}°C
+                    {{ getCpuTempDisplay }}°C
                   </div>
                 </div>
                 <q-icon
-                  :name="getTemperatureIcon(stats.cpu?.temperature || stats.temperature)"
-                  :color="getTemperatureColor(stats.cpu?.temperature || stats.temperature)"
+                  :name="getCpuTempIcon"
+                  :color="getCpuTempColor"
                   size="28px"
                 />
               </div>
@@ -189,24 +189,12 @@
                 <div>
                   <div class="text-caption text-grey-7">GPU</div>
                   <div class="text-h6 text-weight-bold text-white">
-                    <template v-if="stats.gpu">
-                      {{ stats.gpu.temperature?.toFixed(0) || 'N/A' }}°C
-                    </template>
-                    <template v-else>
-                      N/A
-                    </template>
+                    {{ getGpuTempDisplay }}°C
                   </div>
                 </div>
                 <q-icon
-                  v-if="stats.gpu"
-                  :name="getTemperatureIcon(stats.gpu.temperature)"
-                  :color="getTemperatureColor(stats.gpu.temperature)"
-                  size="28px"
-                />
-                <q-icon
-                  v-else
-                  name="help_outline"
-                  color="grey-6"
+                  :name="getGpuTempIcon"
+                  :color="getGpuTempColor"
                   size="28px"
                 />
               </div>
@@ -646,6 +634,58 @@ const loadingState = computed(() => ({
 // Computed for history timestamps check
 const hasHistoryData = computed(() => history.value.timestamps.length > 0);
 
+// CPU Temperature Display (treats 0 as N/A)
+const getCpuTempDisplay = computed(() => {
+  const temp = stats.value.cpu?.temperature || stats.value.temperature || 0;
+  return (temp && temp > 0) ? temp.toFixed(0) : 'N/A';
+});
+
+const getCpuTempIcon = computed(() => {
+  const temp = stats.value.cpu?.temperature || stats.value.temperature || 0;
+  if (!temp || temp <= 0) return 'thermostat';
+  if (temp >= 80) return 'warning';
+  if (temp >= 60) return 'whatshot';
+  return 'ac_unit';
+});
+
+const getCpuTempColor = computed(() => {
+  const temp = stats.value.cpu?.temperature || stats.value.temperature || 0;
+  if (!temp || temp <= 0) return 'grey-5';
+  if (temp >= 80) return 'red';
+  if (temp >= 60) return 'orange';
+  if (temp >= 40) return 'yellow';
+  return 'cyan';
+});
+
+// GPU Temperature Display (treats 0 as N/A)
+const getGpuTempDisplay = computed(() => {
+  const gpu = stats.value.gpu;
+  if (!gpu) return 'N/A';
+  const temp = gpu.temperature || 0;
+  return (temp > 0) ? temp.toFixed(0) : 'N/A';
+});
+
+const getGpuTempIcon = computed(() => {
+  const gpu = stats.value.gpu;
+  if (!gpu) return 'help_outline';
+  const temp = gpu.temperature || 0;
+  if (temp <= 0) return 'help_outline';
+  if (temp >= 80) return 'warning';
+  if (temp >= 60) return 'whatshot';
+  return 'ac_unit';
+});
+
+const getGpuTempColor = computed(() => {
+  const gpu = stats.value.gpu;
+  if (!gpu) return 'grey-6';
+  const temp = gpu.temperature || 0;
+  if (temp <= 0) return 'grey-6';
+  if (temp >= 80) return 'red';
+  if (temp >= 60) return 'orange';
+  if (temp >= 40) return 'yellow';
+  return 'cyan';
+});
+
 // Chart data
 const chartData = computed(() => {
   // CRITICAL: Use shallow copies to prevent infinite recursion with Chart.js
@@ -712,27 +752,6 @@ function formatBytes(bytes) {
   const sizes = ['B', 'KB', 'MB', 'GB', 'TB'];
   const i = Math.floor(Math.log(bytes) / Math.log(k));
   return parseFloat((bytes / Math.pow(k, i)).toFixed(1)) + ' ' + sizes[i];
-}
-
-/**
- * Get temperature icon based on value
- */
-function getTemperatureIcon(temp) {
-  if (!temp) return 'thermostat';
-  if (temp >= 80) return 'warning';
-  if (temp >= 60) return 'whatshot';
-  return 'ac_unit';
-}
-
-/**
- * Get temperature color based on value
- */
-function getTemperatureColor(temp) {
-  if (!temp) return 'grey-5';
-  if (temp >= 80) return 'red';
-  if (temp >= 60) return 'orange';
-  if (temp >= 40) return 'yellow';
-  return 'cyan';
 }
 
 /**
@@ -870,18 +889,18 @@ async function executePowerAction(action) {
 
     switch (action) {
       case 'shutdown':
-        endpoint = '/api/power/shutdown';
+        endpoint = '/api/system/power/shutdown';
         payload = { delay_seconds: 0 };
         break;
       case 'hibernate':
-        endpoint = '/api/power/hibernate';
+        endpoint = '/api/system/power/hibernate';
         break;
       case 'restart':
-        endpoint = '/api/power/restart';
+        endpoint = '/api/system/power/restart';
         payload = { delay_seconds: 0 };
         break;
       case 'lock':
-        endpoint = '/api/power/lock';
+        endpoint = '/api/system/power/lock';
         break;
       default:
         throw new Error(`Unknown action: ${action}`);

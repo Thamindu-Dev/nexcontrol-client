@@ -157,6 +157,11 @@ class AppLauncher:
     def launch_app(self, app_id: str, user: str = "unknown") -> dict:
         """Launch an application"""
         try:
+            # Get user's home directory to use as working directory
+            # This ensures apps open in the user's home folder instead of backend directory
+            home_dir = os.path.expanduser("~")
+            logger.info(f"Using home directory as cwd: {home_dir}")
+
             # Check custom apps
             if app_id in self.custom_apps:
                 app_info = self.custom_apps[app_id]
@@ -171,12 +176,12 @@ class AppLauncher:
                 else:
                     app_path = app_info.get("path", "")
                     if settings.OS_TYPE == "Windows":
-                        subprocess.Popen([app_path], shell=True)
+                        subprocess.Popen([app_path], shell=True, cwd=home_dir)
                     elif settings.OS_TYPE == "Darwin":
-                        subprocess.Popen(["open", app_path])
+                        subprocess.Popen(["open", app_path], cwd=home_dir)
                     else:
-                        subprocess.Popen([app_path])
-                    
+                        subprocess.Popen([app_path], cwd=home_dir)
+
                     logger.info(f"Launched custom app: {app_info['name']} -> {app_path} by user {user}")
                     return {"success": True, "message": f"Launched {app_info['name']}"}
 
@@ -190,16 +195,17 @@ class AppLauncher:
             args = app_info["args"]
 
             if settings.OS_TYPE == "Windows":
-                full_command = f"start {command}"
+                # Use 'start /d' to set working directory for Windows
+                full_command = f"start /d \"{home_dir}\" {command}"
                 if args:
                     full_command += f" {args}"
                 subprocess.Popen(full_command, shell=True, creationflags=subprocess.CREATE_NEW_CONSOLE)
             elif settings.OS_TYPE == "Darwin":
                 full_command = f"{command} {args}".strip()
-                subprocess.Popen(full_command, shell=True, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+                subprocess.Popen(full_command, shell=True, cwd=home_dir, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
             else:
                 full_command = f"{command} {args}".strip()
-                subprocess.Popen(full_command.split(), stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+                subprocess.Popen(full_command.split(), cwd=home_dir, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
 
             logger.info(f"Launched application: {app_info['name']} ({app_id}) by user {user}")
             return {"success": True, "message": f"Launched {app_info['name']}"}

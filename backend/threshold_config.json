@@ -1,0 +1,6 @@
+{
+  "cpu_threshold": 15,
+  "memory_threshold": 15,
+  "disk_threshold": 15,
+  "enabled": true
+}

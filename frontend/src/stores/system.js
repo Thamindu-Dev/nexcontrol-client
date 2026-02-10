@@ -609,9 +609,22 @@ export const useSystemStore = defineStore('system', {
 
         onThresholdAlert: (data) => {
           // Handle threshold alerts from WebSocket
-          console.log('[System] Threshold alert received:', data);
-          // Emit a Vue event that components can listen to
-          this.$patch?.({ _lastAlert: data });
+          console.log('[System] Threshold alert received via WebSocket:', data);
+
+          // Add alert to the alerts array
+          if (data && data.id) {
+            // Check if alert already exists to avoid duplicates
+            const existingIndex = this.alerts.findIndex(a => a.id === data.id);
+            if (existingIndex === -1) {
+              // Add new alert at the beginning
+              this.alerts.unshift(data);
+              console.log(`[System] Added new threshold alert: ${data.metric_type} - ${data.value}%`);
+            } else {
+              // Update existing alert
+              this.alerts[existingIndex] = data;
+              console.log(`[System] Updated threshold alert: ${data.metric_type}`);
+            }
+          }
         }
       };
 
@@ -886,6 +899,26 @@ export const useSystemStore = defineStore('system', {
       } catch (error) {
         console.error('[System] Failed to send native notification:', error);
         // Don't throw - notification failures shouldn't break the app
+      }
+    },
+
+    /**
+     * Fetch threshold alerts from backend
+     */
+    async fetchAlerts() {
+      try {
+        const response = await api.get('/api/threshold/alerts');
+        if (response.success && response.alerts) {
+          // Merge server alerts with local alerts (server takes precedence for synchronization)
+          const serverAlertIds = new Set(response.alerts.map(a => a.id));
+          // Keep local alerts that aren't on server (not yet synced)
+          const localOnlyAlerts = this.alerts.filter(a => !serverAlertIds.has(a.id));
+          // Replace with server alerts and add back local-only alerts
+          this.alerts = [...response.alerts, ...localOnlyAlerts];
+          console.log(`[SystemStore] Fetched ${response.alerts.length} alerts from server, total: ${this.alerts.length}`);
+        }
+      } catch (error) {
+        console.error('[SystemStore] Failed to fetch threshold alerts:', error);
       }
     },
 

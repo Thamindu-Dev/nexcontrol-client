@@ -281,7 +281,9 @@ const showLogs = ref(false);
 const logs = ref('');
 const logsLoading = ref(false);
 const currentContainerId = ref(null);
-const autoRefresh = ref(false); // Default to off
+
+// Load auto-refresh state from localStorage
+const autoRefresh = ref(localStorage.getItem('docker_autoRefresh') === 'true');
 let pollingInterval = null;
 
 // Methods
@@ -369,6 +371,9 @@ function startPolling() {
 }
 
 function handleAutoRefreshToggle(val) {
+  // Save state to localStorage
+  localStorage.setItem('docker_autoRefresh', val.toString());
+
   if (val) {
     refreshContainers(); // Refresh immediately
     startPolling();

@@ -18,15 +18,20 @@ async def get_threshold_config():
     """Get threshold configuration"""
     return notification_manager.get_config()
 
-@router.post("/config", response_model=ThresholdConfig)
+@router.post("/config")
 async def update_threshold_config(config: ThresholdConfig):
     """Update threshold configuration"""
     return notification_manager.update_config(**config.dict())
 
-@router.get("/alerts", response_model=List[ThresholdAlert])
+@router.get("/alerts")
 async def get_threshold_alerts(limit: int = 50, unacknowledged_only: bool = False):
     """Get threshold alerts"""
-    return notification_manager.get_alerts(limit, unacknowledged_only)
+    alerts = notification_manager.get_alerts(limit, unacknowledged_only)
+    return {
+        "success": True,
+        "alerts": alerts,
+        "total": len(alerts)
+    }
 
 @router.post("/alerts/{alert_id}/acknowledge", response_model=CommandResponse)
 async def acknowledge_alert(alert_id: str):
