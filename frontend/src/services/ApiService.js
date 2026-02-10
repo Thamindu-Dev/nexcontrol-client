@@ -220,24 +220,37 @@ const api = {
       // ============================================
       // PRE-FLIGHT SECURITY CHECK
       // ============================================
-      // Check for encryption key before making any request
-      // Skip check for login/register/test/stats endpoints (these don't require encryption)
-      // Stats endpoints are allowed without key so users can view dashboard
+      // ONLY these endpoints work WITHOUT AES key:
+      // - Login, verify token, register
+      // - Test connection (check server status)
+      // - WOL endpoints
+      // - Dashboard stats (view only)
+      // - System info
+      // - Screenshot
+      // - Clipboard
+      // - Threshold config (view/update thresholds)
+      // Everything else requires AES key
       const skipSecurityCheck = [
+        // Authentication
         '/api/auth/login',
         '/api/auth/register',
-        '/api/auth/refresh',
         '/api/auth/verify',
+        '/api/auth/refresh',
+        // Connection test
         '/api/test/connection',
         '/api/test/echo',
-        '/api/stats/cpu',
-        '/api/stats/memory',
-        '/api/stats/gpu',
-        '/api/stats/disk',
-        '/api/stats/system',
+        '/api/health',
+        // Dashboard stats (view only)
+        '/api/stats',
         '/api/system/info',
-        '/api/media/status',
-        '/api/clipboard'
+        // WOL endpoints
+        '/api/wol',
+        // Screenshot
+        '/api/screenshot',
+        // Clipboard
+        '/api/clipboard',
+        // Threshold config (needed for viewing/updating notification thresholds)
+        '/api/threshold/config'
       ].some(path => endpoint.includes(path));
 
       if (!skipSecurityCheck && !hasEncryptionKey()) {
@@ -277,7 +290,7 @@ const api = {
       if (data && ['POST', 'PUT', 'PATCH'].includes(method.toUpperCase())) {
         if (encrypted) {
           // Encrypt the payload
-          const encryptedData = encryptPayload(data);
+          const encryptedData = await encryptPayload(data);
           options.body = JSON.stringify(encryptedData);
         } else {
           options.body = JSON.stringify(data);
@@ -306,7 +319,7 @@ const api = {
       // Decrypt if response contains encrypted data
       // Only decrypt if data is a string (encrypted), not an object (plain JSON)
       if (responseData.data && typeof responseData.data === 'string') {
-        return decryptResponse(responseData);
+        return await decryptResponse(responseData);
       }
 
       return responseData;

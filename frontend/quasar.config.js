@@ -64,6 +64,17 @@ export default defineConfig((/* ctx */) => {
           target: 'http://localhost:8000',
           changeOrigin: true,
         };
+
+        // Optimize crypto-js for ES modules
+        viteConf.optimizeDeps = viteConf.optimizeDeps || {};
+        viteConf.optimizeDeps.include = viteConf.optimizeDeps.include || [];
+        if (!viteConf.optimizeDeps.include.includes('crypto-js')) {
+          viteConf.optimizeDeps.include.push('crypto-js');
+        }
+
+        viteConf.build = viteConf.build || {};
+        viteConf.build.commonjsOptions = viteConf.build.commonjsOptions || {};
+        viteConf.build.commonjsOptions.transformMixedEsModules = true;
       },
       // viteVuePluginOptions: {},
 

@@ -34,6 +34,10 @@ class DockerManager:
 
     def list_containers(self, all: bool = True) -> dict:
         """List all Docker containers"""
+        # Try to reconnect if not available
+        if not self.available:
+            self._init_docker()
+            
         if not self.available:
             logger.warning("Docker is not available, returning empty container list")
             return {"containers": []}
@@ -95,6 +99,10 @@ class DockerManager:
 
     def start_container(self, container_id: str) -> dict:
         """Start a Docker container"""
+        # Try to reconnect if not available
+        if not self.available:
+            self._init_docker()
+
         if not self.available:
             return {"success": False, "message": "Docker is not available"}
 
@@ -112,6 +120,10 @@ class DockerManager:
 
     def stop_container(self, container_id: str) -> dict:
         """Stop a Docker container"""
+        # Try to reconnect if not available
+        if not self.available:
+            self._init_docker()
+
         if not self.available:
             return {"success": False, "message": "Docker is not available"}
 
@@ -129,6 +141,10 @@ class DockerManager:
 
     def restart_container(self, container_id: str) -> dict:
         """Restart a Docker container"""
+        # Try to reconnect if not available
+        if not self.available:
+            self._init_docker()
+
         if not self.available:
             return {"success": False, "message": "Docker is not available"}
 
@@ -146,6 +162,10 @@ class DockerManager:
 
     def get_container_logs(self, container_id: str, tail: int = 100) -> dict:
         """Get logs from a Docker container"""
+        # Try to reconnect if not available
+        if not self.available:
+            self._init_docker()
+
         if not self.available:
             return {"success": False, "message": "Docker is not available"}
 

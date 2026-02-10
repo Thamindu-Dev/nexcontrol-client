@@ -17,19 +17,42 @@
  * Handles encryption of API payloads using AES-256-GCM
  * Compatible with the backend's encryption implementation
  *
+ * Uses Web Crypto API when available (localhost/HTTPS)
+ * Falls back to crypto-js for local network IP access
+ *
  * Format:
  * - Nonce: 12 bytes (96-bit)
  * - Ciphertext: variable length
- * - Tag: 16 bytes (128-bit) - automatically appended by GCM
+ * - Tag: 16 bytes (128-bit) - appended to ciphertext
  *
- * The encrypted data is sent as base64(nonce + ciphertext)
+ * The encrypted data is sent as base64(nonce + ciphertext + tag)
  */
 
 import CryptoJS from 'crypto-js';
 
 // Configuration
 const AES_KEY_SIZE = 32; // 256 bits
+const NONCE_SIZE = 12; // 96 bits for GCM
 const TIMESTAMP_TOLERANCE = 30; // seconds
+
+// Check if Web Crypto API is available
+// Web Crypto API works in: HTTPS, localhost, and Capacitor apps (capacitor://)
+const isSecureContext = typeof window !== 'undefined' &&
+  (window.location.protocol === 'https:' ||
+   window.location.protocol === 'capacitor:' ||
+   window.location.protocol === 'ionic:' ||
+   window.location.hostname === 'localhost' ||
+   window.location.hostname === '127.0.0.1' ||
+   // Check if running in Capacitor
+   (window.Capacitor?.getPlatform() !== undefined));
+
+const useWebCrypto = isSecureContext &&
+  typeof crypto !== 'undefined' &&
+  crypto.subtle;
+
+console.log('[EncryptionService] Protocol:', window.location.protocol);
+console.log('[EncryptionService] Secure context:', isSecureContext);
+console.log('[EncryptionService] Using', useWebCrypto ? 'Web Crypto API' : 'crypto-js');
 
 /**
  * Get the AES key (must match backend)
@@ -49,102 +72,223 @@ function getAESKey() {
   return storedKey || (defaultKey ? defaultKey.substring(0, AES_KEY_SIZE) : '');
 }
 
+// ============================================================================
+// Web Crypto API Implementation (for localhost/HTTPS)
+// ============================================================================
+
+async function importKeyWebCrypto(keyString) {
+  const encoder = new TextEncoder();
+  const keyData = encoder.encode(keyString.substring(0, AES_KEY_SIZE));
+
+  return await crypto.subtle.importKey(
+    'raw',
+    keyData,
+    { name: 'AES-GCM', length: 256 },
+    false,
+    ['encrypt', 'decrypt']
+  );
+}
+
+function arrayBufferToBase64(buffer) {
+  const bytes = new Uint8Array(buffer);
+  let binary = '';
+  for (let i = 0; i < bytes.byteLength; i++) {
+    binary += String.fromCharCode(bytes[i]);
+  }
+  return btoa(binary);
+}
+
+function base64ToArrayBuffer(base64) {
+  const binary = atob(base64);
+  const bytes = new Uint8Array(binary.length);
+  for (let i = 0; i < binary.length; i++) {
+    bytes[i] = binary.charCodeAt(i);
+  }
+  return bytes.buffer;
+}
+
+async function encryptWebCrypto(data) {
+  const jsonStr = JSON.stringify(data);
+  const encoder = new TextEncoder();
+  const plaintext = encoder.encode(jsonStr);
+
+  const nonce = crypto.getRandomValues(new Uint8Array(NONCE_SIZE));
+  const key = await importKeyWebCrypto(getAESKey());
+
+  const ciphertextWithTag = await crypto.subtle.encrypt(
+    { name: 'AES-GCM', iv: nonce },
+    key,
+    plaintext
+  );
+
+  const combined = new Uint8Array(nonce.length + ciphertextWithTag.byteLength);
+  combined.set(nonce, 0);
+  combined.set(new Uint8Array(ciphertextWithTag), nonce.length);
+
+  return arrayBufferToBase64(combined.buffer);
+}
+
+async function decryptWebCrypto(encryptedData) {
+  try {
+    console.log('[WebCrypto] Decrypting data');
+    const combined = base64ToArrayBuffer(encryptedData);
+    const nonce = combined.slice(0, NONCE_SIZE);
+    const ciphertextWithTag = combined.slice(NONCE_SIZE);
+    const key = await importKeyWebCrypto(getAESKey());
+
+    const decrypted = await crypto.subtle.decrypt(
+      { name: 'AES-GCM', iv: new Uint8Array(nonce) },
+      key,
+      ciphertextWithTag
+    );
+
+    const decoder = new TextDecoder();
+    const result = JSON.parse(decoder.decode(decrypted));
+    console.log('[WebCrypto] Decryption successful');
+    return result;
+  } catch (error) {
+    console.error('[WebCrypto] Decryption failed:', error);
+    throw error;
+  }
+}
+
+// ============================================================================
+// crypto-js Implementation (for local network IP access)
+// ============================================================================
+
+function encryptCryptoJS(data) {
+  const jsonStr = JSON.stringify(data);
+  const nonce = CryptoJS.lib.WordArray.random(NONCE_SIZE);
+  const key = CryptoJS.enc.Utf8.parse(getAESKey());
+
+  // Encrypt using AES-GCM
+  const encrypted = CryptoJS.AES.encrypt(jsonStr, key, {
+    mode: CryptoJS.mode.GCM,
+    padding: CryptoJS.pad.Pkcs7,
+    iv: nonce
+  });
+
+  // crypto-js stores tag separately - we need to append it
+  const ciphertextWithTag = CryptoJS.lib.WordArray.create([
+    encrypted.ciphertext,
+    encrypted.tag
+  ]);
+
+  const combined = CryptoJS.lib.WordArray.create([nonce, ciphertextWithTag]);
+  return CryptoJS.enc.Base64.stringify(combined);
+}
+
+function decryptCryptoJS(encryptedData) {
+  try {
+    console.log('[CryptoJS] Decrypting data, length:', encryptedData.length);
+    const combined = CryptoJS.enc.Base64.parse(encryptedData);
+    console.log('[CryptoJS] Combined words:', combined.words.length);
+
+    const nonceWords = 3; // 12 bytes / 4 bytes per word
+    const tagWords = 4; // 16 bytes / 4 bytes per word
+
+    if (combined.words.length < nonceWords + tagWords) {
+      throw new Error(`Encrypted data too short: ${combined.words.length} words`);
+    }
+
+    const nonce = CryptoJS.lib.WordArray.create(combined.words.slice(0, nonceWords));
+    const ciphertextWithTag = CryptoJS.lib.WordArray.create(combined.words.slice(nonceWords));
+
+    const ciphertext = CryptoJS.lib.WordArray.create(ciphertextWithTag.words.slice(0, -tagWords));
+    const tag = CryptoJS.lib.WordArray.create(ciphertextWithTag.words.slice(-tagWords));
+
+    const key = CryptoJS.enc.Utf8.parse(getAESKey());
+    console.log('[CryptoJS] Key length:', key.words.length * 4, 'bytes');
+
+    const decrypted = CryptoJS.AES.decrypt(
+      { ciphertext: ciphertext, tag: tag },
+      key,
+      { mode: CryptoJS.mode.GCM, padding: CryptoJS.pad.Pkcs7, iv: nonce }
+    );
+
+    const jsonStr = decrypted.toString(CryptoJS.enc.Utf8);
+    if (!jsonStr) throw new Error('Decryption produced empty result');
+    console.log('[CryptoJS] Decryption successful');
+    return JSON.parse(jsonStr);
+  } catch (error) {
+    console.error('[CryptoJS] Decryption failed:', error);
+    throw error;
+  }
+}
+
+// ============================================================================
+// Public API
+// ============================================================================
+
 /**
  * Encrypt data using AES-256-GCM
+ * Compatible with Python's cryptography library
  *
  * @param {Object} data - Data to encrypt
- * @returns {Object} Encrypted payload with data and timestamp
+ * @returns {Promise<Object>} Encrypted payload with data and timestamp
  */
-export function encryptPayload(data) {
+export async function encryptPayload(data) {
   try {
-    // Convert data to JSON string
-    const jsonStr = JSON.stringify(data);
+    let encryptedBase64;
 
-    // Generate random nonce (12 bytes)
-    const nonce = CryptoJS.lib.WordArray.random(128 / 8);
+    if (useWebCrypto) {
+      encryptedBase64 = await encryptWebCrypto(data);
+    } else {
+      encryptedBase64 = encryptCryptoJS(data);
+    }
 
-    // Get the key
-    const key = CryptoJS.enc.Utf8.parse(getAESKey());
-
-    // Encrypt using AES
-    const encrypted = CryptoJS.AES.encrypt(jsonStr, key, {
-      mode: CryptoJS.mode.GCM,
-      padding: CryptoJS.pad.Pkcs7,
-      iv: nonce
-    });
-
-    // Combine nonce + ciphertext
-    const combined = CryptoJS.lib.WordArray.create([nonce, encrypted.ciphertext]);
-
-    // Convert to base64
-    const encryptedBase64 = CryptoJS.enc.Base64.stringify(combined);
-
-    // Add timestamp for replay attack prevention
     return {
       data: encryptedBase64,
       timestamp: Math.floor(Date.now() / 1000)
     };
   } catch (error) {
-    console.error('Encryption error:', error);
-    throw new Error('Failed to encrypt payload');
+    console.error('[EncryptionService] Encryption error:', error);
+    throw new Error('Failed to encrypt payload: ' + error.message);
   }
 }
 
 /**
  * Decrypt response from backend
+ * Compatible with Python's cryptography library
  *
  * @param {Object} encryptedResponse - Response with encrypted data
- * @returns {Object} Decrypted data
+ * @returns {Promise<Object>} Decrypted data
  */
-export function decryptResponse(encryptedResponse) {
-  let jsonStr = '';
+export async function decryptResponse(encryptedResponse) {
+  const encryptedData = encryptedResponse.data || encryptedResponse;
 
+  if (!encryptedData) {
+    throw new Error('No encrypted data in response');
+  }
+
+  console.log('[EncryptionService] Decrypting, using WebCrypto:', useWebCrypto);
+
+  // Try primary method
   try {
-    // Handle both direct data and wrapped responses
-    const encryptedData = encryptedResponse.data || encryptedResponse;
+    if (useWebCrypto) {
+      return await decryptWebCrypto(encryptedData);
+    } else {
+      return decryptCryptoJS(encryptedData);
+    }
+  } catch (primaryError) {
+    console.error('[EncryptionService] Primary decryption failed:', primaryError);
 
-    if (!encryptedData) {
-      throw new Error('No encrypted data in response');
+    // If WebCrypto failed and crypto-js is available, try it as fallback
+    if (useWebCrypto && typeof CryptoJS !== 'undefined') {
+      console.log('[EncryptionService] Falling back to crypto-js');
+      try {
+        return decryptCryptoJS(encryptedData);
+      } catch (fallbackError) {
+        console.error('[EncryptionService] Fallback also failed:', fallbackError);
+      }
     }
 
-    // Decode from base64
-    const combined = CryptoJS.enc.Base64.parse(encryptedData);
-
-    // Split nonce and ciphertext
-    // Nonce is first 12 bytes, rest is ciphertext
-    const nonce = CryptoJS.lib.WordArray.create(combined.words.slice(0, 3)); // 3 words = 12 bytes
-    const ciphertext = CryptoJS.lib.WordArray.create(combined.words.slice(3));
-
-    // Get the key
-    const key = CryptoJS.enc.Utf8.parse(getAESKey());
-
-    // Decrypt using AES
-    const decrypted = CryptoJS.AES.decrypt(
-      { ciphertext: ciphertext },
-      key,
-      {
-        mode: CryptoJS.mode.GCM,
-        padding: CryptoJS.pad.Pkcs7,
-        iv: nonce
-      }
-    );
-
-    // Convert to UTF-8 string
-    jsonStr = decrypted.toString(CryptoJS.enc.Utf8);
-
-    // Parse JSON
-    return JSON.parse(jsonStr);
-  } catch (error) {
-    console.error('[EncryptionService] Decryption error:', error);
-
-    // Provide specific error messages
-    if (error.message?.includes('Malformed')) {
-      throw new Error('Decryption failed: Invalid encrypted data format');
-    } else if (jsonStr === '' || error.message?.includes('Unexpected')) {
+    // If we get here, both methods failed
+    if (primaryError.name === 'OperationError') {
       throw new Error('Decryption failed: Encryption key mismatch or corrupted data');
     }
 
-    throw new Error('Failed to decrypt response: ' + (error.message || 'Unknown error'));
+    throw new Error('Failed to decrypt response: ' + (primaryError.message || 'Unknown error'));
   }
 }
 
@@ -157,7 +301,6 @@ export function decryptResponse(encryptedResponse) {
 export function validateTimestamp(timestamp) {
   const currentTime = Math.floor(Date.now() / 1000);
   const timeDiff = Math.abs(currentTime - timestamp);
-
   return timeDiff <= TIMESTAMP_TOLERANCE;
 }
 

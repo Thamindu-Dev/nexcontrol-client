@@ -97,43 +97,33 @@ app.add_middleware(
 @app.middleware("http")
 async def encryption_middleware(request: Request, call_next):
     # Define excluded paths (these endpoints don't use encryption)
+    # ONLY these endpoints work WITHOUT AES key (matching frontend skipSecurityCheck):
     excluded_paths = [
         "/docs", "/redoc", "/openapi.json",
+        # Authentication
         "/auth/token", "/api/auth/token",
         "/auth/login", "/api/auth/login",
         "/auth/verify", "/api/auth/verify",
-        "/ws/", "/api/health", "/system/screenshot/capture",
-        "/api/test/connection", "/api/test/echo",
-        # Stats endpoints - return unencrypted data for dashboard
+        "/auth/refresh", "/api/auth/refresh",
+        # WebSocket
+        "/ws/",
+        # Health check
+        "/api/health",
+        # Test endpoints (check server status)
+        "/api/test/connection",
+        "/api/test/echo",
+        # Stats endpoints - dashboard view only
         "/api/stats",
+        # System info
         "/api/system/info",
-        "/api/media/status",
-        # Docker endpoints - container management
-        "/api/docker",
-        # Process endpoints - process management
-        "/api/processes",
-        # Screenshot status
-        "/api/screenshot/status",
-        # Threshold config
-        "/api/threshold/config",
         # WoL endpoints
         "/api/wol",
-        # Apps endpoints
-        "/api/apps",
-        # Explicit Auth endpoints (login etc)
-        "/api/auth",
-        # System endpoints
-        "/api/system",
-        # Power endpoints
-        "/api/power",
-        # Media endpoints
-        "/api/media",
-        # Schedule endpoints
-        "/api/schedule",
-        # Settings related (if any exist under generic paths)
-        "/api/settings",
-        # Clipboard endpoint (no encryption needed for simple text)
-        "/api/clipboard"
+        # Screenshot endpoints
+        "/api/screenshot",
+        # Clipboard endpoint (simple text data)
+        "/api/clipboard",
+        # Threshold config (viewing/updating notification thresholds)
+        "/api/threshold/config"
     ]
     
     if request.method == "OPTIONS" or any(request.url.path.startswith(path) for path in excluded_paths):
