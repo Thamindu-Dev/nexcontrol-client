@@ -112,10 +112,10 @@ def load_dpapi_config() -> dict | None:
     try:
         encrypted_data = config_file.read_bytes()
         # Decrypt using DPAPI
-        result = win32crypt.CryptUnprotectData(encrypted_data)
-        # Parse JSON from decrypted bytes
-        decrypted_str = str(result[0], 'utf-8')
-        return json.loads(decrypted_str)
+        # CryptUnprotectData returns (description, data) tuple
+        decrypted = win32crypt.CryptUnprotectData(encrypted_data)
+        # Parse JSON from decrypted bytes (second element)
+        return json.loads(decrypted[1].decode('utf-8'))
     except Exception as e:
         logger = logging.getLogger("nexcontrol")
         logger.warning(f"Failed to load DPAPI config: {e}")
@@ -130,7 +130,7 @@ class Settings:
     VERSION = "1.0.0"
 
     # Security Configuration
-    # Priority: DPAPI (portable) > .env file (legacy) > raise error
+    # Only use DPAPI (portable mode) - NO .env fallback for security
     _dpapi_config = load_dpapi_config()
 
     if _dpapi_config:
@@ -140,33 +140,29 @@ class Settings:
         APP_PASSWORD_HASH = _dpapi_config.get("APP_PASSWORD_HASH", "")
         _config_source = "DPAPI (portable mode)"
     else:
-        # Legacy mode - using .env file
-        SECRET_KEY = os.getenv("SECRET_KEY", "")
-        AES_KEY = os.getenv("AES_KEY", "")
-        APP_PASSWORD_HASH = os.getenv("APP_PASSWORD_HASH", "")
-        _config_source = ".env file (legacy mode)"
-
-        # If .env is also empty, raise error
-        if not SECRET_KEY or not AES_KEY or not APP_PASSWORD_HASH:
-            logger = logging.getLogger("nexcontrol")
-            logger.critical("=" * 60)
-            logger.critical("SECURITY ERROR: No configuration found!")
-            logger.critical("-" * 60)
-            logger.critical("The server requires secure configuration to start.")
-            logger.critical("")
-            logger.critical("Portable mode (recommended):")
-            logger.critical("  Run the setup wizard or execute:")
-            logger.critical("  python -m app.portable_setup")
-            logger.critical("")
-            logger.critical("Legacy mode:")
-            logger.critical("  Run: python setup_env.py")
-            logger.critical("=" * 60)
-            raise RuntimeError(
-                "No secure configuration found. Please run the setup wizard first:\n"
-                "  python -m app.portable_setup\n\n"
-                "Or for legacy mode, run:\n"
-                "  python setup_env.py"
-            )
+        # No config found - require setup wizard
+        logger = logging.getLogger("nexcontrol")
+        logger.critical("=" * 60)
+        logger.critical("SECURITY ERROR: No configuration found!")
+        logger.critical("-" * 60)
+        logger.critical("The server requires secure configuration to start.")
+        logger.critical("")
+        logger.critical("Please run the setup wizard:")
+        logger.critical("  1. Run: NexControl.exe (will launch setup automatically)")
+        logger.critical("  2. Or run: python -m app.portable_setup")
+        logger.critical("")
+        logger.critical("The setup wizard will guide you through:")
+        logger.critical("  - Creating an admin password")
+        logger.critical("  - Generating unique AES keys")
+        logger.critical("  - Exporting the AES key for your mobile app")
+        logger.critical("=" * 60)
+        raise RuntimeError(
+            "No secure configuration found.\n\n"
+            "Please run the setup wizard first:\n"
+            "  1. Double-click NexControl.exe\n"
+            "  2. Or run: python -m app.portable_setup\n\n"
+            "The setup wizard will create a secure configuration with your own password."
+        )
 
     # JWT Configuration - Reduced to 15 minutes for better security
     ACCESS_TOKEN_EXPIRE_MINUTES = 15  # Reduced from 60

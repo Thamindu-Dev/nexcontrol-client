@@ -14,7 +14,10 @@
       "Bash(powershell:*)",
       "Bash(pyinstaller:*)",
       "Bash(./NexControl.exe)",
-      "Bash(echo:*)"
+      "Bash(echo:*)",
+      "Bash(cmd.exe /c \"del \"\"%LOCALAPPDATA%\\\\NexControl\\\\config.dat\"\" 2>nul & echo Config deleted\")",
+      "Bash(ipconfig:*)",
+      "Bash(ls:*)"
     ]
   }
 }

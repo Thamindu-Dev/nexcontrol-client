@@ -104,33 +104,27 @@ def encrypt_config_with_dpapi(data: dict) -> bytes:
     Encrypt configuration data using Windows DPAPI.
     Data is tied to the current user's Windows credentials.
     """
-    # Convert to JSON bytes explicitly
+    # Convert to JSON bytes
     json_str = json.dumps(data, separators=(',', ':'))
     json_data = bytes(json_str, 'utf-8')
 
     # Encrypt using DPAPI
-    # CryptProtectData returns (encrypted_bytes, description)
-    result = win32crypt.CryptProtectData(json_data, 'NexControl Config')
+    # CryptProtectData returns bytes directly when called with 2 arguments
+    encrypted = win32crypt.CryptProtectData(json_data, 'NexControl Config')
 
-    # Return just the encrypted bytes
-    return bytes(result[0])
+    return encrypted
 
 
 def decrypt_config_from_dpapi(encrypted_data: bytes) -> dict:
     """
     Decrypt configuration data using Windows DPAPI.
     """
-    # Ensure input is bytes
-    if not isinstance(encrypted_data, bytes):
-        encrypted_data = bytes(encrypted_data)
-
     # Decrypt using DPAPI
-    # CryptUnprotectData returns (decrypted_bytes, description, ...)
-    result = win32crypt.CryptUnprotectData(encrypted_data)
+    # CryptUnprotectData returns (description, data) tuple
+    decrypted = win32crypt.CryptUnprotectData(encrypted_data)
 
-    # Parse JSON from decrypted bytes
-    decrypted_str = str(result[0], 'utf-8')
-    return json.loads(decrypted_str)
+    # Parse JSON from decrypted bytes (second element)
+    return json.loads(decrypted[1].decode('utf-8'))
 
 
 def load_config() -> dict | None:

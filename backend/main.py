@@ -440,4 +440,15 @@ if os.path.exists(frontend_dist):
     app.mount("/", StaticFiles(directory=frontend_dist, html=True), name="static")
 
 if __name__ == "__main__":
-    uvicorn.run("main:app", host="0.0.0.0", port=8000, reload=True)
+    # Detect if running from exe or production mode
+    is_production = (
+        getattr(sys, 'frozen', False) or  # Running as PyInstaller bundle
+        os.getenv('ENVIRONMENT', 'production') == 'production'
+    )
+
+    if is_production:
+        # In production/exe mode, pass app directly and disable reload
+        uvicorn.run(app, host="0.0.0.0", port=8000)
+    else:
+        # In development mode, use reload
+        uvicorn.run("main:app", host="0.0.0.0", port=8000, reload=True)

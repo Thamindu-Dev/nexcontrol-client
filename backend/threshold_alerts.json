@@ -324,6 +324,24 @@
     "unit": "%"
   },
   {
+    "id": "ce587877-3793-4f8e-8c86-b0d8ef0bee87",
+    "metric_type": "memory",
+    "threshold": 15,
+    "value": 72.8,
+    "triggered_at": "2026-02-11T23:35:20.681094",
+    "acknowledged": false,
+    "unit": "%"
+  },
+  {
+    "id": "73a81fee-76af-4dfa-af26-3a8ed14b329b",
+    "metric_type": "disk",
+    "threshold": 15,
+    "value": 31.7,
+    "triggered_at": "2026-02-11T23:35:20.682665",
+    "acknowledged": false,
+    "unit": "%"
+  },
+  {
     "id": "3fe51c3d-23b2-4b86-bbce-90b5b876c7b4",
     "metric_type": "cpu",
     "threshold": 15,
