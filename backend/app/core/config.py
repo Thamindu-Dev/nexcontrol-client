@@ -95,7 +95,7 @@ class Settings:
     AES_NONCE_LENGTH = 12
 
     # App Password Configuration
-    DEFAULT_APP_PASSWORD = "admin123" # CHANGE IN PRODUCTION!
+    # SECURITY: No default password - must be set via setup_env.py
     APP_PASSWORD_HASH = os.getenv("APP_PASSWORD_HASH")
 
     # Rate Limiting

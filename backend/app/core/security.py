@@ -42,8 +42,12 @@ if settings.APP_PASSWORD_HASH:
     app_password_hash = settings.APP_PASSWORD_HASH
     logger.info("Using custom password hash from environment")
 else:
-    app_password_hash = pwd_context.hash(settings.DEFAULT_APP_PASSWORD)
-    logger.info(f"Generated hash for default password")
+    logger.critical("SECURITY ERROR: APP_PASSWORD_HASH not set in .env file!")
+    logger.critical("Run 'python setup_env.py' to set up secure credentials.")
+    raise RuntimeError(
+        "No password configured. Run 'python setup_env.py' from the project root "
+        "to set up secure credentials before starting the server."
+    )
 
 def get_secret_key_bytes() -> bytes:
     """Ensure SECRET_KEY is valid bytes"""
