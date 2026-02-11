@@ -83,18 +83,78 @@ app = FastAPI(
     # Disable docs in production if desired, but keep for now
 )
 
-# CORS Configuration - Use specific origins for security
-allowed_origins = settings.ALLOWED_ORIGINS if settings.ALLOWED_ORIGINS != ["*"] else ["http://localhost:9000", "http://localhost:8080", "http://127.0.0.1:9000", "http://127.0.0.1:8080"]
+# CORS Configuration - Secure but flexible for local network
+# If ALLOWED_ORIGINS is set in .env, use it. Otherwise, allow localhost and local network
+if settings.ALLOWED_ORIGINS == ["*"]:
+    # For local network use: allow localhost and common local IP ranges
+    allowed_origins = [
+        "http://localhost:9000",
+        "http://localhost:8080",
+        "http://127.0.0.1:9000",
+        "http://127.0.0.1:8080",
+        "capacitor://localhost",  # For mobile apps
+        "http://localhost",  # Development servers
+        "http://ionic.local",  # Ionic dev server
+    ]
+    # Also allow any local network IP (192.168.x.x, 10.x.x.x, 172.16-31.x.x)
+    # This is detected dynamically at runtime from requests
+else:
+    allowed_origins = settings.ALLOWED_ORIGINS
 
-app.add_middleware(
-    CORSMiddleware,
-    allow_origins=allowed_origins,  # Specific origins only, no wildcard
-    allow_credentials=True,
-    allow_methods=["GET", "POST", "PUT", "DELETE", "PATCH"],  # Explicit methods
-    allow_headers=["Authorization", "Content-Type", "X-Requested-With"],  # Explicit headers
-    expose_headers=["Content-Type", "Authorization"],
-    max_age=3600,  # Cache preflight for 1 hour
-)
+def is_local_network(origin: str) -> bool:
+    """Check if origin is from local network"""
+    if not origin:
+        return False
+    # Allow localhost variants
+    if origin in allowed_origins:
+        return True
+    # Allow local network IPs
+    for prefix in ["http://192.168.", "http://10.", "http://172.16.", "http://172.17.", "http://172.18.", "http://172.19.",
+                    "http://172.20.", "http://172.21.", "http://172.22.", "http://172.23.", "http://172.24.",
+                    "http://172.25.", "http://172.26.", "http://172.27.", "http://172.28.", "http://172.29.",
+                    "http://172.30.", "http://172.31.", "https://192.168.", "https://10.", "capacitor://"]:
+        if origin.startswith(prefix):
+            return True
+    return False
+
+# Custom CORS middleware that handles dynamic local network origins
+@app.middleware("http")
+async def cors_middleware(request: Request, call_next):
+    origin = request.headers.get("origin")
+    
+    # Check if this is a CORS-eligible request
+    should_add_cors = (
+        not origin or  # No origin (native mobile apps)
+        origin in allowed_origins or  # Explicitly allowed
+        is_local_network(origin)  # Local network
+    )
+    
+    # Handle preflight (OPTIONS) requests
+    if request.method == "OPTIONS":
+        if should_add_cors:
+            response = Response()
+            response.headers["Access-Control-Allow-Origin"] = origin if origin else "*"
+            response.headers["Access-Control-Allow-Credentials"] = "true"
+            response.headers["Access-Control-Allow-Methods"] = "GET, POST, PUT, DELETE, PATCH, OPTIONS"
+            response.headers["Access-Control-Allow-Headers"] = "Authorization, Content-Type, X-Requested-With"
+            response.headers["Access-Control-Max-Age"] = "3600"
+            return response
+        else:
+            # Not allowed, let it fail
+            return Response(status_code=403)
+    
+    # For non-OPTIONS requests, proceed normally
+    response = await call_next(request)
+
+    # Add CORS headers for actual requests
+    if should_add_cors:
+        response.headers["Access-Control-Allow-Origin"] = origin if origin else "*"
+        response.headers["Access-Control-Allow-Credentials"] = "true"
+        response.headers["Access-Control-Allow-Methods"] = "GET, POST, PUT, DELETE, PATCH, OPTIONS"
+        response.headers["Access-Control-Allow-Headers"] = "Authorization, Content-Type, X-Requested-With"
+        response.headers["Access-Control-Expose-Headers"] = "Content-Type, Authorization"
+
+    return response
 
 # Security Headers Middleware
 @app.middleware("http")
@@ -294,7 +354,7 @@ async def http_exception_handler(request: Request, exc: HTTPException):
 
 # Static Files (Frontend)
 # Serve static files from frontend/dist if exists
-frontend_dist = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "frontend", "dist")
+frontend_dist = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "frontend", "dist", "spa")
 if os.path.exists(frontend_dist):
     app.mount("/", StaticFiles(directory=frontend_dist, html=True), name="static")
 

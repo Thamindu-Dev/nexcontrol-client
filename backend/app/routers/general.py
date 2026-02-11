@@ -6,9 +6,9 @@ from datetime import datetime
 
 router = APIRouter(tags=["General"])
 
-@router.get("/")
+@router.get("/api/info/root")
 async def root():
-    """Root endpoint"""
+    """Root endpoint (moved from / to allow static files)"""
     return {"message": "NexControl API is running", "timestamp": datetime.now().isoformat()}
 
 @router.get("/api/health")

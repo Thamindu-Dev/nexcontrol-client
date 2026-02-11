@@ -189,6 +189,141 @@
     "unit": "%"
   },
   {
+    "id": "9751b69b-99b4-49b1-8fe3-d7ae91662fb7",
+    "metric_type": "cpu",
+    "threshold": 15,
+    "value": 25.7,
+    "triggered_at": "2026-02-11T01:06:23.111670",
+    "acknowledged": false,
+    "unit": "%"
+  },
+  {
+    "id": "588f82a2-897b-4819-a80a-0ff07dbbcf3f",
+    "metric_type": "memory",
+    "threshold": 15,
+    "value": 93.6,
+    "triggered_at": "2026-02-11T01:06:23.130630",
+    "acknowledged": false,
+    "unit": "%"
+  },
+  {
+    "id": "8e0c3a4c-1eac-4ba4-88b5-b2b6e4e3a503",
+    "metric_type": "disk",
+    "threshold": 15,
+    "value": 32.0,
+    "triggered_at": "2026-02-11T01:06:23.132606",
+    "acknowledged": false,
+    "unit": "%"
+  },
+  {
+    "id": "34ed8933-95cb-41db-912a-fffca5519541",
+    "metric_type": "cpu",
+    "threshold": 15,
+    "value": 38.9,
+    "triggered_at": "2026-02-11T01:16:45.466885",
+    "acknowledged": false,
+    "unit": "%"
+  },
+  {
+    "id": "38d57658-3b1e-4fb5-bafc-67a99647a259",
+    "metric_type": "memory",
+    "threshold": 15,
+    "value": 94.3,
+    "triggered_at": "2026-02-11T01:16:45.479120",
+    "acknowledged": false,
+    "unit": "%"
+  },
+  {
+    "id": "16c45f11-1436-4e75-9b5e-0bfcba9c8186",
+    "metric_type": "disk",
+    "threshold": 15,
+    "value": 32.0,
+    "triggered_at": "2026-02-11T01:16:45.480801",
+    "acknowledged": false,
+    "unit": "%"
+  },
+  {
+    "id": "2eb60a2e-69a1-4c22-b772-df42d13a3087",
+    "metric_type": "memory",
+    "threshold": 15,
+    "value": 87.8,
+    "triggered_at": "2026-02-11T01:42:16.366153",
+    "acknowledged": false,
+    "unit": "%"
+  },
+  {
+    "id": "13056974-2a34-494c-bbc3-da14b22aa1d1",
+    "metric_type": "disk",
+    "threshold": 15,
+    "value": 31.3,
+    "triggered_at": "2026-02-11T01:42:16.367527",
+    "acknowledged": false,
+    "unit": "%"
+  },
+  {
+    "id": "5de7c88f-21ae-46e3-ac23-35d25fd0202a",
+    "metric_type": "cpu",
+    "threshold": 15,
+    "value": 18.8,
+    "triggered_at": "2026-02-11T01:43:39.279718",
+    "acknowledged": false,
+    "unit": "%"
+  },
+  {
+    "id": "beb4ee81-b65e-476b-84c9-fe91285548d6",
+    "metric_type": "cpu",
+    "threshold": 15,
+    "value": 27.3,
+    "triggered_at": "2026-02-11T02:13:31.296260",
+    "acknowledged": false,
+    "unit": "%"
+  },
+  {
+    "id": "c9a0ec1c-2112-4f65-8fe4-7381f0badb68",
+    "metric_type": "memory",
+    "threshold": 15,
+    "value": 91.7,
+    "triggered_at": "2026-02-11T02:13:31.297692",
+    "acknowledged": false,
+    "unit": "%"
+  },
+  {
+    "id": "e482ce5b-2fc5-4974-8327-ab12b2de69f2",
+    "metric_type": "disk",
+    "threshold": 15,
+    "value": 31.2,
+    "triggered_at": "2026-02-11T02:13:31.298827",
+    "acknowledged": false,
+    "unit": "%"
+  },
+  {
+    "id": "ad44c2a4-0317-4aab-9ca9-7aa77914f3ef",
+    "metric_type": "cpu",
+    "threshold": 15,
+    "value": 25.3,
+    "triggered_at": "2026-02-11T02:38:19.138630",
+    "acknowledged": false,
+    "unit": "%"
+  },
+  {
+    "id": "3ebbecc8-4c35-4df5-b59f-a810bddd997e",
+    "metric_type": "memory",
+    "threshold": 15,
+    "value": 94.9,
+    "triggered_at": "2026-02-11T02:38:19.140715",
+    "acknowledged": false,
+    "unit": "%"
+  },
+  {
+    "id": "3f8f83e0-dc05-4bb4-9aee-9d0adec4c254",
+    "metric_type": "disk",
+    "threshold": 15,
+    "value": 30.9,
+    "triggered_at": "2026-02-11T02:38:19.142540",
+    "acknowledged": false,
+    "unit": "%"
+  },
+  {
     "id": "3fe51c3d-23b2-4b86-bbce-90b5b876c7b4",
     "metric_type": "cpu",
     "threshold": 15,

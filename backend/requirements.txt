@@ -44,6 +44,7 @@ gputil>=1.4.0
 # GUI Support
 customtkinter>=5.2.2
 packaging>=23.2
+pystray>=0.19.5
 
 # Development (Optional - remove in production)
 pyinstaller>=6.3.0

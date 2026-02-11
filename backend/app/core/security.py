@@ -22,6 +22,9 @@ oauth2_scheme = OAuth2PasswordBearer(tokenUrl="auth/token")
 # Rate limiting storage
 login_attempts: Dict[str, list] = {}  # IP -> list of timestamps
 
+# Power action rate limiting storage (new)
+power_action_timestamps: Dict[str, list] = {}  # IP -> list of timestamps
+
 
 # Password hashing context
 pwd_context = CryptContext(
@@ -70,13 +73,30 @@ class SecurityManager:
 
     @staticmethod
     def verify_password(plain_password: str, hashed_password: str = None) -> bool:
-        """Verify a password. If no hash provided, uses the global app password hash."""
+        """
+        Verify a password with constant-time comparison to prevent timing attacks.
+        If no hash provided, uses the global app password hash.
+        """
         if hashed_password is None:
             hashed_password = app_password_hash
+
+        start_time = time.time()
+        result = False
+
         try:
-            return pwd_context.verify(plain_password, hashed_password)
+            result = pwd_context.verify(plain_password, hashed_password)
         except Exception:
-            return False
+            result = False
+
+        # Constant-time delay to prevent timing attacks
+        # argon2 already has constant-time properties, but we add
+        # additional delay to further obfuscate the verification time
+        elapsed = time.time() - start_time
+        min_verification_time = 0.05  # 50ms minimum
+        if elapsed < min_verification_time:
+            time.sleep(min_verification_time - elapsed)
+
+        return result
 
     @staticmethod
     def create_access_token(data: dict, expires_delta: Optional[timedelta] = None) -> str:
@@ -353,3 +373,49 @@ class SecurityManager:
             if ip not in login_attempts:
                 login_attempts[ip] = []
             login_attempts[ip].append(now)
+
+    @staticmethod
+    def check_power_action_rate_limit(ip: str) -> tuple[bool, int]:
+        """
+        Check if IP has exceeded power action rate limit.
+        Returns (allowed, remaining_requests)
+        """
+        now = time.time()
+        window_start = now - settings.POWER_ACTION_WINDOW_SECONDS
+
+        # Clean up old timestamps for this IP
+        if ip in power_action_timestamps:
+            power_action_timestamps[ip] = [
+                t for t in power_action_timestamps[ip]
+                if t > window_start
+            ]
+
+        # Get current count
+        attempts = power_action_timestamps.get(ip, [])
+        count = len(attempts)
+
+        if count >= settings.POWER_ACTION_LIMIT_PER_MINUTE:
+            remaining = 0
+            return False, remaining
+
+        remaining = settings.POWER_ACTION_LIMIT_PER_MINUTE - count
+        return True, remaining
+
+    @staticmethod
+    def record_power_action(ip: str):
+        """Record a power action for rate limiting"""
+        now = time.time()
+        if ip not in power_action_timestamps:
+            power_action_timestamps[ip] = []
+        power_action_timestamps[ip].append(now)
+
+    @staticmethod
+    def cleanup_old_power_action_attempts():
+        """Clean up old power action timestamps to prevent memory leak"""
+        now = time.time()
+        cutoff = now - (settings.POWER_ACTION_WINDOW_SECONDS * 2)
+
+        for ip in list(power_action_timestamps.keys()):
+            # Remove IPs with only old timestamps
+            if not power_action_timestamps[ip] or max(power_action_timestamps[ip]) < cutoff:
+                del power_action_timestamps[ip]

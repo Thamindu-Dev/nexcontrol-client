@@ -112,6 +112,7 @@ cython_debug/
 *.log
 nexcontrol.log
 logs/
+security_audit.log
 
 # IDE
 .vscode/
@@ -123,3 +124,23 @@ logs/
 # OS
 .DS_Store
 Thumbs.db
+
+# Runtime data files (generated at runtime)
+*_devices.json
+*_alerts.json
+*_config.json
+*.json.bak
+
+# PyInstaller build outputs
+/NexControlServer*
+/*.spec
+/build/
+/dist/
+
+# Security files (NEVER commit these)
+AES_KEYS.txt
+SECRET_KEYS.txt
+*.key
+*.pem
+*.crt
+*.cer

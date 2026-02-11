@@ -5,7 +5,7 @@
 # IDE & Editor
 .vscode/
 .idea/
-# .claude/
+.claude/
 *.swp
 *.swo
 *~
@@ -18,15 +18,19 @@
 .Trashes
 ehthumbs.db
 Thumbs.db
+desktop.ini
 
 # Logs
 *.log
 logs/
+nexcontrol.log
 
-# Environment files (keep .env.example)
+# Environment files (KEEP .env.example)
 .env
 .env.local
 .env.*.local
+*.key
+*.pem
 
 # Python
 __pycache__/
@@ -37,6 +41,31 @@ __pycache__/
 venv/
 env/
 ENV/
+*.egg-info/
+.eggs/
+dist/
+build/
+*.egg
+.pytest_cache/
+.coverage
+htmlcov/
+
+# PyInstaller
+*.spec
+*.spec.*
+build/
+dist/
+*.manifest
+
+# Backend specific
+backend/*.log
+backend/*.db
+backend/*.json.bak
+backend/wol_devices.json
+backend/scheduled_tasks.json
+backend/threshold_alerts.json
+backend/threshold_config.json
+backend/security_audit.log
 
 # Node modules (handled by frontend .gitignore)
 node_modules/
@@ -45,6 +74,31 @@ node_modules/
 tmp/
 temp/
 *.tmp
+*.bak
+*.cache
 
+# Security - NEVER commit these
+backend/.env
+backend/AES_KEYS.txt
+backend/SECRET_KEYS.txt
+*.key
+*.pem
+*.crt
+*.cer
 
+# Build artifacts
+frontend/dist/
+frontend/build/
+frontend/.quasar/
+frontend/node_modules/
+
+# Mobile build
 android-build.yaml
+mobile/*.apk
+mobile/*.aab
+
+# IDE specific
+.vscode/
+.idea/
+*.sublime-project
+*.sublime-workspace

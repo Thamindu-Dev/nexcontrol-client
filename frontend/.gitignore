@@ -30,6 +30,11 @@ node_modules/
 /src-capacitor/node_modules/
 /src-capacitor/android/
 /src-capacitor/ios/
+/android/
+/ios/
+*.apk
+*.aab
+.ipa
 
 # Log files (npm, yarn, etc)
 npm-debug.log*
@@ -70,6 +75,7 @@ build/
 *.tmp
 tmp/
 temp/
+*.bak
 
 # Local data
 .cache/
@@ -77,4 +83,13 @@ temp/
 
 # Misc
 *.pem
+*.key
+*.crt
 server.js
+
+# Local storage data (if any)
+nexcontrol_*
+
+# Docker
+docker-compose.yml
+dockerfile
