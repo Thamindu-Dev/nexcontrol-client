@@ -45,6 +45,7 @@ gputil>=1.4.0
 customtkinter>=5.2.2
 packaging>=23.2
 pystray>=0.19.5
+qrcode[pil]>=7.4.2  # QR code generation for mobile app setup
 
 # Development (Optional - remove in production)
 pyinstaller>=6.3.0

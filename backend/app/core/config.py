@@ -3,10 +3,22 @@ import sys
 import logging
 import platform
 import re
+import json
+from pathlib import Path
 from dotenv import load_dotenv
 
-# Load key-value pairs from .env file
+# Load key-value pairs from .env file (legacy mode)
 load_dotenv()
+
+# Try to import DPAPI for portable mode
+DPAPI_AVAILABLE = False
+if platform.system() == "Windows":
+    try:
+        import win32crypt
+        DPAPI_AVAILABLE = True
+    except ImportError:
+        logger = logging.getLogger("nexcontrol")
+        logger.warning("pywin32 not installed - DPAPI mode unavailable. Install with: pip install pywin32")
 
 # ============================================================
 # LOGGING CONFIGURATION
@@ -74,6 +86,42 @@ def validate_aes_key(key: str) -> bool:
 
     return True
 
+
+# ============================================================
+# PORTABLE MODE (DPAPI) CONFIG LOADING
+# ============================================================
+def load_dpapi_config() -> dict | None:
+    """
+    Load configuration from Windows AppData (DPAPI encrypted).
+    Used for portable mode - keys are unique per installation.
+    """
+    if not DPAPI_AVAILABLE:
+        return None
+
+    try:
+        import win32crypt
+    except ImportError:
+        return None
+
+    config_dir = Path(os.getenv('LOCALAPPDATA', '~')) / 'NexControl'
+    config_file = config_dir / 'config.dat'
+
+    if not config_file.exists():
+        return None
+
+    try:
+        encrypted_data = config_file.read_bytes()
+        # Decrypt using DPAPI
+        result = win32crypt.CryptUnprotectData(encrypted_data)
+        # Parse JSON from decrypted bytes
+        decrypted_str = str(result[0], 'utf-8')
+        return json.loads(decrypted_str)
+    except Exception as e:
+        logger = logging.getLogger("nexcontrol")
+        logger.warning(f"Failed to load DPAPI config: {e}")
+        return None
+
+
 # ============================================================
 # APP CONFIGURATION
 # ============================================================
@@ -82,8 +130,43 @@ class Settings:
     VERSION = "1.0.0"
 
     # Security Configuration
-    SECRET_KEY = os.getenv("SECRET_KEY", "NexControl-Secret-Key-Change-Me-12345678")
-    AES_KEY = os.getenv("AES_KEY", "NexControl-AES-Key-32-Bytes-Change!!")
+    # Priority: DPAPI (portable) > .env file (legacy) > raise error
+    _dpapi_config = load_dpapi_config()
+
+    if _dpapi_config:
+        # Portable mode - using DPAPI encrypted config
+        SECRET_KEY = _dpapi_config.get("SECRET_KEY", "")
+        AES_KEY = _dpapi_config.get("AES_KEY", "")
+        APP_PASSWORD_HASH = _dpapi_config.get("APP_PASSWORD_HASH", "")
+        _config_source = "DPAPI (portable mode)"
+    else:
+        # Legacy mode - using .env file
+        SECRET_KEY = os.getenv("SECRET_KEY", "")
+        AES_KEY = os.getenv("AES_KEY", "")
+        APP_PASSWORD_HASH = os.getenv("APP_PASSWORD_HASH", "")
+        _config_source = ".env file (legacy mode)"
+
+        # If .env is also empty, raise error
+        if not SECRET_KEY or not AES_KEY or not APP_PASSWORD_HASH:
+            logger = logging.getLogger("nexcontrol")
+            logger.critical("=" * 60)
+            logger.critical("SECURITY ERROR: No configuration found!")
+            logger.critical("-" * 60)
+            logger.critical("The server requires secure configuration to start.")
+            logger.critical("")
+            logger.critical("Portable mode (recommended):")
+            logger.critical("  Run the setup wizard or execute:")
+            logger.critical("  python -m app.portable_setup")
+            logger.critical("")
+            logger.critical("Legacy mode:")
+            logger.critical("  Run: python setup_env.py")
+            logger.critical("=" * 60)
+            raise RuntimeError(
+                "No secure configuration found. Please run the setup wizard first:\n"
+                "  python -m app.portable_setup\n\n"
+                "Or for legacy mode, run:\n"
+                "  python setup_env.py"
+            )
 
     # JWT Configuration - Reduced to 15 minutes for better security
     ACCESS_TOKEN_EXPIRE_MINUTES = 15  # Reduced from 60
@@ -95,8 +178,7 @@ class Settings:
     AES_NONCE_LENGTH = 12
 
     # App Password Configuration
-    # SECURITY: No default password - must be set via setup_env.py
-    APP_PASSWORD_HASH = os.getenv("APP_PASSWORD_HASH")
+    # Loaded from DPAPI or .env above - no defaults
 
     # Rate Limiting
     MAX_LOGIN_ATTEMPTS = 5
@@ -130,6 +212,7 @@ if not validate_aes_key(settings.AES_KEY):
 # Log security configuration on startup
 security_logger.info("=" * 60)
 security_logger.info(f"NexControl Server v{settings.VERSION} starting")
+security_logger.info(f"Config Source: {settings._config_source}")
 security_logger.info(f"Environment: {settings.ENVIRONMENT}")
 security_logger.info(f"Token Expiry: {settings.ACCESS_TOKEN_EXPIRE_MINUTES} minutes")
 security_logger.info(f"Timestamp Tolerance: {settings.TIMESTAMP_TOLERANCE} seconds")

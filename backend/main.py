@@ -2,6 +2,87 @@
 import asyncio
 import logging
 import os
+import sys
+import platform
+from pathlib import Path
+
+# Fix console encoding for Windows (handles emojis)
+if platform.system() == "Windows":
+    try:
+        sys.stdout.reconfigure(encoding='utf-8')
+        sys.stderr.reconfigure(encoding='utf-8')
+    except:
+        pass
+
+# ============================================================
+# FIRST-RUN CHECK (Must be before config import!)
+# ============================================================
+def safe_print(*args, **kwargs):
+    """Print function that handles encoding errors gracefully."""
+    try:
+        print(*args, **kwargs)
+    except UnicodeEncodeError:
+        # Fallback to ASCII-only output
+        ascii_args = []
+        for arg in args:
+            if isinstance(arg, str):
+                # Remove emojis and unicode symbols
+                ascii_args.append(arg.encode('ascii', 'ignore').decode('ascii'))
+            else:
+                ascii_args.append(arg)
+        print(*ascii_args, **kwargs)
+
+def check_first_run_and_launch_setup():
+    """
+    Check if this is the first run (no config exists).
+    If so, launch the setup wizard before starting the server.
+    """
+    # Check if we should skip setup (for CI/CD, docker, etc.)
+    if os.getenv("NEXCONTROL_SKIP_SETUP"):
+        return False
+
+    # Only works on Windows for DPAPI mode
+    if platform.system() != "Windows":
+        return False
+
+    try:
+        import win32crypt
+        import json
+    except ImportError:
+        # DPAPI not available, skip setup check
+        return False
+
+    # Check for DPAPI config
+    config_dir = Path(os.getenv('LOCALAPPDATA', '~')) / 'NexControl'
+    config_file = config_dir / 'config.dat'
+
+    # If config exists, not first run
+    if config_file.exists():
+        return False
+
+    # First run - launch setup wizard
+    safe_print("\n" + "=" * 60)
+    safe_print("[*] NexControl First-Run Setup")
+    safe_print("=" * 60)
+    safe_print("\nNo configuration found. Launching setup wizard...\n")
+
+    try:
+        from app.portable_setup import run_setup_wizard
+        run_setup_wizard(on_complete_callback=lambda: None)
+        safe_print("\n[+] Setup complete! Starting server...\n")
+        return True
+    except Exception as e:
+        import traceback
+        safe_print(f"\n[!] Setup wizard failed: {e}")
+        safe_print(f"\n[!] Traceback:\n{traceback.format_exc()}")
+        safe_print("\nPlease run setup manually:")
+        safe_print("  python -m app.portable_setup")
+        sys.exit(1)
+
+
+# Run first-run check before importing config (which will fail if no config)
+setup_completed = check_first_run_and_launch_setup()
+
 import uvicorn
 from contextlib import asynccontextmanager
 from typing import Callable
@@ -12,7 +93,7 @@ from fastapi.responses import JSONResponse, FileResponse
 from fastapi.staticfiles import StaticFiles
 from starlette.middleware.base import BaseHTTPMiddleware
 
-# Import Core
+# Import Core (safe now after setup check)
 from app.core.config import settings, logger
 from app.core.security import SecurityManager
 

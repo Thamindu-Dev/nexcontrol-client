@@ -11,7 +11,10 @@
       "Bash(timeout:*)",
       "Bash(cmd:*)",
       "Bash(tasklist:*)",
-      "Bash(powershell:*)"
+      "Bash(powershell:*)",
+      "Bash(pyinstaller:*)",
+      "Bash(./NexControl.exe)",
+      "Bash(echo:*)"
     ]
   }
 }

@@ -38,15 +38,19 @@ pwd_context = CryptContext(
 )
 
 # Initialize password hash
+# Note: config.py will raise error if no config is found
 if settings.APP_PASSWORD_HASH:
     app_password_hash = settings.APP_PASSWORD_HASH
-    logger.info("Using custom password hash from environment")
+    config_source = getattr(settings, '_config_source', 'unknown')
+    logger.info(f"Using password hash from {config_source}")
 else:
-    logger.critical("SECURITY ERROR: APP_PASSWORD_HASH not set in .env file!")
-    logger.critical("Run 'python setup_env.py' to set up secure credentials.")
+    # This should not be reached due to config.py validation
+    logger.critical("SECURITY ERROR: APP_PASSWORD_HASH not set!")
     raise RuntimeError(
-        "No password configured. Run 'python setup_env.py' from the project root "
-        "to set up secure credentials before starting the server."
+        "No password configured. Please run the setup wizard:\n"
+        "  python -m app.portable_setup\n\n"
+        "Or for legacy mode:\n"
+        "  python setup_env.py"
     )
 
 def get_secret_key_bytes() -> bytes:
