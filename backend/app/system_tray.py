@@ -150,6 +150,7 @@ class SystemTrayManager:
             pystray.Menu.SEPARATOR,
             pystray.MenuItem("Open Web Interface", self.open_web_interface),
             pystray.MenuItem("Show Encryption Key", self.show_encryption_key),
+            pystray.MenuItem("Check for Updates", self.check_for_updates),
             pystray.Menu.SEPARATOR,
             pystray.MenuItem("Stop Server", self.stop_server),
             pystray.MenuItem("Exit", self.exit_application),
@@ -420,6 +421,54 @@ class SystemTrayManager:
             print("NexControl Encryption Key:")
             print(f"{aes_key}")
             print(f"{'=' * 50}\n")
+
+    def check_for_updates(self):
+        """Check for application updates (menu callback)."""
+        try:
+            import requests
+            
+            # Call local API
+            response = requests.get("http://localhost:8000/api/update/check", timeout=10)
+            
+            if response.status_code == 200:
+                data = response.json()
+                
+                current = data.get("current_version", "Unknown")
+                latest = data.get("latest_version", "Unknown")
+                available = data.get("update_available", False)
+                download_url = data.get("download_url", "")
+                
+                if available:
+                    msg = (
+                        f"🆕 Update Available!\n\n"
+                        f"Current Version: v{current}\n"
+                        f"Latest Version: v{latest}\n\n"
+                        f"Download from GitHub:\n{download_url}\n\n"
+                        f"Release Notes:\n{data.get('release_notes', 'N/A')[:200]}..."
+                    )
+                    title = "NexControl - Update Available"
+                else:
+                    msg = f"✅ You're up to date!\n\nCurrent Version: v{current}"
+                    title = "NexControl - No Updates"
+                
+                # Show message box
+                try:
+                    import win32gui
+                    win32gui.MessageBoxW(0, msg, title, 0)
+                except:
+                    print(f"\n{'=' * 50}")
+                    print(msg)
+                    print(f"{'=' * 50}\n")
+            else:
+                raise Exception(f"API returned status {response.status_code}")
+                
+        except Exception as e:
+            error_msg = f"Failed to check for updates:\n{str(e)}\n\nPlease check your internet connection."
+            try:
+                import win32gui
+                win32gui.MessageBoxW(0, error_msg, "NexControl - Update Check Failed", 0)
+            except:
+                print(f"\n[!] {error_msg}\n")
 
     def exit_application(self):
         """Exit the application (menu callback)."""

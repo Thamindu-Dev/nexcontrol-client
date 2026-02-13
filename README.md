@@ -99,6 +99,7 @@
 - ✅ Remote screenshot capture
 - ✅ Wake-on-LAN (WoL) with device management
 - ✅ Threshold notifications (CPU/Memory/Disk alerts)
+- ✅ Automatic update checking from GitHub releases
 - ✅ Biometric authentication (TouchID/FaceID) framework
 - ✅ OLED dark mode (cyan/red/orange accents)
 - ✅ App launcher with predefined/custom applications
@@ -153,13 +154,19 @@
 | **No .env Files** | Config stored securely in AppData |
 
 **System Tray Options:**
-- Minimize to Tray - Hide console while server runs in background
-- Show/Hide Console - Toggle console window
+- Auto-Hide on Minimize - Automatically hides to tray when minimizing (no taskbar icon)
+- Show/Hide Console - Toggle console window visibility
 - Server Status - View running state
 - Open Web Interface - Quick browser launch
-- Show Encryption Key - Display AES key
+- Show Encryption Key - Display AES key (copied to clipboard)
+- Check for Updates - Check GitHub for new releases
 - Stop Server - Stop without closing tray
 - Exit - Clean shutdown
+
+**Update Checking:**
+- Automatically checks for updates every 24 hours from GitHub
+- Manual check via system tray "Check for Updates" option
+- Displays version info, release notes, and download link
 
 ### Option 2: Development Mode
 

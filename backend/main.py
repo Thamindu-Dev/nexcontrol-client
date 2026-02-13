@@ -100,6 +100,7 @@ from app.core.security import SecurityManager
 
 # Import Services (for lifespan management)
 from app.services.system_monitor import SystemMonitor
+from app.services.update_checker import UpdateChecker
 # Import Singletons from Routers
 from app.routers.schedule import scheduler_manager
 from app.routers.threshold import notification_manager
@@ -109,7 +110,7 @@ from app.routers.websockets import stats_manager
 from app.routers import (
     auth, system, power, media, apps, processes, docker,
     screenshot, wol, clipboard, schedule, threshold,
-    general, websockets
+    general, websockets, update
 )
 
 # Background Tasks
@@ -133,16 +134,24 @@ async def lifespan(app: FastAPI):
     # Startup
     logger.info("Starting up NexControl Backend...")
     
+    # Initialize Update Checker
+    update_checker_service = UpdateChecker(
+        current_version=settings.VERSION,
+        github_repo="Thamindu-Dev/nexcontrol-client",
+        check_interval_hours=24  # Check for updates every 24 hours
+    )
+    
+    # Set update checker in router
+    update.set_update_checker(update_checker_service)
+    
+    # Start Update Checker
+    await update_checker_service.start()
+    
     # Start Scheduler
     await scheduler_manager.start_scheduler()
     
-    # Start Threshold Monitor (pass stats_manager for alerts)
-    # notification_manager.start_monitor needs websocket_manager argument if we implemented it that way
-    # Let's check implementation. created earlier.
-    # It accepts websocket_manager. Pass stats_manager or a dedicated alert manager?
-    # Using stats_manager for now as it handles broadcasting general messages if structure allows.
-    await notification_manager.start_monitor(websocket_manager=stats_manager) # Broadcasting alerts to stats channel subscribers? Or media? 
-    # Probably fine for now. Frontend listens on stats usually.
+    # Start Threshold Monitor
+    await notification_manager.start_monitor(websocket_manager=stats_manager)
     
     # Start Stats Broadcast
     stats_task = asyncio.create_task(broadcast_system_stats())
@@ -154,6 +163,7 @@ async def lifespan(app: FastAPI):
     stats_task.cancel()
     await scheduler_manager.stop_scheduler()
     await notification_manager.stop_monitor()
+    await update_checker_service.stop()
     logger.info("Shutdown complete.")
 
 
@@ -285,7 +295,10 @@ async def encryption_middleware(request: Request, call_next):
         "/api/threshold/alerts",
         # Apps launcher (launching apps is low-risk operation)
         "/api/apps",
-        "/api/launch"
+        "/api/launch",
+        # Update endpoints (public info)
+        "/api/update/check",
+        "/api/update/status"
     ]
     
     if request.method == "OPTIONS" or any(request.url.path.startswith(path) for path in excluded_paths):
@@ -396,6 +409,7 @@ app.include_router(wol.router, prefix="/api")
 app.include_router(clipboard.router, prefix="/api")
 app.include_router(schedule.router, prefix="/api")
 app.include_router(threshold.router, prefix="/api")
+app.include_router(update.router, prefix="/api")
 app.include_router(websockets.router) # Websockets usually at root /ws or similar. Check router.
 app.include_router(general.router) # General handles root and /api/test
 
