@@ -17,7 +17,7 @@ security = HTTPBearer()
 @router.get("")
 async def list_processes(
     limit: int = Query(default=30, ge=1, le=100),
-    sort_by: str = Query(default="cpu", regex="^(cpu|memory)$")
+    sort_by: str = Query(default="cpu", pattern="^(cpu|memory)$")
 ):
     """List running processes sorted by CPU or memory usage"""
     processes = ProcessManager.list_processes(limit, sort_by)

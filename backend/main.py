@@ -4,6 +4,7 @@ import logging
 import os
 import sys
 import platform
+import threading
 from pathlib import Path
 
 # Fix console encoding for Windows (handles emojis)
@@ -439,6 +440,24 @@ frontend_dist = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__f
 if os.path.exists(frontend_dist):
     app.mount("/", StaticFiles(directory=frontend_dist, html=True), name="static")
 
+# ============================================================
+# SYSTEM TRAY SUPPORT (Windows Only, Production Mode)
+# ============================================================
+_system_tray = None
+
+def get_system_tray():
+    """Get or create system tray manager (lazy import)."""
+    global _system_tray
+    if _system_tray is None and platform.system() == "Windows":
+        try:
+            from app.system_tray import SystemTrayManager
+            exe_path = Path(sys.executable).parent / "NexControl.exe"
+            _system_tray = SystemTrayManager(exe_path)
+        except ImportError:
+            logger = logging.getLogger("nexcontrol")
+            logger.warning("System tray feature not available. Install: pip install pystray")
+    return _system_tray
+
 if __name__ == "__main__":
     # Detect if running from exe or production mode
     is_production = (
@@ -447,7 +466,18 @@ if __name__ == "__main__":
     )
 
     if is_production:
-        # In production/exe mode, pass app directly and disable reload
+        # In production/exe mode, start system tray and run server
+        tray = get_system_tray()
+
+        # Start system tray in background
+        if tray:
+            tray.start()
+            safe_print("\n[+] System tray started. Server is running in the background.")
+            safe_print("[] Look for the NexControl icon in your system tray.")
+            safe_print("[*] Use the tray menu to control the server.\n")
+
+        # Run server (blocking)
+        # Note: System tray runs in separate thread
         uvicorn.run(app, host="0.0.0.0", port=8000)
     else:
         # In development mode, use reload

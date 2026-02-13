@@ -76,6 +76,7 @@ temp/
 *.tmp
 *.bak
 *.cache
+RELEASE_NOTES.md
 
 # Security - NEVER commit these
 backend/.env
