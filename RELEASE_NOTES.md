@@ -32,6 +32,15 @@
    - Real-time connection status
    - Biometric authentication support
 
+4. **System Tray Support (Windows)**
+   - Minimize server to system tray
+   - Background operation with hidden console
+   - Quick access menu for common tasks
+   - Show/hide console window
+   - Server status indicator
+   - Quick launch web interface
+   - Encryption key display with clipboard copy
+
 ---
 
 ## Distribution Package
@@ -285,6 +294,10 @@ Forks must:
 - Unique keys per installation
 - QR code export for mobile setup
 - No .env files in portable folder
+- System tray support (Windows)
+- Minimize to tray functionality
+- Background server operation
+- Quick access menu from system tray
 - Removed default password fallback
 
 #### Security Fixes

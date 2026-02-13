@@ -213,6 +213,26 @@ Remove-Item "$env:LOCALAPPDATA\NexControl\config.dat"
 
 ## Advanced Usage
 
+### System Tray Feature (Windows)
+
+NexControl includes a system tray icon that allows you to minimize the server to the background.
+
+**Features:**
+- **Minimize to Tray** - Hide console window while server keeps running
+- **Show/Hide Console** - Toggle console window visibility
+- **Server Status** - View if server is running or stopped
+- **Open Web Interface** - Quick launch browser to http://localhost:8000
+- **Show Encryption Key** - Display your AES key (copied to clipboard)
+- **Stop Server** - Stop the server without closing tray
+- **Exit** - Clean shutdown of server and tray
+
+**Usage:**
+1. Run NexControl.exe
+2. Look for the NexControl icon in your system tray (near the clock)
+3. Right-click the icon to access all options
+4. Use "Minimize to Tray" to hide the console window
+5. Use "Exit" when done to properly shut down
+
 ### Running as Service (Windows)
 
 To run NexControl as a Windows service (auto-start on boot):

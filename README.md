@@ -149,7 +149,17 @@
 | **DPAPI Encryption** | Config tied to Windows user credentials |
 | **Unique Keys** | Each installation generates unique AES/SECRET keys |
 | **QR Code Export** | Scan with mobile app for easy setup |
+| **System Tray** | Minimize to tray, background operation |
 | **No .env Files** | Config stored securely in AppData |
+
+**System Tray Options:**
+- Minimize to Tray - Hide console while server runs in background
+- Show/Hide Console - Toggle console window
+- Server Status - View running state
+- Open Web Interface - Quick browser launch
+- Show Encryption Key - Display AES key
+- Stop Server - Stop without closing tray
+- Exit - Clean shutdown
 
 ### Option 2: Development Mode
 
@@ -287,9 +297,19 @@ pip install pyinstaller
 pyinstaller --onefile --name NexControl \
   --add-data "app;app" \
   --hidden-import passlib \
+  --hidden-import passlib.handlers.argon2 \
   --hidden-import argon2 \
   --hidden-import win32crypt \
   --hidden-import qrcode \
+  --hidden-import pystray \
+  --hidden-import cryptography \
+  --hidden-import jose \
+  --hidden-import customtkinter \
+  --hidden-import PIL \
+  --hidden-import docker \
+  --hidden-import psutil \
+  --hidden-import pyautogui \
+  --noconfirm \
   main.py
 ```
 
