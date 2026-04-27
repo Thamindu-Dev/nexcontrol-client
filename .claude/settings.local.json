@@ -24,7 +24,10 @@
       "mcp__web-reader__webReader",
       "Bash(npm config:*)",
       "Bash(npm audit:*)",
-      "Bash(npx quasar:*)"
+      "Bash(npx quasar:*)",
+      "Bash(rm -rf node_modules package-lock.json)",
+      "Bash(nvm use:*)",
+      "Bash(npm install:*)"
     ]
   }
 }
