@@ -890,14 +890,15 @@ async function executePowerAction(action) {
     switch (action) {
       case 'shutdown':
         endpoint = '/api/system/power/shutdown';
-        payload = { delay_seconds: 0 };
+        payload = { action: 'shutdown', delay_seconds: 0 };
         break;
       case 'hibernate':
         endpoint = '/api/system/power/hibernate';
+        payload = { action: 'hibernate' };
         break;
       case 'restart':
         endpoint = '/api/system/power/restart';
-        payload = { delay_seconds: 0 };
+        payload = { action: 'restart', delay_seconds: 0 };
         break;
       case 'lock':
         endpoint = '/api/system/power/lock';
@@ -911,7 +912,10 @@ async function executePowerAction(action) {
     secureNotify.success($q, result.message || `${action} command sent successfully`);
   } catch (error) {
     console.error('[Dashboard] Power action error:', error);
-    secureNotify.error($q, error.response?.data?.message || error.message || `${action} failed`);
+    const msg = typeof error === 'string' ? error
+      : error?.message ? error.message
+      : `${action} failed`;
+    secureNotify.error($q, msg);
   } finally {
     powerActionLoading.value = false;
   }
