@@ -133,7 +133,10 @@ async def broadcast_system_stats():
 async def lifespan(app: FastAPI):
     # Startup
     logger.info("Starting up NexControl Backend...")
-    
+
+    # Restore rate limit state from disk
+    SecurityManager.restore_rate_limits()
+
     # Initialize Update Checker
     update_checker_service = UpdateChecker(
         current_version=settings.VERSION,
@@ -160,6 +163,7 @@ async def lifespan(app: FastAPI):
     
     # Shutdown
     logger.info("Shutting down...")
+    SecurityManager.persist_rate_limits()
     stats_task.cancel()
     await scheduler_manager.stop_scheduler()
     await notification_manager.stop_monitor()
@@ -273,6 +277,7 @@ async def encryption_middleware(request: Request, call_next):
         "/auth/login", "/api/auth/login",
         "/auth/verify", "/api/auth/verify",
         "/auth/refresh", "/api/auth/refresh",
+        "/auth/logout", "/api/auth/logout",
         # WebSocket
         "/ws/",
         # Health check

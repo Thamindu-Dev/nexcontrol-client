@@ -51,6 +51,14 @@
         <template v-if="isDashboard">
           <!-- Polling/Realtime Toggle (Dashboard only) -->
           <div class="row items-center q-gutter-sm">
+            <!-- WebSocket connection status badge -->
+            <q-badge
+              v-if="systemStore.webSocketEnabled"
+              :color="wsStatusColor"
+              :label="wsStatusLabel"
+              class="ws-status-badge"
+              outline
+            />
             <q-icon name="timer" size="16px" color="grey-6" />
             <span class="text-caption text-grey-6">Polling</span>
             <q-toggle
@@ -528,6 +536,12 @@ a,
 }
 
 /* Status Dot - Neon Cyan when connected */
+.ws-status-badge {
+  font-size: 0.65rem;
+  padding: 2px 8px;
+  letter-spacing: 0.5px;
+}
+
 .status-dot {
   width: 8px;
   height: 8px;
@@ -692,6 +706,25 @@ const pageTitleMap = {
 // Current page info
 const currentPageInfo = computed(() => {
   return pageTitleMap[$route.path] || { title: 'NexControl', icon: 'computer' };
+});
+
+// WebSocket status display
+const wsStatusColor = computed(() => {
+  switch (systemStore.webSocketState) {
+    case 'connected': return 'cyan';
+    case 'connecting': return 'warning';
+    case 'error': return 'negative';
+    default: return 'grey';
+  }
+});
+
+const wsStatusLabel = computed(() => {
+  switch (systemStore.webSocketState) {
+    case 'connected': return 'Live';
+    case 'connecting': return 'Connecting...';
+    case 'error': return 'Error';
+    default: return 'Offline';
+  }
 });
 
 // CRITICAL: Watch route changes to close drawer on navigation

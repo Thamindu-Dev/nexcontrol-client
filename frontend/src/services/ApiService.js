@@ -414,9 +414,17 @@ const api = {
   },
 
   /**
-   * Logout
+   * Logout - blacklist token on server then clear locally
    */
   async logout() {
+    try {
+      const token = await getToken();
+      if (token) {
+        await api.post('/api/auth/logout');
+      }
+    } catch {
+      // Server blacklisting failed, clear token locally anyway
+    }
     await clearToken();
   },
 

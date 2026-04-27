@@ -9,6 +9,7 @@
 *.swp
 *.swo
 *~
+CLAUDE.md
 
 # OS
 .DS_Store
@@ -103,3 +104,4 @@ mobile/*.aab
 .idea/
 *.sublime-project
 *.sublime-workspace
+.claude/settings.local.json

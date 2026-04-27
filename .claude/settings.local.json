@@ -21,7 +21,10 @@
       "mcp__context7__resolve-library-id",
       "mcp__context7__query-docs",
       "mcp__web-search-prime__webSearchPrime",
-      "mcp__web-reader__webReader"
+      "mcp__web-reader__webReader",
+      "Bash(npm config:*)",
+      "Bash(npm audit:*)",
+      "Bash(npx quasar:*)"
     ]
   }
 }

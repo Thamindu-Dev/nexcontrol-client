@@ -7,6 +7,7 @@ import re
 import secrets
 from datetime import datetime, timedelta
 from typing import Optional, Dict
+from pathlib import Path
 
 from cryptography.hazmat.primitives.ciphers.aead import AESGCM
 from jose import jwt, exceptions as jose_exceptions
@@ -24,6 +25,9 @@ login_attempts: Dict[str, list] = {}  # IP -> list of timestamps
 
 # Power action rate limiting storage (new)
 power_action_timestamps: Dict[str, list] = {}  # IP -> list of timestamps
+
+# Token blacklist for logout
+_blacklisted_tokens: Dict[str, float] = {}  # jti -> expiry timestamp
 
 
 # Password hashing context
@@ -132,6 +136,13 @@ class SecurityManager:
                 algorithms=[settings.ALGORITHM],
                 issuer=settings.JWT_ISSUER
             )
+            jti = payload.get("jti")
+            if jti and jti in _blacklisted_tokens:
+                logger.warning("Blacklisted token attempt detected")
+                raise HTTPException(
+                    status_code=status.HTTP_401_UNAUTHORIZED,
+                    detail="Token has been revoked"
+                )
             return payload
         except jose_exceptions.ExpiredSignatureError:
             logger.warning("Expired token attempt detected")
@@ -325,6 +336,34 @@ class SecurityManager:
         return True
 
     @staticmethod
+    def blacklist_token(token: str) -> bool:
+        """Add token to blacklist. Returns True if successful."""
+        try:
+            payload = jwt.decode(
+                token,
+                SECRET_KEY_BYTES,
+                algorithms=[settings.ALGORITHM],
+                issuer=settings.JWT_ISSUER
+            )
+            jti = payload.get("jti")
+            exp = payload.get("exp")
+            if jti and exp:
+                _blacklisted_tokens[jti] = exp
+                logger.info(f"Token blacklisted: {jti[:8]}...")
+                return True
+        except Exception:
+            pass
+        return False
+
+    @staticmethod
+    def cleanup_blacklisted_tokens():
+        """Remove expired tokens from blacklist to prevent memory leak."""
+        now = time.time()
+        expired = [jti for jti, exp in _blacklisted_tokens.items() if exp < now]
+        for jti in expired:
+            del _blacklisted_tokens[jti]
+
+    @staticmethod
     async def get_current_user(token: str = Depends(oauth2_scheme)):
         credentials_exception = HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
@@ -373,14 +412,14 @@ class SecurityManager:
         """Record a login attempt"""
         if success:
             if ip in login_attempts:
-                # Reset attempts on success?
-                # Yes, usually.
                 del login_attempts[ip]
+            SecurityManager.persist_rate_limits()
         else:
             now = time.time()
             if ip not in login_attempts:
                 login_attempts[ip] = []
             login_attempts[ip].append(now)
+            SecurityManager.persist_rate_limits()
 
     @staticmethod
     def check_power_action_rate_limit(ip: str) -> tuple[bool, int]:
@@ -427,3 +466,80 @@ class SecurityManager:
             # Remove IPs with only old timestamps
             if not power_action_timestamps[ip] or max(power_action_timestamps[ip]) < cutoff:
                 del power_action_timestamps[ip]
+
+    # ============================================================
+    # Rate Limit Persistence (survives restarts)
+    # ============================================================
+    _rate_limit_file = None
+
+    @classmethod
+    def _get_rate_limit_file(cls) -> Path:
+        """Get the path to the rate limit state file."""
+        if cls._rate_limit_file is None:
+            config_dir = Path(os.getenv('LOCALAPPDATA', str(Path.home()))) / 'NexControl'
+            config_dir.mkdir(parents=True, exist_ok=True)
+            cls._rate_limit_file = config_dir / 'rate_limits.json'
+        return cls._rate_limit_file
+
+    @classmethod
+    def persist_rate_limits(cls):
+        """Save current rate limit state to disk. Skipped in development mode."""
+        if settings.ENVIRONMENT == "development":
+            return
+        try:
+            now = time.time()
+            lockout_window = settings.LOGIN_LOCKOUT_MINUTES * 60
+            power_window = settings.POWER_ACTION_WINDOW_SECONDS
+
+            data = {
+                "login_attempts": {
+                    ip: [t for t in ts if t > now - lockout_window]
+                    for ip, ts in login_attempts.items()
+                    if any(t > now - lockout_window for t in ts)
+                },
+                "power_action_timestamps": {
+                    ip: [t for t in ts if t > now - power_window]
+                    for ip, ts in power_action_timestamps.items()
+                    if any(t > now - power_window for t in ts)
+                },
+                "saved_at": now
+            }
+
+            cls._get_rate_limit_file().write_text(json.dumps(data))
+        except Exception as e:
+            logger.warning(f"Failed to persist rate limits: {e}")
+
+    @classmethod
+    def restore_rate_limits(cls):
+        """Load rate limit state from disk on startup."""
+        try:
+            fpath = cls._get_rate_limit_file()
+            if not fpath.exists():
+                return
+
+            data = json.loads(fpath.read_text())
+            now = time.time()
+            saved_at = data.get("saved_at", 0)
+            elapsed = now - saved_at
+
+            # Only restore if saved recently (within 2x lockout window)
+            lockout_window = settings.LOGIN_LOCKOUT_MINUTES * 60
+            if elapsed > lockout_window * 2:
+                return
+
+            # Restore login attempts (adjust timestamps for elapsed time)
+            for ip, ts in data.get("login_attempts", {}).items():
+                valid = [t for t in ts if t > now - lockout_window]
+                if valid:
+                    login_attempts[ip] = valid
+
+            # Restore power action timestamps
+            power_window = settings.POWER_ACTION_WINDOW_SECONDS
+            for ip, ts in data.get("power_action_timestamps", {}).items():
+                valid = [t for t in ts if t > now - power_window]
+                if valid:
+                    power_action_timestamps[ip] = valid
+
+            logger.info(f"Restored rate limits: {len(login_attempts)} login IPs, {len(power_action_timestamps)} power IPs")
+        except Exception as e:
+            logger.warning(f"Failed to restore rate limits: {e}")
