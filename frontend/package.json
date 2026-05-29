@@ -34,7 +34,7 @@
     "@capacitor/preferences": "^8.0.0",
     "@capacitor/push-notifications": "^8.0.0",
     "@quasar/extras": "^1.16.4",
-    "axios": "^1.2.1",
+    "axios": "^1.16.0",
     "chart.js": "^4.4.0",
     "crypto-js": "^4.2.0",
     "pinia": "^3.0.1",
